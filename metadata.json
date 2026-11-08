@@ -1,0 +1,6 @@
+{
+  "name": "Battery Quest: Power Racing Academy",
+  "description": "Android-friendly educational web game for learning electrical circuits and battery engineering in Thai.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

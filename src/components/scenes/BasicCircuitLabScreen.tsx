@@ -1,0 +1,840 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import {
+  Zap,
+  RotateCw,
+  Lightbulb,
+  ToggleLeft,
+  ToggleRight,
+  CheckCircle2,
+  AlertTriangle,
+  Play,
+  RotateCcw,
+  Sparkles,
+  Undo2,
+  HelpCircle,
+  Save,
+  ArrowRight,
+  ArrowLeft,
+  Flame,
+  ShieldAlert,
+  Trash2,
+  Scissors,
+  Star,
+  Info,
+} from 'lucide-react';
+import { useGameState } from '../../context/GameStateContext';
+import {
+  validateBasicCircuit,
+  BasicCircuitValidation,
+} from '../../engine/circuitSimulator';
+import { CircuitComponent, CircuitWire } from '../../types/game';
+import { VoltDialog } from '../common/VoltDialog';
+
+const playTone = (freq: number, type: OscillatorType = 'sine', duration: number = 0.15) => {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch {
+    // Ignore audio error
+  }
+};
+
+export const BasicCircuitLabScreen: React.FC = () => {
+  const { goToScene, completeMission } = useGameState();
+
+  const [placedComponents, setPlacedComponents] = useState<Record<string, boolean>>({
+    cell_1: true,
+    sw_1: true,
+    bulb_1: true,
+  });
+
+  const [isSwitchClosed, setIsSwitchClosed] = useState<boolean>(true);
+  const [isBatteryReversed, setIsBatteryReversed] = useState<boolean>(false);
+
+  const [wires, setWires] = useState<CircuitWire[]>([
+    { id: 'w1', fromTerminalId: 'cell_1_pos', toTerminalId: 'sw_1_in', color: '#ef4444' },
+    { id: 'w2', fromTerminalId: 'sw_1_out', toTerminalId: 'bulb_1_a', color: '#f59e0b' },
+    { id: 'w3', fromTerminalId: 'bulb_1_b', toTerminalId: 'cell_1_neg', color: '#3b82f6' },
+  ]);
+
+  const [history, setHistory] = useState<CircuitWire[][]>([]);
+  const [activeTerminalId, setActiveTerminalId] = useState<string | null>(null);
+
+  const [hasTested, setHasTested] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<BasicCircuitValidation | null>(null);
+  const [showCelebration, setShowCelebration] = useState<boolean>(false);
+  const [showHintModal, setShowHintModal] = useState<boolean>(false);
+  const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  const [terminalCoords, setTerminalCoords] = useState<Record<string, { x: number; y: number }>>({});
+  const workbenchRef = useRef<HTMLDivElement | null>(null);
+
+  const activeComponents = useMemo<CircuitComponent[]>(() => {
+    const list: CircuitComponent[] = [];
+    if (placedComponents.cell_1) {
+      list.push({
+        id: 'cell_1',
+        type: 'battery_cell',
+        name: 'เซลล์ AA 1.5V',
+        x: 100,
+        y: 100,
+        terminals: [
+          { id: 'cell_1_pos', componentId: 'cell_1', label: '+', polarity: 'positive', x: 0, y: 0 },
+          { id: 'cell_1_neg', componentId: 'cell_1', label: '-', polarity: 'negative', x: 0, y: 0 },
+        ],
+        properties: {
+          voltage: 1.5,
+          capacityMah: 2000,
+          isReversed: isBatteryReversed,
+        },
+      });
+    }
+    if (placedComponents.sw_1) {
+      list.push({
+        id: 'sw_1',
+        type: 'switch',
+        name: 'สวิตช์ควบคุม',
+        x: 200,
+        y: 100,
+        terminals: [
+          { id: 'sw_1_in', componentId: 'sw_1', label: 'IN', polarity: 'neutral', x: 0, y: 0 },
+          { id: 'sw_1_out', componentId: 'sw_1', label: 'OUT', polarity: 'neutral', x: 0, y: 0 },
+        ],
+        properties: {
+          isClosed: isSwitchClosed,
+        },
+      });
+    }
+    if (placedComponents.bulb_1) {
+      list.push({
+        id: 'bulb_1',
+        type: 'light_bulb',
+        name: 'หลอดไฟ 1.5V',
+        x: 300,
+        y: 100,
+        terminals: [
+          { id: 'bulb_1_a', componentId: 'bulb_1', label: 'A', polarity: 'neutral', x: 0, y: 0 },
+          { id: 'bulb_1_b', componentId: 'bulb_1', label: 'B', polarity: 'neutral', x: 0, y: 0 },
+        ],
+        properties: {
+          resistance: 3.0,
+          ratedVoltage: 1.5,
+        },
+      });
+    }
+    return list;
+  }, [placedComponents, isBatteryReversed, isSwitchClosed]);
+
+  const liveValidation = useMemo<BasicCircuitValidation>(() => {
+    return validateBasicCircuit(activeComponents, wires);
+  }, [activeComponents, wires]);
+
+  const terminalMeta: Record<string, { label: string; componentName: string; color: string }> = {
+    cell_1_pos: {
+      label: isBatteryReversed ? 'ขั้วลบ (-)' : 'ขั้วบวก (+)',
+      componentName: 'ถ่าน AA',
+      color: 'bg-rose-500 text-white border-rose-300 ring-rose-500/50',
+    },
+    cell_1_neg: {
+      label: isBatteryReversed ? 'ขั้วบวก (+)' : 'ขั้วลบ (-)',
+      componentName: 'ถ่าน AA',
+      color: 'bg-blue-500 text-white border-blue-300 ring-blue-500/50',
+    },
+    sw_1_in: {
+      label: 'ขั้ว IN',
+      componentName: 'สวิตช์',
+      color: 'bg-amber-500 text-slate-950 border-amber-300 ring-amber-500/50',
+    },
+    sw_1_out: {
+      label: 'ขั้ว OUT',
+      componentName: 'สวิตช์',
+      color: 'bg-amber-500 text-slate-950 border-amber-300 ring-amber-500/50',
+    },
+    bulb_1_a: {
+      label: 'ขั้ว A',
+      componentName: 'หลอดไฟ',
+      color: 'bg-emerald-500 text-white border-emerald-300 ring-emerald-500/50',
+    },
+    bulb_1_b: {
+      label: 'ขั้ว B',
+      componentName: 'หลอดไฟ',
+      color: 'bg-emerald-500 text-white border-emerald-300 ring-emerald-500/50',
+    },
+  };
+
+  const updateTerminalPositions = () => {
+    if (!workbenchRef.current) return;
+    const wbRect = workbenchRef.current.getBoundingClientRect();
+    const newCoords: Record<string, { x: number; y: number }> = {};
+    const terminalElements = workbenchRef.current.querySelectorAll<HTMLElement>('[data-terminal-id]');
+    terminalElements.forEach((el) => {
+      const id = el.getAttribute('data-terminal-id');
+      if (id) {
+        const rect = el.getBoundingClientRect();
+        newCoords[id] = {
+          x: rect.left + rect.width / 2 - wbRect.left,
+          y: rect.top + rect.height / 2 - wbRect.top,
+        };
+      }
+    });
+    setTerminalCoords(newCoords);
+  };
+
+  useEffect(() => {
+    updateTerminalPositions();
+    window.addEventListener('resize', updateTerminalPositions);
+    const timer = setTimeout(updateTerminalPositions, 100);
+    return () => {
+      window.removeEventListener('resize', updateTerminalPositions);
+      clearTimeout(timer);
+    };
+  }, [placedComponents, wires, isSwitchClosed, isBatteryReversed]);
+
+  const handleTerminalClick = (terminalId: string) => {
+    if (!activeTerminalId) {
+      setActiveTerminalId(terminalId);
+      playTone(440, 'sine', 0.08);
+      return;
+    }
+    if (activeTerminalId === terminalId) {
+      setActiveTerminalId(null);
+      return;
+    }
+    const exists = wires.some(
+      (w) =>
+        (w.fromTerminalId === activeTerminalId && w.toTerminalId === terminalId) ||
+        (w.fromTerminalId === terminalId && w.toTerminalId === activeTerminalId)
+    );
+    if (exists) {
+      setActiveTerminalId(null);
+      return;
+    }
+
+    setHistory((prev) => [...prev, wires]);
+
+    let wireColor = '#f59e0b';
+    if (activeTerminalId.includes('pos') || terminalId.includes('pos')) wireColor = '#ef4444';
+    else if (activeTerminalId.includes('neg') || terminalId.includes('neg')) wireColor = '#3b82f6';
+
+    const newWire: CircuitWire = {
+      id: `w_${Date.now()}`,
+      fromTerminalId: activeTerminalId,
+      toTerminalId: terminalId,
+      color: wireColor,
+    };
+
+    setWires((prev) => [...prev, newWire]);
+    setActiveTerminalId(null);
+    playTone(660, 'sine', 0.12);
+  };
+
+  const handleRemoveWire = (wireId: string) => {
+    setHistory((prev) => [...prev, wires]);
+    setWires((prev) => prev.filter((w) => w.id !== wireId));
+    playTone(330, 'triangle', 0.1);
+  };
+
+  const handleUndo = () => {
+    if (history.length === 0) return;
+    const previous = history[history.length - 1];
+    setHistory((prev) => prev.slice(0, -1));
+    setWires(previous);
+    playTone(400, 'sine', 0.08);
+  };
+
+  const handleReset = () => {
+    setHistory((prev) => [...prev, wires]);
+    setWires([]);
+    setActiveTerminalId(null);
+    setHasTested(false);
+    playTone(280, 'sine', 0.15);
+  };
+
+  const handleToggleSwitch = () => {
+    setIsSwitchClosed((prev) => !prev);
+    playTone(isSwitchClosed ? 350 : 580, 'square', 0.08);
+  };
+
+  const handleFlipBattery = () => {
+    setIsBatteryReversed((prev) => !prev);
+    playTone(500, 'triangle', 0.1);
+  };
+
+  const handleTestCircuit = () => {
+    setHasTested(true);
+    setTestResult(liveValidation);
+    if (liveValidation.isShortCircuit) {
+      playTone(150, 'sawtooth', 0.4);
+      return;
+    }
+    if (liveValidation.isSuccess && liveValidation.isLampLit) {
+      playTone(880, 'sine', 0.25);
+      setTimeout(() => playTone(1100, 'sine', 0.35), 150);
+      completeMission('m1', 3);
+      setShowCelebration(true);
+    } else {
+      playTone(300, 'triangle', 0.2);
+    }
+  };
+
+  const handleSaveCircuit = () => {
+    try {
+      const snapshot = {
+        wires,
+        isSwitchClosed,
+        isBatteryReversed,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem('battery_quest_lab01_saved_circuit', JSON.stringify(snapshot));
+      setSaveToast('บันทึกแบบจำลองวงจรสำเร็จเรียบร้อย!');
+      setTimeout(() => setSaveToast(null), 3000);
+      playTone(750, 'sine', 0.12);
+    } catch {
+      setSaveToast('ไม่สามารถบันทึกลงในหน่วยความจำได้');
+      setTimeout(() => setSaveToast(null), 3000);
+    }
+  };
+
+  const isLampGlow = liveValidation.isLampLit && !liveValidation.isShortCircuit;
+
+  return (
+    <div className="max-w-7xl mx-auto p-3 sm:p-5 space-y-4">
+      {/* Header */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl backdrop-blur flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => goToScene('mission_map')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all text-xs sm:text-sm font-semibold active:scale-95 shrink-0 cursor-pointer"
+            title="กลับสู่แผนที่ภารกิจ"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>แผนที่ภารกิจ</span>
+          </button>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                LAB-01 · สถาบันนักซิ่ง
+              </span>
+              <span className="text-[11px] text-slate-400 font-medium">วงจรไฟฟ้ากระแสตรงพื้นฐาน</span>
+            </div>
+            <h1 className="text-lg sm:text-xl font-extrabold text-white flex items-center gap-2 mt-0.5">
+              <Zap className="w-5 h-5 text-amber-400 shrink-0" />
+              <span>ห้องทดลองวงจรปิดพื้นฐาน (Basic Circuit Lab)</span>
+            </h1>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+          <button
+            onClick={() => setShowHintModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all cursor-pointer"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span>คำใบ้</span>
+          </button>
+
+          <button
+            onClick={() => goToScene('series_lab')}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-800 text-xs font-semibold transition-all cursor-pointer"
+          >
+            <span>Lab 2: วงจรอนุกรม</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {saveToast && (
+        <div className="p-3 bg-emerald-950/90 border border-emerald-500/50 text-emerald-200 rounded-xl text-xs font-semibold flex items-center justify-between shadow-lg">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            {saveToast}
+          </span>
+          <button onClick={() => setSaveToast(null)} className="text-emerald-400 font-bold ml-2">✕</button>
+        </div>
+      )}
+
+      <VoltDialog
+        mood={
+          liveValidation.isShortCircuit
+            ? 'warning'
+            : isLampGlow
+            ? 'excited'
+            : !isSwitchClosed && liveValidation.isLampInCircuit
+            ? 'thinking'
+            : 'idea'
+        }
+        title={
+          liveValidation.isShortCircuit
+            ? 'VOLT ตรวจพบไฟฟ้าลัดวงจร!'
+            : isLampGlow
+            ? 'VOLT ชื่นชม: วงจรทำงานสมบูรณ์แบบ!'
+            : 'VOLT แนะนำการต่อวงจร'
+        }
+        message={liveValidation.statusMessage}
+        hint={liveValidation.hint}
+      />
+
+      {/* Main Grid: Workbench + Telemetry */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div className="lg:col-span-8 space-y-3">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-slate-300 font-semibold">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>โต๊ะทดลองวิศวกรรมไฟฟ้า (Interactive Electronics Workbench)</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleUndo}
+                disabled={history.length === 0}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 border border-slate-700 transition-colors font-medium"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+                <span>เลิกทำ</span>
+              </button>
+
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors font-medium"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>รีเซ็ต</span>
+              </button>
+
+              <button
+                onClick={handleSaveCircuit}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition-colors font-medium"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>บันทึก</span>
+              </button>
+            </div>
+          </div>
+
+          {activeTerminalId && (
+            <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs flex items-center justify-between animate-pulse">
+              <span>
+                เลือกต้นทางแล้ว: <strong>{terminalMeta[activeTerminalId]?.label}</strong> &rarr; แตะขั้วปลายทางเพื่อต่อสายไฟ
+              </span>
+              <button
+                onClick={() => setActiveTerminalId(null)}
+                className="px-2 py-0.5 rounded bg-slate-900 text-slate-300 text-[10px] font-bold border border-slate-700"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          )}
+
+          {/* Workbench Canvas Mat */}
+          <div
+            ref={workbenchRef}
+            className={`relative w-full min-h-[380px] rounded-2xl border-2 transition-all overflow-hidden p-4 sm:p-6 flex flex-col justify-between select-none ${
+              liveValidation.isShortCircuit
+                ? 'bg-gradient-to-b from-rose-950/40 via-slate-950 to-slate-950 border-rose-500 shadow-2xl'
+                : isLampGlow
+                ? 'bg-gradient-to-b from-amber-950/20 via-slate-950 to-slate-950 border-amber-500/40 shadow-2xl'
+                : 'bg-slate-950 border-slate-800 shadow-2xl'
+            }`}
+          >
+            <div className="text-[10px] font-mono text-slate-600 uppercase tracking-widest pointer-events-none">
+              CIRCUIT WORKBENCH · DC 1.5V MAX · RESISTANCE BOARD
+            </div>
+
+            {liveValidation.isShortCircuit && (
+              <div className="absolute inset-0 bg-rose-950/40 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-4 pointer-events-none">
+                <div className="bg-rose-900/90 border-2 border-rose-400 text-white p-4 rounded-2xl max-w-md text-center shadow-2xl space-y-2">
+                  <div className="flex items-center justify-center gap-2 text-rose-300 font-bold text-base">
+                    <Flame className="w-6 h-6 text-rose-400 animate-bounce" />
+                    <span>ตรวจพบไฟฟ้าลัดวงจร (SHORT CIRCUIT!)</span>
+                  </div>
+                  <p className="text-xs text-rose-100">
+                    ขั้วบวกต่อตรงกับขั้วลบโดยไม่มีหลอดไฟคั่น ระบบนิรภัยได้ตัดการทำงานชั่วคราว
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 my-auto py-4">
+              {/* Battery */}
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-lg space-y-3">
+                <div className="text-xs font-bold text-slate-300">เซลล์ AA 1.5V (2000 mAh)</div>
+                <div className="relative w-40 h-20 bg-gradient-to-r from-amber-500 via-amber-400 to-slate-800 rounded-xl border-2 border-amber-300 shadow-xl flex items-center justify-between px-3 text-slate-950 font-black">
+                  <div className="text-base font-mono">{isBatteryReversed ? '-' : '+'}</div>
+                  <div className="text-center font-bold">
+                    <div className="text-[9px] uppercase">CELL AA</div>
+                    <div className="text-sm font-mono">1.50V</div>
+                  </div>
+                  <div className="text-base font-mono text-white">{isBatteryReversed ? '+' : '-'}</div>
+                </div>
+
+                <div className="flex items-center justify-between w-full px-2 pt-1">
+                  <button
+                    data-terminal-id="cell_1_pos"
+                    onClick={() => handleTerminalClick('cell_1_pos')}
+                    className={`px-3 py-2 rounded-xl text-xs font-extrabold border-2 transition-all ${
+                      activeTerminalId === 'cell_1_pos'
+                        ? 'bg-rose-500 text-white border-white ring-2 ring-rose-500'
+                        : 'bg-rose-950/80 text-rose-300 border-rose-500/60'
+                    }`}
+                  >
+                    <span>{isBatteryReversed ? '(-)' : '(+)'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleFlipBattery}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold flex items-center gap-1"
+                  >
+                    <RotateCw className="w-3 h-3" />
+                    <span>กลับขั้ว</span>
+                  </button>
+
+                  <button
+                    data-terminal-id="cell_1_neg"
+                    onClick={() => handleTerminalClick('cell_1_neg')}
+                    className={`px-3 py-2 rounded-xl text-xs font-extrabold border-2 transition-all ${
+                      activeTerminalId === 'cell_1_neg'
+                        ? 'bg-blue-500 text-white border-white ring-2 ring-blue-500'
+                        : 'bg-blue-950/80 text-blue-300 border-blue-500/60'
+                    }`}
+                  >
+                    <span>{isBatteryReversed ? '(+)' : '(-)'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Switch */}
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-lg space-y-3">
+                <div className="text-xs font-bold text-slate-300">สวิตช์ควบคุม (Knife Switch)</div>
+                <button
+                  onClick={handleToggleSwitch}
+                  className={`w-36 h-20 rounded-xl border-2 transition-all p-3 flex flex-col items-center justify-between cursor-pointer ${
+                    isSwitchClosed
+                      ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300'
+                      : 'bg-rose-950/60 border-rose-500 text-rose-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {isSwitchClosed ? (
+                      <ToggleRight className="w-8 h-8 text-emerald-400 animate-pulse" />
+                    ) : (
+                      <ToggleLeft className="w-8 h-8 text-rose-400" />
+                    )}
+                    <span className="text-xs font-black">{isSwitchClosed ? 'สับลง (ON)' : 'ยกขึ้น (OFF)'}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400">แตะเพื่อสลับ</span>
+                </button>
+
+                <div className="flex items-center justify-between w-full px-2 pt-1">
+                  <button
+                    data-terminal-id="sw_1_in"
+                    onClick={() => handleTerminalClick('sw_1_in')}
+                    className={`px-3 py-2 rounded-xl text-xs font-extrabold border-2 transition-all ${
+                      activeTerminalId === 'sw_1_in'
+                        ? 'bg-amber-500 text-slate-950 border-white ring-2 ring-amber-500'
+                        : 'bg-amber-950/80 text-amber-300 border-amber-500/60'
+                    }`}
+                  >
+                    IN
+                  </button>
+                  <span className="text-[11px] text-slate-500 font-mono">⟷</span>
+                  <button
+                    data-terminal-id="sw_1_out"
+                    onClick={() => handleTerminalClick('sw_1_out')}
+                    className={`px-3 py-2 rounded-xl text-xs font-extrabold border-2 transition-all ${
+                      activeTerminalId === 'sw_1_out'
+                        ? 'bg-amber-500 text-slate-950 border-white ring-2 ring-amber-500'
+                        : 'bg-amber-950/80 text-amber-300 border-amber-500/60'
+                    }`}
+                  >
+                    OUT
+                  </button>
+                </div>
+              </div>
+
+              {/* Lamp */}
+              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-lg space-y-3">
+                <div className="text-xs font-bold text-slate-300">หลอดไฟ 1.5V (3.0 Ω)</div>
+                <div
+                  className={`relative w-28 h-20 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${
+                    isLampGlow
+                      ? 'bg-gradient-to-t from-amber-500/20 via-amber-400/40 to-amber-200/50 border-amber-300 shadow-[0_0_40px_rgba(251,191,36,0.6)]'
+                      : 'bg-slate-950 border-slate-700'
+                  }`}
+                >
+                  <Lightbulb
+                    className={`w-12 h-12 transition-all duration-300 ${
+                      isLampGlow
+                        ? 'text-amber-200 fill-amber-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.9)] animate-pulse'
+                        : 'text-slate-600'
+                    }`}
+                  />
+                  <div className={`text-[9px] font-bold mt-1 ${isLampGlow ? 'text-amber-200' : 'text-slate-500'}`}>
+                    {isLampGlow ? 'สว่างเต็มที่ (100%)' : 'ดับ (ไม่มีกระแส)'}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between w-full px-2 pt-1">
+                  <button
+                    data-terminal-id="bulb_1_a"
+                    onClick={() => handleTerminalClick('bulb_1_a')}
+                    className={`px-3 py-2 rounded-xl text-xs font-extrabold border-2 transition-all ${
+                      activeTerminalId === 'bulb_1_a'
+                        ? 'bg-emerald-500 text-white border-white ring-2 ring-emerald-500'
+                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/60'
+                    }`}
+                  >
+                    ขั้ว A
+                  </button>
+                  <span className="text-[11px] text-slate-500 font-mono">ไส้หลอด</span>
+                  <button
+                    data-terminal-id="bulb_1_b"
+                    onClick={() => handleTerminalClick('bulb_1_b')}
+                    className={`px-3 py-2 rounded-xl text-xs font-extrabold border-2 transition-all ${
+                      activeTerminalId === 'bulb_1_b'
+                        ? 'bg-emerald-500 text-white border-white ring-2 ring-emerald-500'
+                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/60'
+                    }`}
+                  >
+                    ขั้ว B
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* SVG Wires */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-15" style={{ overflow: 'visible' }}>
+              {wires.map((wire) => {
+                const p1 = terminalCoords[wire.fromTerminalId];
+                const p2 = terminalCoords[wire.toTerminalId];
+                if (!p1 || !p2) return null;
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const curvature = Math.min(60, dist * 0.25);
+                const midY = (p1.y + p2.y) / 2 + (p1.y < p2.y ? -curvature : curvature);
+                const pathD = `M ${p1.x} ${p1.y} Q ${(p1.x + p2.x) / 2} ${midY} ${p2.x} ${p2.y}`;
+
+                return (
+                  <g key={wire.id}>
+                    <path d={pathD} fill="none" stroke="#020617" strokeWidth="8" strokeLinecap="round" />
+                    <path d={pathD} fill="none" stroke={wire.color || '#f59e0b'} strokeWidth="4" strokeLinecap="round" />
+                    {isLampGlow && (
+                      <path
+                        d={pathD}
+                        fill="none"
+                        stroke="#fef08a"
+                        strokeWidth="2"
+                        strokeDasharray="6 14"
+                        strokeLinecap="round"
+                        className="animate-[dash_1s_linear_infinite]"
+                      />
+                    )}
+                    <circle cx={p1.x} cy={p1.y} r="5" fill="#f59e0b" stroke="#000" strokeWidth="2" />
+                    <circle cx={p2.x} cy={p2.y} r="5" fill="#f59e0b" stroke="#000" strokeWidth="2" />
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* Wire Management Strip */}
+            {wires.length > 0 && (
+              <div className="relative z-20 flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800 text-[11px]">
+                <span className="text-slate-400 font-semibold flex items-center gap-1">
+                  <Scissors className="w-3.5 h-3.5" />
+                  <span>สายไฟในวงจร ({wires.length} เส้น):</span>
+                </span>
+                {wires.map((wire, idx) => {
+                  const fromMeta = terminalMeta[wire.fromTerminalId]?.label || wire.fromTerminalId;
+                  const toMeta = terminalMeta[wire.toTerminalId]?.label || wire.toTerminalId;
+                  return (
+                    <button
+                      key={wire.id}
+                      onClick={() => handleRemoveWire(wire.id)}
+                      className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-rose-950 text-slate-300 hover:text-rose-300 border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: wire.color || '#f59e0b' }} />
+                      <span>{fromMeta} &rarr; {toMeta}</span>
+                      <Trash2 className="w-3 h-3 text-rose-400 ml-0.5" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Multimeter */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-xs sm:text-sm font-extrabold text-white uppercase tracking-wider">
+                มัลติมิเตอร์วัดค่าไฟฟ้า (Multimeter)
+              </h3>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                REALTIME
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 text-xs">
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block mb-0.5">แรงดันไฟฟ้า (V)</span>
+                <span className="font-mono font-bold text-amber-300 text-lg">
+                  {liveValidation.isShortCircuit ? '0.00' : liveValidation.voltage.toFixed(2)} V
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block mb-0.5">กระแสไฟฟ้า (I = V/R)</span>
+                <span className="font-mono font-bold text-sky-300 text-lg">
+                  {liveValidation.currentAmps.toFixed(2)} A
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block mb-0.5">ความต้านทาน (R)</span>
+                <span className="font-mono font-bold text-slate-200">
+                  {liveValidation.resistance === Infinity ? '∞ Ω' : `${liveValidation.resistance.toFixed(1)} Ω`}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block mb-0.5">กำลังไฟฟ้า (P = VI)</span>
+                <span className="font-mono font-bold text-emerald-300">
+                  {liveValidation.powerWatts.toFixed(2)} W
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 pt-1">
+              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-sky-400" />
+                <span>หลักการทางวิทยาศาสตร์ (Ohm's Law)</span>
+              </label>
+              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 leading-relaxed">
+                <p>{liveValidation.scientificExplanation}</p>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={handleTestCircuit}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-400/20 active:scale-98 transition-all cursor-pointer"
+              >
+                <Play className="w-4 h-4 fill-slate-950" />
+                <span>ทดสอบวงจร (Test Circuit)</span>
+              </button>
+            </div>
+
+            {hasTested && testResult && (
+              <div
+                className={`p-3 rounded-xl border text-xs space-y-1 ${
+                  testResult.isSuccess && testResult.isLampLit
+                    ? 'bg-emerald-950/60 border-emerald-500 text-emerald-200'
+                    : testResult.isShortCircuit
+                    ? 'bg-rose-950/60 border-rose-500 text-rose-200'
+                    : 'bg-amber-950/60 border-amber-500 text-amber-200'
+                }`}
+              >
+                <div className="font-bold flex items-center gap-1.5">
+                  {testResult.isSuccess && testResult.isLampLit ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span>ผ่านเกณฑ์การทดสอบ 100%!</span>
+                    </>
+                  ) : testResult.isShortCircuit ? (
+                    <>
+                      <ShieldAlert className="w-4 h-4 text-rose-400" />
+                      <span>ไม่ผ่าน: ลัดวงจรไม่ปลอดภัย!</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      <span>ไม่ผ่าน: วงจรยังไม่สมบูรณ์</span>
+                    </>
+                  )}
+                </div>
+                <p className="text-[11px] leading-relaxed opacity-90">{testResult.statusMessage}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showCelebration && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-emerald-500/80 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-5 animate-in zoom-in-95">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-xl">
+              <Sparkles className="w-8 h-8" />
+            </div>
+            <div>
+              <div className="text-xs font-mono font-bold text-amber-400 tracking-wider">ภารกิจสำเร็จ</div>
+              <h2 className="text-xl sm:text-2xl font-black text-white mt-1">ผ่านการทดสอบ LAB-01 แล้ว!</h2>
+              <p className="text-xs text-slate-300 mt-2">
+                คุณต่อวงจรปิดสมบูรณ์สำเร็จ หลอดไฟสว่างตามพิกัด 1.5V และเข้าใจการไหลของกระแสไฟฟ้าแล้ว
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              {[1, 2, 3].map((s) => (
+                <Star key={s} className="w-7 h-7 fill-amber-400 text-amber-400" />
+              ))}
+            </div>
+            <div className="flex flex-col gap-2.5 pt-2">
+              <button
+                onClick={() => goToScene('series_lab')}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+              >
+                <span>เข้าสู่ LAB-02: วงจรอนุกรม</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => goToScene('mission_map')}
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                กลับสู่แผนที่ภารกิจ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showHintModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-amber-400" />
+                <span>คำใบ้และขั้นตอนจาก VOLT</span>
+              </h3>
+              <button onClick={() => setShowHintModal(false)} className="text-slate-400 hover:text-white text-sm font-bold">✕</button>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              ต่อสายไฟจากขั้วบวก (+) ของถ่านไปยังขั้ว IN ของสวิตช์ จากนั้นต่อจากขั้ว OUT ไปยังหลอดไฟ และต่อจากหลอดไฟกลับมายังขั้วลบ (-) ของถ่าน จากนั้นสับสวิตช์ลงแล้วกดปุ่มทดสอบ
+            </p>
+            <button
+              onClick={() => setShowHintModal(false)}
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs"
+            >
+              เข้าใจแล้ว
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
