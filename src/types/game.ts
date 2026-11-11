@@ -349,7 +349,7 @@ export interface RaceData {
   energyUsedMah?: number;
   remainingEnergyMah?: number;
   batteryPercentageRemaining?: number;
-  selectedTrackId?: 'flat_sprint' | 'hill_climb' | 'endurance_route';
+  selectedTrackId?: 'flat_sprint' | 'hill_climb' | 'endurance_route' | 'offroad_downhill';
   trackName?: string;
   trackDistanceMeters?: number;
   competitorResults?: CompetitorFinishResult[];
@@ -362,6 +362,8 @@ export interface RaceData {
   motorVoltageMatchRatio?: number;
   maxSlopeEncountered?: number;
   downhillEnergySavedWh?: number;
+  regeneratedEnergyMah?: number;
+  maxRegenPowerW?: number;
   chosenMotorVoltage?: number;
   chosenPackVoltage?: number;
 }

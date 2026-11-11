@@ -41,6 +41,24 @@ function lerp(a: number, b: number, t: number) {
 // ─── Track Control Points ───────────────────────────────────────────────────
 
 function getTrackPoints(trackId: string): THREE.Vector3[] {
+  if (trackId === 'offroad_downhill') {
+    // MX Offroad Downhill Trail (800m) - Inspired by MX Offroad Master
+    // Starts high atop mountain ridge (Y: 65m) -> drops into steep rock descent (-22%) -> jump ramp (+8%) -> canyon -> finish
+    return [
+      new THREE.Vector3(0, 65, 0),             // 0m (Ridge Peak starting line, Y: 65)
+      new THREE.Vector3(35, 62, -50),          // 65m (Ridge roll-in, Y: 62)
+      new THREE.Vector3(75, 49, -110),         // 145m (Entering steep gully -20%, Y: 49)
+      new THREE.Vector3(55, 33, -185),         // 230m (Steep rocky hairpin switchback -22%, Y: 33)
+      new THREE.Vector3(-10, 24, -250),        // 310m (Ridge edge trail, Y: 24)
+      new THREE.Vector3(-60, 20, -320),        // 390m (Jump lip ramp +8% kicker, Y: 20)
+      new THREE.Vector3(-95, 13, -400),        // 480m (Smooth air landing run-out, Y: 13)
+      new THREE.Vector3(-110, 8, -490),        // 580m (Winding canyon S-bend, Y: 8)
+      new THREE.Vector3(-75, 4.5, -580),       // 670m (Canyon exit, Y: 4.5)
+      new THREE.Vector3(-20, 2.0, -670),       // 730m (High speed dirt sprint, Y: 2.0)
+      new THREE.Vector3(35, 0.5, -740),        // 770m (Final straight, Y: 0.5)
+      new THREE.Vector3(70, 0.0, -800),        // 800m (Finish arena at base of mountain, Y: 0)
+    ];
+  }
   if (trackId === 'hill_climb') {
     // Undulating uphill highway with realistic slope physics:
     // Climb (+14%) -> Downhill Valley (-9%) -> Second Mountain Climb to Summit (+16%)
@@ -97,6 +115,7 @@ interface CyclistParts {
   group: THREE.Group;
   rollPivot: THREE.Group;
   steerPivot: THREE.Group;
+  forkSuspensionGroup: THREE.Group;
   pelvisGroup: THREE.Group;
   torsoGroup: THREE.Group;
   headGroup: THREE.Group;
@@ -127,7 +146,13 @@ interface CyclistParts {
   batteryLed: THREE.Mesh;
   nameSprite: THREE.Sprite;
   brakeParticles: THREE.Points;
-  updateKinematics: (crankAngle: number, speedMps: number, dt: number) => void;
+  updateKinematics: (
+    crankAngle: number,
+    speedMps: number,
+    dt: number,
+    slopePercent?: number,
+    isBraking?: boolean
+  ) => void;
   updateLegIK: (crankAngle: number) => void;
   currentLean: number;
   currentSteer: number;
@@ -279,20 +304,36 @@ function createCyclist(
   // Front wheel axle in steerPivot local space
   const frontAxleLocal = new THREE.Vector3().subVectors(frontAxle, headTop);
 
-  // Fork crown & dual fork blades
+  // Fork crown
   const forkCrown = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.09, 8), chromeMat);
   forkCrown.rotation.z = Math.PI / 2;
   forkCrown.position.set(0, -0.06, 0);
   steerPivot.add(forkCrown);
 
+  // Upper stanchions (fixed to fork crown)
   [-0.035, 0.035].forEach((sideX) => {
-    const blade = createTube(
+    const stanchion = createTube(
       new THREE.Vector3(sideX, -0.06, 0),
-      new THREE.Vector3(sideX, frontAxleLocal.y, frontAxleLocal.z),
+      new THREE.Vector3(sideX, frontAxleLocal.y * 0.55, frontAxleLocal.z * 0.55),
       chromeMat,
-      0.018
+      0.016
     );
-    steerPivot.add(blade);
+    steerPivot.add(stanchion);
+  });
+
+  // Telescopic Suspension Slider Group (Compresses dynamically on downhill bumps & braking)
+  const forkSuspensionGroup = new THREE.Group();
+  steerPivot.add(forkSuspensionGroup);
+
+  // Lower fork sliders (Anodized MTB suspension look)
+  [-0.035, 0.035].forEach((sideX) => {
+    const slider = createTube(
+      new THREE.Vector3(sideX, frontAxleLocal.y * 0.50, frontAxleLocal.z * 0.50),
+      new THREE.Vector3(sideX, frontAxleLocal.y, frontAxleLocal.z),
+      isTechGirl ? goldMat : darkMat,
+      0.022
+    );
+    forkSuspensionGroup.add(slider);
   });
 
   // Drop Handlebars (Road / Racing style) in steerPivot local space
@@ -359,10 +400,10 @@ function createCyclist(
   const rearWheel = createWheel(rearAxle);
   rollPivot.add(rearWheel);
 
-  // Front wheel is placed in frontWheelPivot under steerPivot so it turns with the steering
+  // Front wheel is placed in frontWheelPivot under forkSuspensionGroup so it turns with steering and compresses
   const frontWheelPivot = new THREE.Group();
   frontWheelPivot.position.copy(frontAxleLocal);
-  steerPivot.add(frontWheelPivot);
+  forkSuspensionGroup.add(frontWheelPivot);
 
   const frontWheel = createWheel(new THREE.Vector3(0, 0, 0));
   frontWheelPivot.add(frontWheel);
@@ -759,27 +800,44 @@ function createCyclist(
   const _pedalR = new THREE.Vector3();
   const _poleKnee = new THREE.Vector3(0, -0.15, 1.0);
 
-  // DeepSeek R1 Full Organic Cyclist Kinematics & Two-Bone IK Update
-  const updateKinematics = (crankAngle: number, speedMps: number, dt: number) => {
+  // DeepSeek V4 Pro Full Organic Cyclist Kinematics, Weight Shift & Two-Bone IK Update
+  const updateKinematics = (
+    crankAngle: number,
+    speedMps: number,
+    dt: number,
+    slopePercent: number = 0,
+    isBraking: boolean = false
+  ) => {
     const activity = THREE.MathUtils.clamp(speedMps / 3.0, 0.0, 1.0);
     const s = Math.sin(crankAngle);
     const c = Math.cos(crankAngle);
     const down = 0.5 - 0.5 * Math.cos(2 * crankAngle);
 
+    // Dynamic Weight Shift (MX Offroad Master inspired):
+    // On Downhill (slope < 0): rider shifts weight back (Lean Back) over rear wheel to prevent over-the-bars!
+    // On Steep Uphill (slope > 0): rider shifts weight forward to keep front wheel planted
+    const slopeFactor = THREE.MathUtils.clamp(slopePercent / 20.0, -1.0, 1.0);
+    const weightShiftZ = slopeFactor < 0
+      ? -slopeFactor * 0.09   // Shifting hips back up to +9cm on -20% descent
+      : -slopeFactor * 0.04;  // Shifting forward up to -4cm on +20% climb
+    const weightShiftY = slopeFactor < 0 ? -0.024 * Math.abs(slopeFactor) : 0.008 * slopeFactor;
+
     // 1. Pelvis Dynamic Sway & Heave
-    const pelvicHeave = -0.016 * down * activity;
+    const pelvicHeave = -0.016 * down * activity + weightShiftY;
     const pelvicSway = 0.008 * s * activity;
     const pelvicRoll = -0.035 * s * activity;
     const pelvicYaw = -0.022 * c * activity;
-    const pelvicPitch = 0.008 * down * activity;
+    const pelvicPitch = 0.008 * down * activity + (slopeFactor < 0 ? 0.12 * -slopeFactor : -0.06 * slopeFactor);
 
     pelvisGroup.position.copy(pelvisBasePos);
     pelvisGroup.position.y += pelvicHeave;
     pelvisGroup.position.x += pelvicSway;
+    pelvisGroup.position.z += weightShiftZ;
     pelvisGroup.rotation.set(pelvicPitch, pelvicYaw, pelvicRoll, 'YXZ');
 
     // 2. Torso Dynamic Effort Bobbing, Counter-Roll & Lateral Sway
-    const torsoPitch = torsoBaseLean + 0.038 * down * activity;
+    const torsoCounterPitch = slopeFactor < 0 ? -0.26 * Math.abs(slopeFactor) : 0.14 * slopeFactor;
+    const torsoPitch = torsoBaseLean + 0.038 * down * activity + torsoCounterPitch;
     const torsoRoll = -pelvicRoll * 0.65 + 0.012 * s * activity;
     const torsoYaw = -pelvicYaw * 0.35 + 0.015 * s * activity;
     const torsoLateral = 0.006 * s * activity;
@@ -787,7 +845,13 @@ function createCyclist(
     torsoGroup.position.set(torsoLateral, 0.06, 0.02);
     torsoGroup.rotation.set(torsoPitch, torsoYaw, torsoRoll, 'YXZ');
 
-    // 3. Head & Neck Gaze Stabilization + subtle nod
+    // 3. Telescopic Suspension Compression & Brake Dive
+    const brakeDive = isBraking ? 0.032 : 0.0;
+    const bumpVibe = activity > 0.1 ? Math.sin(crankAngle * 3.5) * 0.006 * activity : 0.0;
+    const targetSuspension = THREE.MathUtils.clamp(brakeDive + bumpVibe, 0.0, 0.045);
+    forkSuspensionGroup.position.set(0, targetSuspension * 0.985, -targetSuspension * 0.174);
+
+    // 4. Head & Neck Gaze Stabilization + subtle nod
     const totalPitch = pelvicPitch + (torsoPitch - torsoBaseLean);
     const totalYaw = pelvicYaw + torsoYaw;
     const totalRoll = pelvicRoll + torsoRoll;
@@ -920,6 +984,7 @@ function createCyclist(
     group,
     rollPivot,
     steerPivot,
+    forkSuspensionGroup,
     pelvisGroup,
     torsoGroup,
     headGroup,
@@ -974,6 +1039,8 @@ export interface RacerUpdate {
   jerseyColor: string;
   bikeColor: string;
   character?: CharacterState;
+  slopePercent?: number;
+  isRegenActive?: boolean;
 }
 
 export class Racing3DRenderer {
@@ -988,6 +1055,7 @@ export class Racing3DRenderer {
   private trackCurve!: THREE.CatmullRomCurve3;
   private trackArcLength: number = 0;
   private gameTrackLength: number;
+  private trackId: string;
   private isClosedTrack: boolean;
   private laps: number;
 
@@ -1016,8 +1084,9 @@ export class Racing3DRenderer {
   ) {
     this.container = container;
     this.gameTrackLength = gameTrackLength;
+    this.trackId = trackId;
     this.laps = laps;
-    this.isClosedTrack = trackId !== 'hill_climb';
+    this.isClosedTrack = trackId !== 'hill_climb' && trackId !== 'offroad_downhill';
 
     // ── 1. Scene & Atmosphere ──
     this.scene = new THREE.Scene();
@@ -1224,28 +1293,46 @@ export class Racing3DRenderer {
       deckBottomRight.push(sR.clone().add(new THREE.Vector3(0, -DECK_THICKNESS, 0)));
     }
 
-    // 1. Asphalt Top Strip
+    const isOffroad = this.trackId === 'offroad_downhill';
+
+    // 1. Surface Strip (Asphalt Highway or Offroad Mountain Dirt Trail)
     addStrip(asphaltLeft, asphaltRight, (i) => {
+      if (isOffroad) {
+        const isAlt = Math.floor(i / 5) % 2 === 0;
+        return isAlt ? [0.38, 0.26, 0.16] : [0.32, 0.22, 0.13]; // Warm mountain dirt/gravel trail
+      }
       const isAlt = Math.floor(i / 6) % 2 === 0;
       const c = isAlt ? 0.16 : 0.13;
       return [c, c, c + 0.015];
     });
 
-    // 2. Left Kerb (Red/White alternating)
+    // 2. Left Kerb (Red/White or Weathered Mountain Stone)
     addStrip(kerbLeftOuter, asphaltLeft, (i) => {
+      if (isOffroad) {
+        const isStone = Math.floor(i / 4) % 2 === 0;
+        return isStone ? [0.45, 0.40, 0.35] : [0.30, 0.26, 0.22];
+      }
       const isRed = Math.floor(i / 6) % 2 === 0;
       return isRed ? [0.95, 0.15, 0.15] : [0.95, 0.95, 0.95];
     });
 
-    // 3. Right Kerb (Red/White alternating)
+    // 3. Right Kerb (Red/White or Weathered Mountain Stone)
     addStrip(asphaltRight, kerbRightOuter, (i) => {
+      if (isOffroad) {
+        const isStone = Math.floor(i / 4) % 2 === 0;
+        return isStone ? [0.45, 0.40, 0.35] : [0.30, 0.26, 0.22];
+      }
       const isRed = Math.floor(i / 6) % 2 === 0;
       return isRed ? [0.95, 0.15, 0.15] : [0.95, 0.95, 0.95];
     });
 
     // 4. Outer Shoulders
-    addStrip(shoulderLeftOuter, kerbLeftOuter, () => [0.22, 0.22, 0.24]);
-    addStrip(kerbRightOuter, shoulderRightOuter, () => [0.22, 0.22, 0.24]);
+    addStrip(shoulderLeftOuter, kerbLeftOuter, () =>
+      isOffroad ? [0.24, 0.18, 0.12] : [0.22, 0.22, 0.24]
+    );
+    addStrip(kerbRightOuter, shoulderRightOuter, () =>
+      isOffroad ? [0.24, 0.18, 0.12] : [0.22, 0.22, 0.24]
+    );
 
     // 5. Concrete Side Walls (descending to deck underside)
     addStrip(deckBottomLeft, shoulderLeftOuter, () => [0.35, 0.35, 0.38]);
@@ -1278,6 +1365,8 @@ export class Racing3DRenderer {
   // ─── Center Dashed Lane Lines ─────────────────────────────────────────────
 
   private buildCenterLine() {
+    if (this.trackId === 'offroad_downhill') return; // Offroad mountain trails do not have paved center lane markings
+
     const dashPositions: number[] = [];
     const dashIndices: number[] = [];
     let vertIdx = 0;
@@ -1896,14 +1985,23 @@ export class Racing3DRenderer {
       cyclist.frontWheel.rotation.x += wheelSpeed * dt;
       cyclist.rearWheel.rotation.x += wheelSpeed * dt;
 
-      // 5. DeepSeek R1 Full Organic Cyclist Kinematics (Pelvis, Torso, Gaze, Arms, Legs)
+      // 5. DeepSeek V4 Pro Full Organic Cyclist Kinematics & Weight Shift (Pelvis, Torso, Gaze, Arms, Legs)
       const crankAngle = cyclist.crankGroup.rotation.x;
-      cyclist.updateKinematics(crankAngle, racer.speedMps, dt);
+      cyclist.updateKinematics(
+        crankAngle,
+        racer.speedMps,
+        dt,
+        racer.slopePercent || 0,
+        racer.isBraking || false
+      );
 
-      // Motor glow effect
-      if (racer.isMotorActive && racer.batteryPct > 1) {
+      // Motor glow effect & Regenerative energy pulse (KERS)
+      if (racer.isRegenActive) {
+        cyclist.motorGlow.intensity = 2.8 + Math.sin(this.elapsedTime * 16) * 0.8;
+        cyclist.motorGlow.color.setHex(0x10b981); // Emerald green for KERS regeneration
+      } else if (racer.isMotorActive && racer.batteryPct > 1) {
         cyclist.motorGlow.intensity = 2.2 + Math.sin(this.elapsedTime * 12) * 0.6;
-        cyclist.motorGlow.color.setHex(0x38bdf8);
+        cyclist.motorGlow.color.setHex(0x38bdf8); // Cyan for motor boost
       } else {
         cyclist.motorGlow.intensity = 0;
       }

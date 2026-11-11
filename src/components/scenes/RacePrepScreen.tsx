@@ -54,7 +54,7 @@ const playTone = (freq: number, type: OscillatorType = 'sine', duration: number 
 };
 
 interface TrackOption {
-  id: 'flat_sprint' | 'hill_climb' | 'endurance_route';
+  id: 'flat_sprint' | 'hill_climb' | 'endurance_route' | 'offroad_downhill';
   name: string;
   distanceMeters: number;
   elevation: string;
@@ -106,6 +106,19 @@ const RACE_TRACKS: TrackOption[] = [
     recommendedStrategy: 'บริหารพลังงานให้สม่ำเสมอ ผ่อนคันเร่งเข้าโค้ง และเร่งเต็มที่ในทางตรง',
     gradientBadge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
   },
+  {
+    id: 'offroad_downhill',
+    name: 'เอ็มเอ็กซ์ ออฟโรด ดาวน์ฮิลล์ (MX Downhill - 800m)',
+    distanceMeters: 800,
+    elevation: 'ทางวิบากทิ้งดิ่งลงเขาสูงชัน (-22% / +8%)',
+    slopeProfile: 'ออกตัวจากยอดเขาสันเขา ดิ่งลงเขาสุดขั้ว -22% ผ่านเนินจั๊มพ์ โค้งหักศอก และแคนยอน',
+    lapCount: 1,
+    terrainType: 'เส้นทางวิบากลูกรังและหินผาภูเขา (MX Offroad Gravel & Ridge Trail)',
+    learningObjective:
+      'ทดสอบระบบ Regenerative Braking (KERS): แรงโน้มถ่วงตอนทิ้งดิ่งลงเขาช่วยปั่นไฟชาร์จกลับเข้าแบตเตอรี่ พร้อมระบบโช้คอัพซับแรงกระแทก',
+    recommendedStrategy: 'ช่วงทิ้งดิ่งลงเขาชัน -22% แตะเบรกชาร์จไฟกลับ (Regen) และถ่ายน้ำหนักตัวไปข้างหลัง (Lean Back) เพื่อทรงตัว',
+    gradientBadge: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+  },
 ];
 
 interface AIRacer {
@@ -155,7 +168,7 @@ const AI_RACERS: AIRacer[] = [
 export const RacePrepScreen: React.FC = () => {
   const { state, goToScene, updateRaceData } = useGameState();
 
-  const [selectedTrackId, setSelectedTrackId] = useState<'flat_sprint' | 'hill_climb' | 'endurance_route'>('flat_sprint');
+  const [selectedTrackId, setSelectedTrackId] = useState<'flat_sprint' | 'hill_climb' | 'endurance_route' | 'offroad_downhill'>('flat_sprint');
   const selectedTrack = RACE_TRACKS.find((t) => t.id === selectedTrackId) || RACE_TRACKS[0];
 
   // Countdown state
@@ -265,11 +278,11 @@ export const RacePrepScreen: React.FC = () => {
                 <MapPin className="w-4 h-4 text-amber-400" />
                 เลือกสนามแข่งขัน (Select Race Track)
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">3 สนามแข่งขัน</span>
+              <span className="text-[10px] text-slate-400 font-mono">4 สนามแข่งขัน (มีด่านวิบาก MX)</span>
             </div>
 
-            {/* 3 Track Option Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {/* 4 Track Option Buttons */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               {RACE_TRACKS.map((track) => {
                 const isSelected = selectedTrackId === track.id;
                 return (

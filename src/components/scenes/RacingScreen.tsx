@@ -32,7 +32,7 @@ import { Racing3DRenderer, RacerUpdate } from '../../racing3d/Racing3DRenderer';
 
 // Web Audio sound generator for racing immersion
 const playRacingTone = (
-  type: 'pedal' | 'motor_hum' | 'brake' | 'boost' | 'rank_change' | 'finish',
+  type: 'pedal' | 'motor_hum' | 'brake' | 'boost' | 'rank_change' | 'finish' | 'regen',
   freq: number = 440,
   duration: number = 0.12
 ) => {
@@ -54,6 +54,12 @@ const playRacingTone = (
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(140, ctx.currentTime);
       gain.gain.setValueAtTime(0.09, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    } else if (type === 'regen') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(420, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(840, ctx.currentTime + duration);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
     } else if (type === 'boost') {
       osc.type = 'triangle';
@@ -116,10 +122,17 @@ export const RacingScreen: React.FC = () => {
   const trackId = state.raceData?.selectedTrackId || 'flat_sprint';
   const isHillClimb = trackId === 'hill_climb';
   const isEndurance = trackId === 'endurance_route';
+  const isOffroadDownhill = trackId === 'offroad_downhill';
 
   const totalTrackLength =
     state.raceData?.trackDistanceMeters ||
-    (trackId === 'hill_climb' ? 600 : trackId === 'endurance_route' ? 1200 : 400);
+    (trackId === 'hill_climb'
+      ? 600
+      : trackId === 'endurance_route'
+      ? 1200
+      : trackId === 'offroad_downhill'
+      ? 800
+      : 400);
 
   const trackName =
     state.raceData?.trackName ||
@@ -127,6 +140,8 @@ export const RacingScreen: React.FC = () => {
       ? 'ฮิลล์ ไคลมบ์ (Hill Climb - 600m)'
       : trackId === 'endurance_route'
       ? 'เอนดูรานซ์ รูท (Endurance Route - 1,200m)'
+      : trackId === 'offroad_downhill'
+      ? 'เอ็มเอ็กซ์ ออฟโรด ดาวน์ฮิลล์ (MX Downhill - 800m)'
       : 'แฟลต สปรินต์ (Flat Sprint - 400m)');
 
   const totalLaps = isEndurance ? 3 : 1;
@@ -176,6 +191,12 @@ export const RacingScreen: React.FC = () => {
   const [motorPowerW, setMotorPowerW] = useState<number>(0);
   const [humanPowerW, setHumanPowerW] = useState<number>(0);
   const [pedalCadenceRpm, setPedalCadenceRpm] = useState<number>(0);
+
+  // Regenerative Braking (KERS) States
+  const [totalRegeneratedMah, setTotalRegeneratedMah] = useState<number>(0);
+  const [regenCurrentA, setRegenCurrentA] = useState<number>(0);
+  const [regenPowerW, setRegenPowerW] = useState<number>(0);
+  const [isRegenActive, setIsRegenActive] = useState<boolean>(false);
 
   // 3 AI Opponents
   const [aiRiders, setAiRiders] = useState<AIRiderState[]>([
@@ -244,6 +265,7 @@ export const RacingScreen: React.FC = () => {
     isPedaling,
     isMotorAssistActive,
     isBraking,
+    isRegenActive,
     batteryRemainingMah,
     totalCapacityMah,
     bikeColor,
@@ -261,6 +283,7 @@ export const RacingScreen: React.FC = () => {
       isPedaling,
       isMotorAssistActive,
       isBraking,
+      isRegenActive,
       batteryRemainingMah,
       totalCapacityMah,
       bikeColor,
@@ -278,6 +301,16 @@ export const RacingScreen: React.FC = () => {
   // Track slope computation based on trackId and distance z
   const getTrackSlopePercent = useCallback(
     (z: number) => {
+      if (isOffroadDownhill) {
+        if (z < 65) return -4;   // Ridge roll-in (-4%)
+        if (z < 180) return -20; // Steep gully descent (-20%)
+        if (z < 280) return -22; // Extreme technical rock downhill (-22%)
+        if (z < 380) return 8;   // Jump kicker ramp (+8%)
+        if (z < 460) return -16; // Air landing slope (-16%)
+        if (z < 600) return -9;  // Winding canyon descent (-9%)
+        if (z < 720) return -3;  // Flattening dirt run (-3%)
+        return 0;                // Finish arena (0%)
+      }
       if (isHillClimb) {
         if (z < 100) return 5;
         if (z < 250) return 14; // Steep climb 1 (+14%)
@@ -291,12 +324,15 @@ export const RacingScreen: React.FC = () => {
       }
       return 0; // Flat sprint
     },
-    [isHillClimb, isEndurance]
+    [isHillClimb, isEndurance, isOffroadDownhill]
   );
 
   // Track curvature computation based on distance z
   const getTrackCurvature = useCallback(
     (z: number) => {
+      if (isOffroadDownhill) {
+        return Math.sin((z / 90) * Math.PI) * 0.95;
+      }
       if (isEndurance) {
         return Math.sin((z / 120) * Math.PI) * 0.8;
       }
@@ -305,7 +341,7 @@ export const RacingScreen: React.FC = () => {
       }
       return 0; // straight sprint
     },
-    [isEndurance, isHillClimb]
+    [isEndurance, isHillClimb, isOffroadDownhill]
   );
 
   // Keyboard controls listener
@@ -463,12 +499,63 @@ export const RacingScreen: React.FC = () => {
           setDownhillSavedWh((prev) => prev + (chosenMotorVoltage * 3.5 * dt) / 3600);
         }
 
+        // 3.1 Regenerative Braking (KERS) & Battery Energy Recovery
+        // Triggered when braking at speed (playerSpeedMps > 1.8) or steep downhill coasting (slope < -8% & playerSpeedMps > 4.5)
+        let regenCurrent = 0;
+        let regenPower = 0;
+        let regenBrakingForceN = 0;
+        const isRegenCandidate =
+          (isBraking && playerSpeedMps > 1.8) ||
+          (currentSlope < -8 && playerSpeedMps > 4.5 && !isMotorAssistActive);
+
+        if (isRegenCandidate && batteryRemainingMah < totalCapacityMah) {
+          // Generator Induced Back-EMF based on motor rating & speed
+          const genKvFactor = chosenMotorVoltage * 0.052;
+          const inducedGenV = playerSpeedMps * genKvFactor;
+
+          if (inducedGenV > nominalPackV * 0.55 || isBraking) {
+            const rawRegenA = Math.max(
+              0,
+              (inducedGenV - nominalPackV * 0.5) / (0.55 + internalResistance)
+            );
+            regenCurrent = Math.min(5.2, rawRegenA * (isBraking ? 1.0 : 0.65));
+
+            if (regenCurrent > 0.15) {
+              regenPower = Math.round(nominalPackV * regenCurrent);
+              // Electromagnetic back-torque braking resistance (smooth magnetic deceleration)
+              regenBrakingForceN = Math.min(130, (regenPower * 0.95) / Math.max(playerSpeedMps, 1.5));
+
+              // Real chemical recharge with 75% coulombic efficiency
+              const rechargeMah = (regenCurrent * 1000 * dt * 0.75) / 3600;
+              setBatteryRemainingMah((prev) => Math.min(totalCapacityMah, prev + rechargeMah));
+              setTotalRegeneratedMah((prev) => prev + rechargeMah);
+              setIsRegenActive(true);
+            } else {
+              setIsRegenActive(false);
+            }
+          } else {
+            setIsRegenActive(false);
+          }
+        } else {
+          setIsRegenActive(false);
+        }
+
+        setRegenCurrentA(Number(regenCurrent.toFixed(2)));
+        setRegenPowerW(regenPower);
+
         setMotorCurrentA(Number(motorCurrent.toFixed(2)));
         setLoadedVoltageV(Number(loadedVoltage.toFixed(2)));
         setMotorPowerW(Math.round(motorPower));
 
-        // 4. Net Acceleration: F_net = F_pedal + F_motor - F_drag - F_roll - F_slope - F_brake
-        const netForceN = humanForceN + motorThrustForceN - aeroDragN - rollingResistanceN - slopeForceN - brakeForceN;
+        // 4. Net Acceleration: F_net = F_pedal + F_motor - F_drag - F_roll - F_slope - F_brake - F_regen
+        const netForceN =
+          humanForceN +
+          motorThrustForceN -
+          aeroDragN -
+          rollingResistanceN -
+          slopeForceN -
+          brakeForceN -
+          regenBrakingForceN;
         const accelerationMps2 = netForceN / totalMassKg;
 
         // 5. Update Speed with friction clamp
@@ -659,6 +746,8 @@ export const RacingScreen: React.FC = () => {
             jerseyColor: tel.outfitColor,
             bikeColor: tel.bikeColor,
             character: tel.character,
+            slopePercent: getTrackSlopePercent(tel.playerZ),
+            isRegenActive: tel.isRegenActive,
           },
           ...tel.aiRiders.map((ai) => ({
             id: ai.id,
@@ -669,6 +758,8 @@ export const RacingScreen: React.FC = () => {
             isPedaling: ai.speedMps > 0.5,
             isMotorActive: ai.batteryRemainingMah > 20,
             isBraking: false,
+            slopePercent: getTrackSlopePercent(ai.z),
+            isRegenActive: false,
             batteryPct: Math.round((ai.batteryRemainingMah / ai.totalCapacityMah) * 100),
             color: ai.color,
             isPlayer: false,
@@ -837,8 +928,10 @@ export const RacingScreen: React.FC = () => {
       batteryExhaustedMidway: hasBatteryExhausted || remainingEnergy <= 5,
       stalledOnHill: isStalledOnHill,
       motorVoltageMatchRatio: voltageMatchRatio,
-      maxSlopeEncountered: 16,
+      maxSlopeEncountered: isOffroadDownhill ? 22 : 16,
       downhillEnergySavedWh: Math.round(downhillSavedWh * 10) / 10,
+      regeneratedEnergyMah: Math.round(totalRegeneratedMah * 10) / 10,
+      maxRegenPowerW: Math.round(nominalPackV * 4.8),
       chosenMotorVoltage,
       chosenPackVoltage: nominalPackV,
     });
@@ -900,13 +993,13 @@ export const RacingScreen: React.FC = () => {
             </div>
           )}
 
-          {isHillClimb && (
+          {(isHillClimb || isOffroadDownhill) && (
             <div
               className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1 border ${
                 currentSlope > 0
                   ? 'bg-amber-950/70 border-amber-500/40 text-amber-300'
                   : currentSlope < 0
-                  ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300 animate-pulse'
+                  ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                   : 'bg-slate-900 border-slate-700 text-slate-300'
               }`}
             >
@@ -915,7 +1008,7 @@ export const RacingScreen: React.FC = () => {
                 {currentSlope > 0
                   ? `ขึ้นเขา: +${currentSlope}%`
                   : currentSlope < 0
-                  ? `ลงเขา: ${currentSlope}% (ปล่อยไหลฟรี 0W!)`
+                  ? `ลงเขาชัน: ${currentSlope}% (KERS ชาร์จไฟกลับ!)`
                   : 'ทางราบ'}
               </span>
             </div>
@@ -979,10 +1072,18 @@ export const RacingScreen: React.FC = () => {
                 {motorPowerW} W ({motorCurrentA} A @ {loadedVoltageV} V)
               </strong>
             </span>
+
+            {isRegenActive && (
+              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/60 text-emerald-300 animate-pulse font-bold shadow-[0_0_12px_rgba(16,185,129,0.35)]">
+                <BatteryCharging className="w-3.5 h-3.5 text-emerald-400" />
+                <span>KERS ชาร์จกลับ:</span>
+                <strong className="text-emerald-300">+{regenPowerW} W (+{regenCurrentA} A)</strong>
+              </span>
+            )}
           </div>
 
           <div className="text-[11px] text-slate-400 hidden sm:inline">
-            💡 กดค้างเพื่อปั่น (Pedal) + กดระบบไฟฟ้าช่วยปั่น (Motor Assist) เพื่อทำความเร็วสูงสุด
+            💡 กดค้างเพื่อปั่น (Pedal) + กดปุ่มไฟฟ้าช่วยปั่น (Motor) หรือกดเบรกหน่วงชาร์จไฟกลับ (KERS Regen)
           </div>
         </div>
 
@@ -1033,18 +1134,18 @@ export const RacingScreen: React.FC = () => {
             </button>
           </div>
 
-          {/* Brake Button (2 Cols) */}
+          {/* Brake / KERS Regen Button (2 Cols) */}
           <div className="col-span-2">
             <button
               onMouseDown={() => {
                 setIsBraking(true);
-                playRacingTone('brake');
+                playRacingTone(isRegenActive ? 'regen' : 'brake');
               }}
               onMouseUp={() => setIsBraking(false)}
               onTouchStart={(e) => {
                 e.preventDefault();
                 setIsBraking(true);
-                playRacingTone('brake');
+                playRacingTone(isRegenActive ? 'regen' : 'brake');
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
@@ -1052,12 +1153,16 @@ export const RacingScreen: React.FC = () => {
               }}
               className={`w-full py-4 md:py-5 rounded-2xl font-black text-xs md:text-sm flex flex-col items-center justify-center gap-0.5 transition active:scale-95 border min-h-[58px] ${
                 isBraking
-                  ? 'bg-rose-500 text-white border-rose-400 shadow-lg shadow-rose-500/40'
+                  ? isRegenActive
+                    ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-lg shadow-emerald-500/50'
+                    : 'bg-rose-500 text-white border-rose-400 shadow-lg shadow-rose-500/40'
+                  : isRegenActive
+                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/50 animate-pulse'
                   : 'bg-slate-900 hover:bg-slate-800 text-rose-300 border-rose-900/60'
               }`}
             >
-              <span className="text-base md:text-lg">🛑</span>
-              <span>เบรก</span>
+              <span className="text-base md:text-lg">{isRegenActive ? '⚡' : '🛑'}</span>
+              <span>{isRegenActive ? 'REGEN' : 'เบรก'}</span>
             </button>
           </div>
 

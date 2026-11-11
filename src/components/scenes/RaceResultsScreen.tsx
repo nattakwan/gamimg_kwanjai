@@ -140,6 +140,10 @@ export const RaceResultsScreen: React.FC = () => {
       return `❌ แบตเตอรี่หมดพลังงานระหว่างการแข่งขัน ส่งผลให้มอเตอร์ไฟฟ้าหยุดทำงานกะทันหัน และรถสูญเสียแรงขับเคลื่อนจนหยุดนิ่งบนเนินเขา`;
     }
 
+    if (trackId === 'offroad_downhill') {
+      const regenMah = state.raceData?.regeneratedEnergyMah || 0;
+      return `🚵 ผลการแข่งขันบนเส้นทางวิบาก MX Offroad Downhill (800m)! คุณควบคุมจักรยานทิ้งดิ่งลงเขาชัน -22% ผ่านเนินจั๊มพ์ได้อย่างมีเสถียรภาพ และใช้ระบบ Regenerative Braking (KERS) ชาร์จพลังงานกลับคืนสู่แบตเตอรี่ได้ถึง ${regenMah > 0 ? regenMah.toFixed(1) : '15.4'} mAh ระบบช่วงล่างโช้คอัพหน้าซับแรงกระแทกและการถ่ายน้ำหนักตัว (Lean Back) ช่วยให้เข้าเส้นชัยได้อย่างสมบูรณ์แบบ!`;
+    }
     if (trackId === 'hill_climb') {
       return `🏆 ผลสำเร็จจากการจับคู่วิศวกรรมยอดเยี่ยม! มอเตอร์ ${chosenMotorV}V ทำงานคู่กับชุดแบตเตอรี่ ${packV}V (${packMah} mAh) ได้อย่างกลมกลืน ช่วงไต่เขาชัน 14-16% มอเตอร์สร้างแรงบิดเอาชนะแรงโน้มถ่วง F = mg*sin(θ) ได้อย่างราบรื่น และในช่วงลงเขาชัน 9% คุณประหยัดพลังงานได้ ${downhillSavedWh > 0 ? downhillSavedWh.toFixed(1) : '1.2'} Wh จากการปล่อยไหลฟรี (Coasting) ทำให้มีพลังงานเหลือรอดเข้าเส้นชัยได้อย่างสง่างาม!`;
     }
@@ -393,6 +397,24 @@ export const RaceResultsScreen: React.FC = () => {
                   {remainingMah} mAh ({remainingPct}%)
                 </span>
               </div>
+
+              {state.raceData?.regeneratedEnergyMah && state.raceData.regeneratedEnergyMah > 0 ? (
+                <div className="bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-500/40 col-span-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BatteryCharging className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">พลังงานที่ชาร์จกลับ (KERS Regenerated)</span>
+                      <span className="font-mono font-bold text-emerald-300 text-sm">
+                        +{state.raceData.regeneratedEnergyMah.toFixed(1)} mAh (
+                        {((state.raceData.regeneratedEnergyMah * packV) / 1000).toFixed(2)} Wh)
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+                    KERS REGEN
+                  </span>
+                </div>
+              ) : null}
             </div>
 
             {/* Scientific Explanation of Battery Choice */}
