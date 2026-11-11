@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useGameState } from '../../context/GameStateContext';
 import { AvatarRenderer } from '../common/AvatarRenderer';
+import { Bike3DViewer } from '../garage/Bike3DViewer';
 import { MOTOR_CATALOG, MotorSpec, MotorVoltageRating } from '../../types/game';
 
 const playTone = (freq: number, type: OscillatorType = 'sine', duration: number = 0.15) => {
@@ -490,107 +491,16 @@ export const BikeGarageScreen: React.FC = () => {
                 </div>
               </div>
 
-              {/* Cartoon Electric-Assist Bicycle Graphic */}
-              <div className="relative flex-1 max-w-sm flex flex-col items-center">
-                <svg viewBox="0 0 320 180" className="w-full h-auto drop-shadow-2xl">
-                  {/* Floor Shadow */}
-                  <ellipse cx="160" cy="165" rx="140" ry="8" fill="#020617" opacity="0.6" />
-
-                  {/* Rear Wheel */}
-                  <g style={{ transformOrigin: '60px 125px', transform: `rotate(${wheelRotation}deg)` }}>
-                    <circle cx="60" cy="125" r="38" stroke="#1e293b" strokeWidth="10" fill="none" />
-                    <circle cx="60" cy="125" r="33" stroke="#475569" strokeWidth="2" fill="none" />
-                    {/* Spokes */}
-                    <line x1="60" y1="92" x2="60" y2="158" stroke="#94a3b8" strokeWidth="1.5" />
-                    <line x1="27" y1="125" x2="93" y2="125" stroke="#94a3b8" strokeWidth="1.5" />
-                    <circle cx="60" cy="125" r="7" fill="#64748b" />
-                  </g>
-
-                  {/* Front Wheel */}
-                  <g style={{ transformOrigin: '260px 125px', transform: `rotate(${wheelRotation}deg)` }}>
-                    <circle cx="260" cy="125" r="38" stroke="#1e293b" strokeWidth="10" fill="none" />
-                    <circle cx="260" cy="125" r="33" stroke="#475569" strokeWidth="2" fill="none" />
-                    <line x1="260" y1="92" x2="260" y2="158" stroke="#94a3b8" strokeWidth="1.5" />
-                    <line x1="227" y1="125" x2="293" y2="125" stroke="#94a3b8" strokeWidth="1.5" />
-                    <circle cx="260" cy="125" r="7" fill="#64748b" />
-                  </g>
-
-                  {/* Rear Hub Motor */}
-                  <circle cx="60" cy="125" r="16" fill="#0f172a" stroke="#06b6d4" strokeWidth="2.5" />
-                  <text x="60" y="127" fill="#06b6d4" fontSize="6.5" fontWeight="bold" textAnchor="middle">
-                    {selectedMotor.ratedVoltage}V
-                  </text>
-                  <text x="60" y="134" fill="#38bdf8" fontSize="5" fontWeight="bold" textAnchor="middle">
-                    {selectedMotor.powerWatts}W
-                  </text>
-
-                  {/* Frame Tubes */}
-                  <polyline
-                    points="60,125 140,125 210,65 115,65 60,125"
-                    stroke={frameColor}
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                  {/* Seat tube */}
-                  <line x1="140" y1="125" x2="115" y2="50" stroke={frameColor} strokeWidth="7" strokeLinecap="round" />
-                  {/* Front fork */}
-                  <line x1="260" y1="125" x2="230" y2="45" stroke={frameColor} strokeWidth="7" strokeLinecap="round" />
-                  {/* Downtube */}
-                  <line x1="140" y1="125" x2="230" y2="45" stroke={frameColor} strokeWidth="8" strokeLinecap="round" />
-
-                  {/* Handlebars */}
-                  <path d="M225 45 L245 40 L255 52" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" fill="none" />
-                  <circle cx="255" cy="52" r="3" fill="#0284c7" />
-
-                  {/* Saddle */}
-                  <path d="M102 50 C110 46, 128 46, 134 52" stroke="#0f172a" strokeWidth="9" strokeLinecap="round" />
-
-                  {/* Battery Downtube Mounting Bracket */}
-                  <rect
-                    x="150"
-                    y="74"
-                    width="50"
-                    height="26"
-                    rx="5"
-                    fill="#020617"
-                    stroke="#475569"
-                    strokeWidth="1.5"
-                    strokeDasharray={isBatteryInstalled ? 'none' : '3 2'}
-                  />
-
-                  {/* Battery Pack Graphic */}
-                  {isBatteryInstalled && (
-                    <g className={isInstalling ? 'animate-bounce' : ''}>
-                      <rect
-                        x="152"
-                        y="76"
-                        width="46"
-                        height="22"
-                        rx="4"
-                        fill={isVoltageMatch ? '#10b981' : isUnderVoltage ? '#f59e0b' : '#f43f5e'}
-                        stroke="#ffffff"
-                        strokeWidth="1.5"
-                      />
-                      <text x="175" y="87" fill="#022c22" fontSize="7" fontWeight="black" textAnchor="middle">
-                        ⚡ {selectedPack.nominalVoltage.toFixed(1)}V
-                      </text>
-                      <text x="175" y="94" fill="#022c22" fontSize="5.5" fontWeight="bold" textAnchor="middle">
-                        {selectedPack.capacityMah}mAh
-                      </text>
-                    </g>
-                  )}
-
-                  {!isBatteryInstalled && (
-                    <text x="175" y="90" fill="#94a3b8" fontSize="6.5" textAnchor="middle">
-                      (แท่นแบตเตอรี่ว่าง)
-                    </text>
-                  )}
-                </svg>
+              {/* Interactive 3D Electric Bicycle Viewer (Supports Custom GLB from Blender) */}
+              <div className="relative flex-1 min-h-[320px] w-full flex flex-col items-center justify-center bg-slate-950/70 rounded-2xl border border-indigo-500/30 p-2 shadow-2xl overflow-hidden">
+                <Bike3DViewer
+                  frameColor={frameColor}
+                  motorVoltage={selectedMotor.ratedVoltage}
+                  batteryPackName={isBatteryInstalled ? selectedPack.name : undefined}
+                />
 
                 {/* Battery Mount Status Tag */}
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-2 mt-1 z-10">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
                       isBatteryInstalled
@@ -602,16 +512,11 @@ export const BikeGarageScreen: React.FC = () => {
                   >
                     {isBatteryInstalled ? (
                       <>
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>
-                          ติดตั้งแล้ว: {selectedPack.name} (คู่กับมอเตอร์ {selectedMotor.ratedVoltage}V)
-                        </span>
+                        <Zap className="w-3.5 h-3.5" />
+                        ติดตั้ง: {selectedPack.code} ({selectedPack.nominalVoltage.toFixed(1)}V {selectedPack.capacityMah}mAh)
                       </>
                     ) : (
-                      <>
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                        <span>ยังไม่ได้ติดตั้งชุดแบตเตอรี่</span>
-                      </>
+                      'ยังไม่ได้ติดตั้งแบตเตอรี่'
                     )}
                   </span>
                 </div>

@@ -14,6 +14,7 @@
  */
 
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { CharacterState } from '../types/game';
 
 // ─── Track Geometry Constants ───────────────────────────────────────────────
@@ -1075,6 +1076,7 @@ export class Racing3DRenderer {
   // Time & animations
   private elapsedTime = 0;
   private resizeObserver: ResizeObserver;
+  private customBikeModel: THREE.Group | null = null;
 
   constructor(
     container: HTMLDivElement,
@@ -1087,6 +1089,9 @@ export class Racing3DRenderer {
     this.trackId = trackId;
     this.laps = laps;
     this.isClosedTrack = trackId !== 'hill_climb' && trackId !== 'offroad_downhill';
+
+    // Try loading custom Blender GLB model for player bike
+    this.loadCustomBikeModel();
 
     // ── 1. Scene & Atmosphere ──
     this.scene = new THREE.Scene();
@@ -1842,6 +1847,56 @@ export class Racing3DRenderer {
     this.scene.add(blimpGroup);
   }
 
+  // ─── Custom Blender GLB Bike Loader ─────────────────────────────────────────
+
+  private loadCustomBikeModel() {
+    const loader = new GLTFLoader();
+    const candidatePaths = [
+      '/assets/models/ebike.glb',
+      '/assets/models/E_BYCLYCE.glb',
+      '/assets/models/bike.glb',
+    ];
+
+    const tryLoad = (idx: number) => {
+      if (idx >= candidatePaths.length) return;
+      loader.load(
+        candidatePaths[idx],
+        (gltf) => {
+          const model = gltf.scene;
+          const box = new THREE.Box3().setFromObject(model);
+          const size = box.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const scale = 1.18 / Math.max(maxDim, 0.001);
+          model.scale.setScalar(scale);
+
+          const center = box.getCenter(new THREE.Vector3()).multiplyScalar(scale);
+          model.position.sub(center);
+          model.position.y += 0.04;
+
+          model.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+
+          this.customBikeModel = model;
+
+          // If player is already on the track, equip custom frame
+          const playerCyclist = this.cyclists.get('player');
+          if (playerCyclist) {
+            playerCyclist.frame.clear();
+            playerCyclist.frame.add(model.clone());
+          }
+        },
+        undefined,
+        () => tryLoad(idx + 1)
+      );
+    };
+
+    tryLoad(0);
+  }
+
   // ─── Cyclist Management ───────────────────────────────────────────────────
 
   addRacer(
@@ -1855,6 +1910,13 @@ export class Racing3DRenderer {
     if (this.cyclists.has(id)) return;
 
     const cyclist = createCyclist(name, jerseyColor, bikeColor, isPlayer, character);
+
+    // If custom Blender model is available, attach to player bicycle frame
+    if (isPlayer && this.customBikeModel) {
+      cyclist.frame.clear();
+      cyclist.frame.add(this.customBikeModel.clone());
+    }
+
     this.scene.add(cyclist.group);
     this.cyclists.set(id, cyclist);
   }
