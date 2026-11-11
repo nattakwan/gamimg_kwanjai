@@ -1,7 +1,6 @@
 ---
+trigger: always_on
 description: AI model delegation rules between Gemini Flash, DeepSeek Reasoner, and DeepSeek Chat
-globs: ["**/*"]
-always_on: true
 ---
 
 # AI Model Delegation Rules for Gaming Kwanjai
