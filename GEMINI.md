@@ -38,12 +38,9 @@
 
 ---
 
-## 3. การซิงค์และบันทึกงานไปยัง OneDrive (Cross-Location Sync: Home & University)
-* **โฟลเดอร์เป้าหมายบน OneDrive:** `C:\Users\natta\OneDrive\RMUTL\Gaming`
-* **กฎก่อนเลิกงานทุกครั้ง (Mandatory Pre-Exit Rule):**
-  - ก่อนจบงาน, สรุปผล หรือส่งมอบงานให้ผู้ใช้ทุกครั้ง ต้องทำการซิงค์ไฟล์โปรเจกต์จาก `e:\gittest\gamimg_kwanjai` ไปยัง `C:\Users\natta\OneDrive\RMUTL\Gaming` เสมอ (ยกเว้น `node_modules`, `.vite`, `dist`)
-  - คำสั่งสำหรับซิงค์: `npm run sync:onedrive` (หรือ `node scripts/sync_onedrive.cjs`)
-  - คำสั่งนำเข้าแชท: `npm run chat:export` (ส่งออก) และ `npm run chat:import` (นำเข้าที่เครื่องมหาลัย)
-  - เพื่อให้ผู้ใช้สามารถเดินทางไปเปิดทำงานต่อที่มหาวิทยาลัยได้ทันที โดยโค้ดและประวัติแชทเป็นเวอร์ชันล่าสุด 100% เสมอ
+## 3. สภาพแวดล้อมการพัฒนา (Single-Machine Local Development)
+* **พื้นที่พัฒนาหลัก:** `e:\gittest\gamimg_kwanjai`
+* **สถานะโครงการข้ามเครื่อง:** ยกเลิกการซิงค์และใช้งานบนเครื่องมหาวิทยาลัยแล้ว เน้นการพัฒนา ทดสอบ และรันบนเครื่องนี้เครื่องเดียว (Local Workstation)
+* ไม่จำเป็นต้องรันสคริปต์ซิงค์ OneDrive หรือ Chat Export/Import ก่อนจบงานอีกต่อไป ให้เน้นการพัฒนาฟีเจอร์ กราฟิก 3D และระบบเกมบนเครื่องนี้โดยตรง
 
 

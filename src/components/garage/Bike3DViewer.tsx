@@ -225,9 +225,10 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
       return bikeGroup;
     };
 
-    // 6. Try to load custom Blender GLB model first
+    // 6. Try to load custom Blender/glTF GLB model first
     const gltfLoader = new GLTFLoader();
     const candidatePaths = [
+      '/assets/models/porter_ebike_concept__lumelectrics.glb',
       '/assets/models/ebike.glb',
       '/assets/models/E_BYCLYCE.glb',
       '/assets/models/bike.glb',
@@ -428,3 +429,4 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
     </div>
   );
 };
+

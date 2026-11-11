@@ -26,8 +26,7 @@ Always follow these principles when distributing or recommending work among mode
    - Multi-file codebase overview and architectural summarization with massive context window
    - Fast React/Tailwind frontend layout design & modals
 
-4. **Cross-Location OneDrive Sync Rule (Home & University)**:
-   - Before ending a task/session or when asked to save/wrap up, always run `npm run sync:onedrive` (or `node scripts/sync_onedrive.cjs`).
-   - Syncs all project source code, assets, and configs to `C:\Users\natta\OneDrive\RMUTL\Gaming` (excluding `node_modules`, `.vite`, `dist`).
-   - Ensures the developer can switch seamlessly between Home and University with identical up-to-date files.
+4. **Single-Machine Local Development (Home Workstation Only)**:
+   - All development, testing, and debugging are executed exclusively on `e:\gittest\gamimg_kwanjai`.
+   - University/OneDrive cross-location sync is discontinued as per user direction. No mandatory OneDrive sync is required before closing tasks.
 

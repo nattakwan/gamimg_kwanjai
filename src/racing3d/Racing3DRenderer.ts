@@ -1847,11 +1847,12 @@ export class Racing3DRenderer {
     this.scene.add(blimpGroup);
   }
 
-  // ─── Custom Blender GLB Bike Loader ─────────────────────────────────────────
+  // ─── Custom Blender/glTF GLB Bike Loader ─────────────────────────────────────────
 
   private loadCustomBikeModel() {
     const loader = new GLTFLoader();
     const candidatePaths = [
+      '/assets/models/porter_ebike_concept__lumelectrics.glb',
       '/assets/models/ebike.glb',
       '/assets/models/E_BYCLYCE.glb',
       '/assets/models/bike.glb',
@@ -1866,12 +1867,18 @@ export class Racing3DRenderer {
           const box = new THREE.Box3().setFromObject(model);
           const size = box.getSize(new THREE.Vector3());
           const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 1.18 / Math.max(maxDim, 0.001);
+          const scale = 1.25 / Math.max(maxDim, 0.001);
           model.scale.setScalar(scale);
 
-          const center = box.getCenter(new THREE.Vector3()).multiplyScalar(scale);
+          // If modeled lengthways along X, align with forward +Z race track vector
+          if (size.x > size.z) {
+            model.rotation.y = -Math.PI / 2;
+          }
+
+          const recomputedBox = new THREE.Box3().setFromObject(model);
+          const center = recomputedBox.getCenter(new THREE.Vector3());
           model.position.sub(center);
-          model.position.y += 0.04;
+          model.position.y += 0.35; // align bottom bracket with cyclist pelvis & crank
 
           model.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
