@@ -12,6 +12,8 @@ export interface DeepSeekConfig {
   baseURL: string;
   defaultModel: string;
   reasoningModel: string;
+  flashModel: string;
+  proModel: string;
   apiKey: string;
 }
 
@@ -34,8 +36,10 @@ const getApiKey = (): string => {
 export const DEEPSEEK_CONFIG: DeepSeekConfig = {
   provider: 'DeepSeek',
   baseURL: 'https://api.deepseek.com',
-  defaultModel: 'deepseek-chat',
-  reasoningModel: 'deepseek-reasoner',
+  defaultModel: 'deepseek-flash',
+  reasoningModel: 'deepseek-v4-pro',
+  flashModel: 'deepseek-flash',
+  proModel: 'deepseek-v4-pro',
   apiKey: getApiKey(),
 };
 
@@ -45,7 +49,7 @@ export interface ChatMessage {
 }
 
 export interface DeepSeekRequestOptions {
-  model?: 'deepseek-chat' | 'deepseek-reasoner' | string;
+  model?: 'deepseek-flash' | 'deepseek-v4-pro' | 'deepseek-chat' | 'deepseek-reasoner' | string;
   messages: ChatMessage[];
   temperature?: number;
   max_tokens?: number;

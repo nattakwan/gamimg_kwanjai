@@ -1,6 +1,20 @@
 {
   "models": [
     {
+      "title": "DeepSeek V4 Pro",
+      "provider": "openai",
+      "model": "deepseek-v4-pro",
+      "apiBase": "https://api.deepseek.com/v1",
+      "apiKey": "${DEEPSEEK_API_KEY}"
+    },
+    {
+      "title": "DeepSeek Flash",
+      "provider": "openai",
+      "model": "deepseek-flash",
+      "apiBase": "https://api.deepseek.com/v1",
+      "apiKey": "${DEEPSEEK_API_KEY}"
+    },
+    {
       "title": "Gemini 2.0 Flash",
       "provider": "gemini",
       "model": "gemini-2.0-flash",
@@ -12,19 +26,12 @@
       "model": "deepseek-reasoner",
       "apiBase": "https://api.deepseek.com/v1",
       "apiKey": "${DEEPSEEK_API_KEY}"
-    },
-    {
-      "title": "DeepSeek Chat",
-      "provider": "openai",
-      "model": "deepseek-chat",
-      "apiBase": "https://api.deepseek.com/v1",
-      "apiKey": "${DEEPSEEK_API_KEY}"
     }
   ],
   "tabAutocompleteModel": {
-    "title": "DeepSeek Chat",
+    "title": "DeepSeek Flash",
     "provider": "openai",
-    "model": "deepseek-chat",
+    "model": "deepseek-flash",
     "apiBase": "https://api.deepseek.com/v1",
     "apiKey": "${DEEPSEEK_API_KEY}"
   }

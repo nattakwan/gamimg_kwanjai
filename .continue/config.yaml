@@ -2,9 +2,14 @@ name: DeepSeek Project Config
 version: 1.0.0
 schema: v1
 models:
-  - name: DeepSeek Chat
+  - name: DeepSeek V4 Pro
     provider: openai
-    model: deepseek-chat
+    model: deepseek-v4-pro
+    apiBase: https://api.deepseek.com/v1
+    apiKey: ${{ env.DEEPSEEK_API_KEY }}
+  - name: DeepSeek Flash
+    provider: openai
+    model: deepseek-flash
     apiBase: https://api.deepseek.com/v1
     apiKey: ${{ env.DEEPSEEK_API_KEY }}
   - name: DeepSeek Reasoner
@@ -12,4 +17,10 @@ models:
     model: deepseek-reasoner
     apiBase: https://api.deepseek.com/v1
     apiKey: ${{ env.DEEPSEEK_API_KEY }}
+  - name: DeepSeek Chat
+    provider: openai
+    model: deepseek-chat
+    apiBase: https://api.deepseek.com/v1
+    apiKey: ${{ env.DEEPSEEK_API_KEY }}
+
 

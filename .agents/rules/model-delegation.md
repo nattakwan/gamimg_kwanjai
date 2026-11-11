@@ -1,28 +1,29 @@
 ---
 trigger: always_on
-description: AI model delegation rules between Gemini Flash, DeepSeek Reasoner, and DeepSeek Chat
+description: AI model delegation rules between DeepSeek V4 Pro, DeepSeek Flash, and Gemini Flash
 ---
 
 # AI Model Delegation Rules for Gaming Kwanjai
 
 Always follow these principles when distributing or recommending work among models:
 
-1. **Gemini Flash (Vision & Wide Context)**:
+1. **DeepSeek V4 Pro (3D Math, Spatial Coordinates, Kinematics & Deep Logic)**:
+   - Three.js procedural 3D modeling (vertices, X/Y/Z coordinates, pivots, splines)
+   - Kinematics & two-bone inverse kinematics (joint calculation, pedaling legs, steering arms, character rigs)
+   - Physics & battery equations (aerodynamics, rolling resistance, slope resistance, motor torque curve, pack series/parallel circuits)
+   - Opponent AI pacing & strategy engine
+   - High-complexity bug analysis, memory leaks & WebGL buffer optimization
+
+2. **DeepSeek Flash (Fast Coding, Routine Development & Tab Autocomplete)**:
+   - Real-time tab autocomplete and inline suggestions (Continue / Roo Code)
+   - TypeScript interfaces, types, configs, constants
+   - Material properties (`roughness`, `metalness`, `shininess`), color palettes, Tailwind CSS styling
+   - Helper/utility math converters, time formatters, unit tests
+
+3. **Gemini Flash (Vision, UI & Large Context)**:
    - UI mockup and reference image analysis
    - Multi-file codebase overview and architectural summarization
-   - Fast React/Tailwind frontend layout design
-
-2. **DeepSeek Reasoner (3D Math, Spatial Coordinates & Deep Logic)**:
-   - Three.js procedural 3D modeling (vertices, X/Y/Z coordinates, pivots, splines)
-   - Kinematics & joint calculation (pedaling legs, character rigs)
-   - Physics & battery equations (aerodynamics, rolling resistance, motor torque curve)
-   - Opponent AI pacing & complex bug analysis
-
-3. **DeepSeek Chat (Fast Coding & Routine Development)**:
-   - Tab autocomplete and inline suggestions
-   - TypeScript interfaces, types, constants
-   - Helper/utility math converters and formatting
-   - Color, materials, and lighting property adjustments
+   - Fast React/Tailwind frontend layout design & modals
 
 4. **Cross-Location OneDrive Sync Rule (Home & University)**:
    - Before ending a task/session or when asked to save/wrap up, always run `npm run sync:onedrive` (or `node scripts/sync_onedrive.cjs`).
