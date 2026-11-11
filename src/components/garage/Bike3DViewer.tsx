@@ -4,16 +4,17 @@
  *
  * Bike3DViewer — Interactive 3D Bicycle Viewer for Garage (Scene 11).
  * Supports:
- * 1. Loading custom GLTF/GLB models exported from Blender (e.g., /assets/models/ebike.glb).
- * 2. Automatic centering, bounding box normalisation, and material assignment.
+ * 1. Loading custom GLTF/GLB models exported from Blender (e.g., /assets/models/porter_ebike_concept__lumelectrics.glb).
+ * 2. Automatic centering, bounding box normalisation, and exact tire-to-floor contact alignment.
  * 3. Graceful procedural fallback 3D e-bike with frame color, battery pack, and motor when GLB is not yet placed.
  * 4. 360° touch/mouse drag rotation and smooth cinematic turntable animation.
+ * 5. Bright high-tech showroom lighting and clean studio aesthetic.
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { RotateCw, Sparkles, Box, CheckCircle2 } from 'lucide-react';
+import { RotateCw, Box, CheckCircle2 } from 'lucide-react';
 
 interface Bike3DViewerProps {
   frameColor: string;
@@ -48,16 +49,16 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    const width = container.clientWidth || 480;
-    const height = container.clientHeight || 340;
+    const width = container.clientWidth || 540;
+    const height = container.clientHeight || 380;
 
     // 1. Scene setup
     const scene = new THREE.Scene();
 
-    // 2. Camera setup (Iso perspective showcasing bike profile)
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    camera.position.set(0, 0.45, 2.7);
-    camera.lookAt(0, 0, 0);
+    // 2. Camera setup — framing the enlarged bicycle prominently in bright daylight
+    const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
+    camera.position.set(0, 0.46, 2.35);
+    camera.lookAt(0, 0.06, 0);
 
     // 3. WebGL Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -65,48 +66,91 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
-    // 4. Studio Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    // 4. Bright Studio Showroom Lighting (Clean Daylight & High Key)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
-    keyLight.position.set(4, 5, 4);
+    // Main Sunlight Key
+    const keyLight = new THREE.DirectionalLight(0xfffbeb, 2.3);
+    keyLight.position.set(4, 6, 4);
     keyLight.castShadow = true;
-    keyLight.shadow.mapSize.width = 1024;
-    keyLight.shadow.mapSize.height = 1024;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.bias = -0.0008;
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
-    fillLight.position.set(-4, 3, -2);
+    // Cool Sky Fill Light
+    const fillLight = new THREE.DirectionalLight(0xbae6fd, 1.35);
+    fillLight.position.set(-4, 4, 3);
     scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xf59e0b, 1.0);
-    rimLight.position.set(0, -2, -4);
+    // Warm Rim / Back Light
+    const rimLight = new THREE.DirectionalLight(0xfef3c7, 1.1);
+    rimLight.position.set(0, 4, -4);
     scene.add(rimLight);
 
-    // 5. Floor Pedestal & Radial Shadow
-    const floorGeo = new THREE.CylinderGeometry(1.4, 1.45, 0.05, 48);
-    const floorMat = new THREE.MeshPhongMaterial({
-      color: 0x0f172a,
-      shininess: 40,
+    // Ground Bounce / Underglow
+    const bounceLight = new THREE.DirectionalLight(0xf1f5f9, 0.8);
+    bounceLight.position.set(0, -3, 0);
+    scene.add(bounceLight);
+
+    // 5. Floor Pedestal (Showroom Turntable with exact floor level at y = -0.48)
+    const floorY = -0.48; // Exact top surface level of showroom podium
+    const pedestalHeight = 0.08;
+    const pedestalRadius = 1.55;
+
+    const floorGeo = new THREE.CylinderGeometry(pedestalRadius, pedestalRadius + 0.07, pedestalHeight, 64);
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      roughness: 0.22,
+      metalness: 0.18,
     });
     const pedestal = new THREE.Mesh(floorGeo, floorMat);
-    pedestal.position.y = -0.52;
+    pedestal.position.y = floorY - pedestalHeight / 2; // top surface aligns precisely to floorY
     pedestal.receiveShadow = true;
     scene.add(pedestal);
 
-    // Ring accent on pedestal
-    const ringGeo = new THREE.RingGeometry(1.36, 1.39, 48);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
+    // Glowing Cyan / Teal LED Accent Ring on edge of podium
+    const ringGeo = new THREE.RingGeometry(pedestalRadius - 0.05, pedestalRadius - 0.01, 64);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4,
+      side: THREE.DoubleSide,
+    });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = Math.PI / 2;
-    ring.position.y = -0.494;
+    ring.position.y = floorY + 0.001; // barely above podium top to avoid z-fighting
     scene.add(ring);
 
-    // Main rotating group
+    // Outer Chrome Bezel
+    const outerTorusGeo = new THREE.TorusGeometry(pedestalRadius + 0.03, 0.015, 12, 64);
+    const outerTorusMat = new THREE.MeshStandardMaterial({
+      color: 0xcbd5e1,
+      metalness: 0.85,
+      roughness: 0.2,
+    });
+    const outerBezel = new THREE.Mesh(outerTorusGeo, outerTorusMat);
+    outerBezel.rotation.x = Math.PI / 2;
+    outerBezel.position.y = floorY;
+    scene.add(outerBezel);
+
+    // Soft Radial Shadow on Podium Top under bike
+    const shadowGeo = new THREE.CircleGeometry(1.05, 48);
+    const shadowMat = new THREE.MeshBasicMaterial({
+      color: 0x0f172a,
+      transparent: true,
+      opacity: 0.18,
+    });
+    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+    shadowMesh.rotation.x = -Math.PI / 2;
+    shadowMesh.position.y = floorY + 0.002;
+    scene.add(shadowMesh);
+
+    // Main rotating group for bicycle
     const rootGroup = new THREE.Group();
     scene.add(rootGroup);
     bikeGroupRef.current = rootGroup;
@@ -115,18 +159,30 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
     const buildProceduralBike = () => {
       const bikeGroup = new THREE.Group();
 
-      const bikeMat = new THREE.MeshPhongMaterial({
+      const bikeMat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(frameColor),
-        shininess: 90,
+        roughness: 0.35,
+        metalness: 0.65,
       });
-      const chromeMat = new THREE.MeshPhongMaterial({ color: 0xd4d4d8, shininess: 100 });
-      const darkMat = new THREE.MeshPhongMaterial({ color: 0x18181b, shininess: 20 });
-      const goldMat = new THREE.MeshPhongMaterial({ color: 0xf59e0b, shininess: 80 });
+      const chromeMat = new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0,
+        roughness: 0.15,
+        metalness: 0.9,
+      });
+      const darkMat = new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        roughness: 0.6,
+      });
+      const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        roughness: 0.3,
+        metalness: 0.8,
+      });
 
-      const createTube = (from: THREE.Vector3, to: THREE.Vector3, mat: THREE.Material, radius = 0.024) => {
+      const createTube = (from: THREE.Vector3, to: THREE.Vector3, mat: THREE.Material, radius = 0.032) => {
         const dir = new THREE.Vector3().subVectors(to, from);
         const len = dir.length();
-        const geo = new THREE.CylinderGeometry(radius, radius, len, 12);
+        const geo = new THREE.CylinderGeometry(radius, radius, len, 16);
         const mesh = new THREE.Mesh(geo, mat);
         mesh.castShadow = true;
         mesh.position.copy(from).addScaledVector(dir, 0.5);
@@ -134,94 +190,104 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
         return mesh;
       };
 
-      const bbCenter = new THREE.Vector3(0, -0.15, 0);
-      const rearAxle = new THREE.Vector3(-0.52, -0.15, 0);
-      const headTop = new THREE.Vector3(0.48, 0.32, 0);
-      const headBottom = new THREE.Vector3(0.43, 0.16, 0);
-      const seatCluster = new THREE.Vector3(-0.16, 0.24, 0);
-      const frontAxle = new THREE.Vector3(0.56, -0.15, 0);
+      const wheelRadius = 0.32;
+      // Axles positioned so bottom of wheels rests precisely at floorY (-0.48)
+      const axleY = floorY + wheelRadius; // -0.48 + 0.32 = -0.16
+      const bbCenter = new THREE.Vector3(0, axleY, 0);
+      const rearAxle = new THREE.Vector3(-0.65, axleY, 0);
+      const frontAxle = new THREE.Vector3(0.70, axleY, 0);
+      const headTop = new THREE.Vector3(0.58, axleY + 0.54, 0);
+      const headBottom = new THREE.Vector3(0.52, axleY + 0.36, 0);
+      const seatCluster = new THREE.Vector3(-0.20, axleY + 0.46, 0);
 
       // Frame Tubes
-      bikeGroup.add(createTube(bbCenter, seatCluster, bikeMat));
-      bikeGroup.add(createTube(seatCluster, headTop, bikeMat));
-      bikeGroup.add(createTube(bbCenter, headBottom, bikeMat, 0.032));
-      bikeGroup.add(createTube(headBottom, headTop, bikeMat, 0.030));
-      bikeGroup.add(createTube(bbCenter, rearAxle, bikeMat, 0.018));
-      bikeGroup.add(createTube(seatCluster, rearAxle, bikeMat, 0.018));
+      bikeGroup.add(createTube(bbCenter, seatCluster, bikeMat, 0.034));
+      bikeGroup.add(createTube(seatCluster, headTop, bikeMat, 0.030));
+      bikeGroup.add(createTube(bbCenter, headBottom, bikeMat, 0.042));
+      bikeGroup.add(createTube(headBottom, headTop, bikeMat, 0.036));
+      bikeGroup.add(createTube(bbCenter, rearAxle, bikeMat, 0.024));
+      bikeGroup.add(createTube(seatCluster, rearAxle, bikeMat, 0.024));
+      bikeGroup.add(createTube(headBottom, frontAxle, bikeMat, 0.028));
 
-      // Telescopic Front Suspension Fork
-      bikeGroup.add(createTube(headBottom, new THREE.Vector3(0.48, 0.0, 0), chromeMat, 0.018));
-      bikeGroup.add(createTube(new THREE.Vector3(0.48, 0.0, 0), frontAxle, goldMat, 0.022));
+      // Seatpost & Saddle
+      const seatpostTop = new THREE.Vector3(-0.24, axleY + 0.58, 0);
+      bikeGroup.add(createTube(seatCluster, seatpostTop, chromeMat, 0.022));
 
-      // Wheels
-      [-1, 1].forEach((isRear) => {
-        const center = isRear === -1 ? rearAxle : frontAxle;
+      // Handlebar & Stem
+      const stemTop = new THREE.Vector3(0.56, axleY + 0.62, 0);
+      bikeGroup.add(createTube(headTop, stemTop, chromeMat, 0.022));
+      const barL = new THREE.Vector3(0.56, axleY + 0.62, -0.32);
+      const barR = new THREE.Vector3(0.56, axleY + 0.62, 0.32);
+      bikeGroup.add(createTube(barL, barR, darkMat, 0.02));
+
+      // Wheels (Tires & Rims)
+      const buildWheel = (pos: THREE.Vector3) => {
         const wheelGroup = new THREE.Group();
-        wheelGroup.position.copy(center);
+        wheelGroup.position.copy(pos);
 
-        const tire = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.026, 12, 32), darkMat);
-        tire.rotation.y = Math.PI / 2;
+        // Fat Tire
+        const tireGeo = new THREE.TorusGeometry(wheelRadius - 0.05, 0.055, 16, 48);
+        const tire = new THREE.Mesh(tireGeo, darkMat);
         tire.castShadow = true;
         wheelGroup.add(tire);
 
-        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.012, 8, 32), chromeMat);
-        rim.rotation.y = Math.PI / 2;
-        wheelGroup.add(rim);
+        // Rim
+        const rimMesh = new THREE.Mesh(new THREE.TorusGeometry(wheelRadius - 0.07, 0.02, 12, 36), chromeMat);
+        wheelGroup.add(rimMesh);
 
-        for (let i = 0; i < 16; i++) {
-          const angle = (i / 16) * Math.PI * 2;
-          const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.28, 4), chromeMat);
-          spoke.position.set(0, Math.cos(angle) * 0.14, Math.sin(angle) * 0.14);
-          spoke.rotation.x = angle;
-          wheelGroup.add(spoke);
-        }
-
-        const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.08, 12), chromeMat);
-        hub.rotation.z = Math.PI / 2;
+        // Hub & Rotor
+        const hubGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.1, 16);
+        const hub = new THREE.Mesh(hubGeo, chromeMat);
+        hub.rotation.x = Math.PI / 2;
         wheelGroup.add(hub);
 
-        bikeGroup.add(wheelGroup);
-      });
+        const discGeo = new THREE.RingGeometry(0.05, 0.11, 24);
+        const disc = new THREE.Mesh(discGeo, chromeMat);
+        disc.position.z = 0.04;
+        wheelGroup.add(disc);
 
-      // Handlebars
-      const stem = createTube(headTop, new THREE.Vector3(0.46, 0.40, 0), chromeMat, 0.016);
-      bikeGroup.add(stem);
-      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.48, 12), darkMat);
-      bar.rotation.z = Math.PI / 2;
-      bar.position.set(0.46, 0.40, 0);
-      bikeGroup.add(bar);
+        return wheelGroup;
+      };
+
+      bikeGroup.add(buildWheel(rearAxle));
+      bikeGroup.add(buildWheel(frontAxle));
 
       // Saddle
-      const seatPost = createTube(seatCluster, new THREE.Vector3(-0.19, 0.38, 0), chromeMat, 0.016);
-      bikeGroup.add(seatPost);
-      const saddleGeo = new THREE.BoxGeometry(0.22, 0.04, 0.12);
+      const saddleGeo = new THREE.ConeGeometry(0.12, 0.28, 4);
       const saddle = new THREE.Mesh(saddleGeo, darkMat);
-      saddle.position.set(-0.20, 0.40, 0);
+      saddle.rotation.z = Math.PI / 2;
+      saddle.position.set(-0.25, axleY + 0.60, 0);
+      saddle.scale.set(0.7, 1.2, 0.9);
+      saddle.castShadow = true;
       bikeGroup.add(saddle);
 
-      // Battery Pack (Mounted along downtube)
-      const battGeo = new THREE.BoxGeometry(0.24, 0.08, 0.07);
-      const battMat = new THREE.MeshPhongMaterial({
+      // Battery Pack (Integrated downtube mount)
+      const battGeo = new THREE.BoxGeometry(0.32, 0.10, 0.09);
+      const battMat = new THREE.MeshStandardMaterial({
         color: 0x0284c7,
         emissive: 0x0369a1,
-        emissiveIntensity: 0.3,
-        shininess: 90,
+        emissiveIntensity: 0.35,
+        roughness: 0.2,
+        metalness: 0.7,
       });
       const battMesh = new THREE.Mesh(battGeo, battMat);
-      battMesh.position.set(0.18, 0.02, 0);
-      battMesh.rotation.z = 0.52;
+      battMesh.position.set(0.22, axleY + 0.18, 0);
+      battMesh.rotation.z = 0.48;
       battMesh.castShadow = true;
       bikeGroup.add(battMesh);
 
-      // Hub Motor / Mid Motor
-      const motorGeo = new THREE.CylinderGeometry(0.065, 0.065, 0.09, 16);
-      const motorMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 80 });
+      // Hub Motor
+      const motorGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.12, 24);
+      const motorMat = new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        roughness: 0.3,
+        metalness: 0.8,
+      });
       const motor = new THREE.Mesh(motorGeo, motorMat);
       motor.position.copy(rearAxle);
-      motor.rotation.z = Math.PI / 2;
+      motor.rotation.x = Math.PI / 2;
       bikeGroup.add(motor);
 
-      bikeGroup.position.y = -0.05;
       return bikeGroup;
     };
 
@@ -238,7 +304,6 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
 
     const tryLoadGlb = (index: number) => {
       if (index >= candidatePaths.length) {
-        // Fallback to procedural model
         if (!isLoaded) {
           const proceduralBike = buildProceduralBike();
           rootGroup.add(proceduralBike);
@@ -257,23 +322,48 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
 
           const model = gltf.scene;
 
-          // Compute bounding box and normalize scale & center
-          const box = new THREE.Box3().setFromObject(model);
-          const size = box.getSize(new THREE.Vector3());
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 1.3 / Math.max(maxDim, 0.001);
+          // 1. Initial bounding box
+          const initialBox = new THREE.Box3().setFromObject(model);
+          const initialSize = initialBox.getSize(new THREE.Vector3());
+          const maxDim = Math.max(initialSize.x, initialSize.y, initialSize.z);
+
+          // 2. Scale up significantly: was 1.3, now 2.15 to look prominently large & grand
+          const scale = 2.15 / Math.max(maxDim, 0.001);
           model.scale.setScalar(scale);
+          model.updateMatrixWorld(true);
 
-          const center = box.getCenter(new THREE.Vector3()).multiplyScalar(scale);
-          model.position.sub(center);
-          model.position.y -= 0.05;
+          // 3. Compute accurate bounding box of the scaled model
+          const scaledBox = new THREE.Box3().setFromObject(model);
+          const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
 
-          // Enable shadows and enhance materials
+          // 4. Center X and Z
+          model.position.x = -scaledCenter.x;
+          model.position.z = -scaledCenter.z;
+
+          // 5. CRUCIAL FIX: Align bottom of tires exactly to the top surface of the showroom podium (floorY = -0.48)
+          // scaledBox.min.y is the lowest vertex of the tires
+          model.position.y = floorY - scaledBox.min.y;
+
+          // 6. Enhance lighting & shadows on meshes
           model.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
               const mesh = child as THREE.Mesh;
               mesh.castShadow = true;
               mesh.receiveShadow = true;
+
+              // Ensure materials respond richly to bright studio lighting
+              if (mesh.material) {
+                const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                mats.forEach((m) => {
+                  const stdMat = m as THREE.MeshStandardMaterial;
+                  if (typeof stdMat.roughness === 'number') {
+                    stdMat.roughness = Math.min(stdMat.roughness, 0.7);
+                  }
+                  if ('envMapIntensity' in stdMat) {
+                    (stdMat as any).envMapIntensity = 1.3;
+                  }
+                });
+              }
             }
           });
 
@@ -284,7 +374,6 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
         },
         undefined,
         () => {
-          // Try next path
           tryLoadGlb(index + 1);
         }
       );
@@ -302,7 +391,7 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
       if (!isDraggingRef.current) return;
       const deltaX = e.clientX - prevMouseXRef.current;
       prevMouseXRef.current = e.clientX;
-      targetRotationYRef.current += deltaX * 0.01;
+      targetRotationYRef.current += deltaX * 0.008;
     };
 
     const onMouseUp = () => {
@@ -320,7 +409,7 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
       if (!isDraggingRef.current || e.touches.length !== 1) return;
       const deltaX = e.touches[0].clientX - prevMouseXRef.current;
       prevMouseXRef.current = e.touches[0].clientX;
-      targetRotationYRef.current += deltaX * 0.01;
+      targetRotationYRef.current += deltaX * 0.008;
     };
 
     const onTouchEnd = () => {
@@ -342,7 +431,7 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
 
       // Auto slow turntable rotation when not dragging
       if (!isDraggingRef.current) {
-        targetRotationYRef.current += 0.003;
+        targetRotationYRef.current += 0.0025;
       }
 
       // Smooth rotation damping
@@ -358,8 +447,8 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
     // 9. Resize Observer
     const ro = new ResizeObserver(() => {
       if (!container) return;
-      const newW = container.clientWidth || 480;
-      const newH = container.clientHeight || 340;
+      const newW = container.clientWidth || 540;
+      const newH = container.clientHeight || 380;
       camera.aspect = newW / newH;
       camera.updateProjectionMatrix();
       renderer.setSize(newW, newH);
@@ -381,7 +470,7 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
   }, [frameColor, motorVoltage]);
 
   return (
-    <div className={`relative w-full h-full min-h-[300px] flex flex-col justify-end select-none ${className}`}>
+    <div className={`relative w-full h-full min-h-[320px] flex flex-col justify-end select-none ${className}`}>
       {/* 3D Canvas Container */}
       <div
         ref={containerRef}
@@ -391,35 +480,35 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
       {/* Top Overlay Badge: Model Status */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
         {isCustomModelLoaded ? (
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-[11px] font-mono font-bold backdrop-blur-md shadow-lg shadow-emerald-500/20">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>โมเดลกำหนดเอง: {modelFileName}</span>
+          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-emerald-300 text-emerald-800 text-[11px] font-mono font-bold backdrop-blur-md shadow-md">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>โมเดล 3D: {modelFileName}</span>
           </span>
         ) : (
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[11px] font-mono font-bold backdrop-blur-md shadow-lg">
-            <Box className="w-3.5 h-3.5 text-cyan-400" />
-            <span>โมเดล 3D จำลอง (พร้อมรับ ebike.glb จาก Blender)</span>
+          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-sky-300 text-sky-800 text-[11px] font-mono font-bold backdrop-blur-md shadow-md">
+            <Box className="w-3.5 h-3.5 text-sky-600" />
+            <span>โมเดล 3D จำลอง (พร้อมรับ GLB)</span>
           </span>
         )}
       </div>
 
       {/* Bottom Floating Controls: 360 Rotation Hint & Rotate Buttons */}
       <div className="relative z-10 p-3 flex items-center justify-between pointer-events-none">
-        <span className="text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-full border border-slate-800 backdrop-blur-sm">
+        <span className="text-[10px] font-mono text-slate-600 bg-white/95 px-3 py-1 rounded-full border border-slate-200 shadow-sm backdrop-blur-md">
           🖱️ ลากเมาส์ / สัมผัสเพื่อหมุนดู 360°
         </span>
 
         <div className="flex items-center gap-1.5 pointer-events-auto">
           <button
             onClick={() => handleRotate(-Math.PI / 4)}
-            className="p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition active:scale-95"
+            className="p-1.5 rounded-lg bg-white/95 hover:bg-slate-100 border border-slate-300 text-slate-700 shadow-sm transition active:scale-95"
             title="หมุนซ้าย 45°"
           >
             <RotateCw className="w-3.5 h-3.5 -scale-x-100" />
           </button>
           <button
             onClick={() => handleRotate(Math.PI / 4)}
-            className="p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition active:scale-95"
+            className="p-1.5 rounded-lg bg-white/95 hover:bg-slate-100 border border-slate-300 text-slate-700 shadow-sm transition active:scale-95"
             title="หมุนขวา 45°"
           >
             <RotateCw className="w-3.5 h-3.5" />
@@ -429,4 +518,3 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
     </div>
   );
 };
-

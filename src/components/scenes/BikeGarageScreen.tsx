@@ -1,6 +1,15 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * BikeGarageScreen — Electric-Assist Bike Garage & Assembly Bay (Scene 11).
+ * Redesigned with:
+ * 1. Bright modern workshop/laboratory showroom aesthetic (Light Theme).
+ * 2. Visual infographics and icons, minimal wall-of-text.
+ * 3. Side-by-side 3D Showroom:
+ *    - Left: Player's customized character from Character Creator (Character3DViewer).
+ *    - Right: Enlarged 3D Electric Bicycle (Bike3DViewer) with exact wheel-ground contact.
+ * 4. 8-Cell Battery quota infographic and motor rating selection cards.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -22,12 +31,16 @@ import {
   RotateCw,
   AlertTriangle,
   Cpu,
-  Layers,
-  Scale,
   Mountain,
+  Timer,
+  Compass,
+  Battery,
+  Check,
+  ChevronRight,
+  Layers,
 } from 'lucide-react';
 import { useGameState } from '../../context/GameStateContext';
-import { AvatarRenderer } from '../common/AvatarRenderer';
+import { Character3DViewer } from '../character/Character3DViewer';
 import { Bike3DViewer } from '../garage/Bike3DViewer';
 import { MOTOR_CATALOG, MotorSpec, MotorVoltageRating } from '../../types/game';
 
@@ -57,67 +70,72 @@ interface GaragePack {
   id: string;
   code: string;
   name: string;
+  circuitTag: string;
   nominalVoltage: number;
   capacityMah: number;
   seriesCount: number;
   parallelCount: number;
   totalCells: number;
   internalResistance: number;
-  description: string;
+  tagline: string;
   recommendedForMotorVoltage: MotorVoltageRating;
 }
 
 const GARAGE_PACKS: GaragePack[] = [
   {
     id: 'pack_2s4p_6v',
-    code: '2S4P (8 ก้อน - โควตาเต็ม)',
-    name: 'ชุดผสมความจุสูง 2S4P (6.0V 8,000mAh)',
+    code: '2S 4P',
+    name: 'ชุดผสมความจุสูง',
+    circuitTag: '2S 4P (อนุกรม 2 ขนาน 4)',
     nominalVoltage: 6.0,
     capacityMah: 8000,
     seriesCount: 2,
     parallelCount: 4,
     totalCells: 8,
     internalResistance: 0.08,
-    description: 'ต่อขนาน 4 แถว ความจุสูงถึง 8,000mAh แบตอึดมาก ไม่มีวันหมดกลางทาง เหมาะกับมอเตอร์ 6V',
+    tagline: 'ความจุสูง 8,000 mAh วิ่งไกล แบตอึดสุด',
     recommendedForMotorVoltage: 6,
   },
   {
     id: 'pack_4s2p_12v',
-    code: '4S2P (8 ก้อน - โควตาเต็ม)',
-    name: 'ชุดผสมสมดุล 4S2P (12.0V 4,000mAh)',
+    code: '4S 2P',
+    name: 'ชุดผสมสมดุลลงตัว',
+    circuitTag: '4S 2P (อนุกรม 4 ขนาน 2)',
     nominalVoltage: 12.0,
     capacityMah: 4000,
     seriesCount: 4,
     parallelCount: 2,
     totalCells: 8,
     internalResistance: 0.15,
-    description: 'สมดุลยอดเยี่ยม 12V ความจุ 4,000mAh จ่ายกำลังได้สม่ำเสมอ เหมาะกับมอเตอร์ 12V',
+    tagline: 'สมดุล 12V 4,000 mAh กำลังขับสม่ำเสมอ',
     recommendedForMotorVoltage: 12,
   },
   {
     id: 'pack_8s1p_24v',
-    code: '8S1P (8 ก้อน - โควตาเต็ม)',
-    name: 'ชุดอนุกรมแรงบิดสูง 8S1P (24.0V 2,000mAh)',
+    code: '8S 1P',
+    name: 'ชุดอนุกรมแรงบิดสูง',
+    circuitTag: '8S 1P (อนุกรม 8 ล้วน)',
     nominalVoltage: 24.0,
     capacityMah: 2000,
     seriesCount: 8,
     parallelCount: 1,
     totalCells: 8,
     internalResistance: 0.35,
-    description: 'แรงดันสูงสุด 24V เพื่อพลังปีนเขา แต่ความจุมีเพียง 2,000mAh แบตเตอรี่จะหมดเร็วมากหากเร่งสปรินต์ต่อเนื่อง!',
+    tagline: 'แรงบิดสูงสุด 24V พลังปีนเขาชัน แต่คายประจุเร็ว',
     recommendedForMotorVoltage: 24,
   },
   {
     id: 'pack_2s2p_6v',
-    code: '2S2P (4 ก้อน - ครึ่งโควตา)',
-    name: 'ชุดประหยัด 2S2P (6.0V 4,000mAh)',
+    code: '2S 2P',
+    name: 'ชุดประหยัดน้ำหนักเบา',
+    circuitTag: '2S 2P (อนุกรม 2 ขนาน 2)',
     nominalVoltage: 6.0,
     capacityMah: 4000,
     seriesCount: 2,
     parallelCount: 2,
     totalCells: 4,
     internalResistance: 0.16,
-    description: 'ชุดทดสอบ 4 ก้อน น้ำหนักเบาแต่แรงดัน 6V เหมาะสำหรับการทดสอบขั้นต้น',
+    tagline: 'ชุด 4 ก้อน เบา คล่องตัว เหมาะทดสอบ',
     recommendedForMotorVoltage: 6,
   },
 ];
@@ -138,17 +156,17 @@ export const BikeGarageScreen: React.FC = () => {
   const selectedMotor: MotorSpec = MOTOR_CATALOG[selectedMotorId] || MOTOR_CATALOG.motor_12v;
 
   // Cosmetics
-  const [frameType, setFrameType] = useState<string>(
+  const [frameType] = useState<string>(
     state.bikeSetup?.frameType || 'lightning_cruiser'
   );
-  const [frameColor, setFrameColor] = useState<string>(
+  const [frameColor] = useState<string>(
     state.bikeSetup?.frameColor || '#06b6d4'
   );
-  const [tireType, setTireType] = useState<string>(
+  const [tireType] = useState<string>(
     state.bikeSetup?.tireType || 'slick_street'
   );
 
-  // Battery Selection & Animated Installation
+  // Battery Selection & Installation
   const [selectedPackId, setSelectedPackId] = useState<string>(() => {
     if (selectedMotor.ratedVoltage === 24) return 'pack_8s1p_24v';
     if (selectedMotor.ratedVoltage === 6) return 'pack_2s4p_6v';
@@ -161,9 +179,8 @@ export const BikeGarageScreen: React.FC = () => {
 
   // Bench Test Run Simulation
   const [isTestSpinning, setIsTestSpinning] = useState<boolean>(false);
-  const [wheelRotation, setWheelRotation] = useState<number>(0);
 
-  // Modals & Feedback
+  // Toast Feedback
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
   const selectedPack =
@@ -173,8 +190,6 @@ export const BikeGarageScreen: React.FC = () => {
   const isVoltageMatch = selectedPack.nominalVoltage === selectedMotor.ratedVoltage;
   const isOverVoltage = selectedPack.nominalVoltage > selectedMotor.ratedVoltage;
   const isUnderVoltage = selectedPack.nominalVoltage < selectedMotor.ratedVoltage;
-
-  const isCompatible = !isOverVoltage; // Overvoltage is prohibited to prevent motor blowout
   const voltageRatio = Number((selectedPack.nominalVoltage / selectedMotor.ratedVoltage).toFixed(2));
 
   // Stored Energy Calculation (Wh = V * Ah)
@@ -191,7 +206,7 @@ export const BikeGarageScreen: React.FC = () => {
     if (selectedMotor.ratedVoltage === 24) {
       topSpeedKmh = 42;
       accelSeconds = 2.4;
-      rangeKm = Number(((selectedPack.capacityMah / 1000) * 3.2).toFixed(1)); // Drains fast!
+      rangeKm = Number(((selectedPack.capacityMah / 1000) * 3.2).toFixed(1));
     } else if (selectedMotor.ratedVoltage === 12) {
       topSpeedKmh = 35;
       accelSeconds = 3.4;
@@ -199,24 +214,14 @@ export const BikeGarageScreen: React.FC = () => {
     } else {
       topSpeedKmh = 27;
       accelSeconds = 4.8;
-      rangeKm = Number(((selectedPack.capacityMah / 1000) * 6.5).toFixed(1)); // Very long range
+      rangeKm = Number(((selectedPack.capacityMah / 1000) * 6.5).toFixed(1));
     }
   } else if (isUnderVoltage) {
-    // Severely degraded performance under undervoltage
     const powerScale = Math.pow(voltageRatio, 2);
     topSpeedKmh = Math.max(12, Math.round(30 * powerScale));
     accelSeconds = Math.min(15, Number((5.0 / powerScale).toFixed(1)));
     rangeKm = Number(((selectedPack.capacityMah / 1000) * 5.0).toFixed(1));
   }
-
-  // Wheel rotation animation loop when bench testing
-  useEffect(() => {
-    if (!isTestSpinning) return;
-    const interval = setInterval(() => {
-      setWheelRotation((prev) => (prev + 36) % 360);
-    }, 40);
-    return () => clearInterval(interval);
-  }, [isTestSpinning]);
 
   // Handle Motor Selection
   const handleSelectMotor = (motorId: string) => {
@@ -224,7 +229,6 @@ export const BikeGarageScreen: React.FC = () => {
     setSelectedMotorId(motorId);
     const motor = MOTOR_CATALOG[motorId];
     if (motor) {
-      // Auto-suggest optimal pack for this motor
       if (motor.ratedVoltage === 24) setSelectedPackId('pack_8s1p_24v');
       else if (motor.ratedVoltage === 12) setSelectedPackId('pack_4s2p_12v');
       else setSelectedPackId('pack_2s4p_6v');
@@ -246,7 +250,7 @@ export const BikeGarageScreen: React.FC = () => {
     if (isOverVoltage) {
       playTone(180, 'sawtooth', 0.35);
       setInstallationError(
-        `อันตรายร้ายแรง! แรงดันแบตเตอรี่ ${selectedPack.nominalVoltage}V เกินพิกัดมอเตอร์ ${selectedMotor.ratedVoltage}V (${Math.round((selectedPack.nominalVoltage / selectedMotor.ratedVoltage) * 100)}%) ขดลวดมอเตอร์จะไหม้เสียหายทันที ระบบตัดการติดตั้งอัตโนมัติ!`
+        `อันตราย! แรงดันแบตเตอรี่ (${selectedPack.nominalVoltage}V) เกินพิกัดมอเตอร์ (${selectedMotor.ratedVoltage}V) ขดลวดมอเตอร์จะไหม้เสียหาย ระบบตัดการติดตั้ง!`
       );
       setIsBatteryInstalled(false);
       return;
@@ -260,16 +264,16 @@ export const BikeGarageScreen: React.FC = () => {
       playTone(880, 'triangle', 0.2);
       setIsInstalling(false);
       setIsBatteryInstalled(true);
-      setSaveToast(`ติดตั้ง ${selectedPack.name} กับมอเตอร์ ${selectedMotor.name} เรียบร้อยแล้ว!`);
+      setSaveToast(`ติดตั้ง ${selectedPack.code} (${selectedPack.nominalVoltage}V) กับมอเตอร์ ${selectedMotor.ratedVoltage}V เรียบร้อย!`);
       setTimeout(() => setSaveToast(null), 3000);
-    }, 500);
+    }, 450);
   };
 
   // Handle Test Setup Run
   const handleTestSetup = () => {
     if (!isBatteryInstalled) {
       playTone(280, 'square', 0.2);
-      setSaveToast('กรุณาติดตั้งชุดแบตเตอรี่ลงในโครงจักรยานก่อนทดสอบ!');
+      setSaveToast('กรุณากดติดตั้งแบตเตอรี่ลงในโครงจักรยานก่อนทดสอบ!');
       setTimeout(() => setSaveToast(null), 3000);
       return;
     }
@@ -278,8 +282,8 @@ export const BikeGarageScreen: React.FC = () => {
     setIsTestSpinning(true);
     setSaveToast(
       isVoltageMatch
-        ? `กำลังทดสอบมอเตอร์ ${selectedMotor.ratedVoltage}V: รอบหมุน ${selectedMotor.maxRpm} RPM ความเร็วสูงสุดประเมิน ${topSpeedKmh} กม./ชม.!`
-        : `คำเตือนการทดสอบ: แรงดัน ${selectedPack.nominalVoltage}V ไม่ตรงพิกัดมอเตอร์ ${selectedMotor.ratedVoltage}V มอเตอร์ทำงานได้เพียง ${Math.round(Math.pow(voltageRatio, 2) * 100)}% ของกำลังสูงสุด!`
+        ? `ทดสอบมอเตอร์ ${selectedMotor.ratedVoltage}V: ความเร็วสูงสุด ${topSpeedKmh} กม./ชม. ระบบสมบูรณ์!`
+        : `คำเตือน: แรงดัน ${selectedPack.nominalVoltage}V จ่ายไฟให้มอเตอร์ ${selectedMotor.ratedVoltage}V ได้เพียง ${Math.round(Math.pow(voltageRatio, 2) * 100)}%`
     );
 
     setTimeout(() => {
@@ -299,7 +303,6 @@ export const BikeGarageScreen: React.FC = () => {
 
     playTone(600, 'sine', 0.15);
 
-    // Save Battery Pack Setup to GameState
     updateBatteryPack({
       id: selectedPack.id,
       name: selectedPack.name,
@@ -316,7 +319,6 @@ export const BikeGarageScreen: React.FC = () => {
       notes: `ติดตั้งในจักรยานแข่ง: มอเตอร์ ${selectedMotor.ratedVoltage}V คู่กับ ${selectedPack.name}`,
     });
 
-    // Save Bike Setup to GameState
     updateBikeSetup({
       motorId: selectedMotor.id,
       motorName: selectedMotor.name,
@@ -334,8 +336,8 @@ export const BikeGarageScreen: React.FC = () => {
       rangeKm,
     });
 
-    setSaveToast('บันทึกการปรับแต่งจักรยาน มอเตอร์ และชุดแบตเตอรี่ 8 ก้อนเรียบร้อยแล้ว!');
-    setTimeout(() => setSaveToast(null), 3500);
+    setSaveToast('บันทึกการปรับแต่งจักรยาน มอเตอร์ และชุดแบตเตอรี่เรียบร้อยแล้ว!');
+    setTimeout(() => setSaveToast(null), 3000);
   };
 
   const handleContinue = () => {
@@ -344,28 +346,33 @@ export const BikeGarageScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white flex flex-col font-sans select-none">
-      {/* Header */}
-      <div className="bg-slate-900/90 border-b border-indigo-500/30 backdrop-blur-md px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/40 text-slate-800 flex flex-col font-sans select-none">
+      {/* ─── Top Header (Light Studio Navbar) ───────────────────────────── */}
+      <header className="bg-white/90 border-b border-slate-200/90 backdrop-blur-md px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-3">
           <button
             onClick={() => goToScene('motor_test')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition active:scale-95 min-h-[44px]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 transition active:scale-95 min-h-[42px]"
           >
-            <ArrowLeft className="w-4 h-4 text-emerald-400" />
-            <span>ย้อนกลับไปแล็บ (Back to Lab)</span>
+            <ArrowLeft className="w-4 h-4 text-slate-600" />
+            <span>ย้อนกลับไปแล็บ</span>
           </button>
 
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-sm shadow-md">
-              <Wrench className="w-4 h-4" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-sky-500/20">
+              <Wrench className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-sm md:text-base font-black text-indigo-200">
-                โรงเก็บจักรยานพาวเวอร์ไบค์ (Electric-Assist Bike Garage)
-              </h1>
-              <p className="text-[11px] text-slate-400">
-                เลือกพิกัดมอเตอร์ (6V / 12V / 24V) และบริหารโควตาเซลล์แบตเตอรี่ 8 ก้อน
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm md:text-base font-black text-slate-900 tracking-tight">
+                  โรงเก็บจักรยานพาวเวอร์ไบค์ (E-Bike Garage)
+                </h1>
+                <span className="text-[10px] font-bold bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full border border-sky-200">
+                  ห้องแล็บประกอบยานยนต์
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                ปรับจูนมอเตอร์ไฟฟ้าและบริหารชุดแบตเตอรี่โควตา 8 ก้อน
               </p>
             </div>
           </div>
@@ -375,145 +382,186 @@ export const BikeGarageScreen: React.FC = () => {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleTestSetup}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 text-xs font-bold border border-indigo-700 transition min-h-[44px]"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold border border-sky-300 transition min-h-[42px] shadow-sm active:scale-95"
           >
-            <Play className={`w-4 h-4 ${isTestSpinning ? 'animate-spin' : ''}`} />
+            <Play className={`w-4 h-4 text-sky-600 ${isTestSpinning ? 'animate-spin' : ''}`} />
             <span>ทดสอบระบบ (Test Bench)</span>
           </button>
 
           <button
             onClick={handleSaveAll}
-            className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 text-xs font-bold border border-emerald-700/60 transition min-h-[44px]"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition min-h-[42px] shadow-sm active:scale-95"
           >
-            <Save className="w-4 h-4 text-emerald-400" />
+            <Save className="w-4 h-4 text-emerald-600" />
             <span>บันทึกการแต่งรถ</span>
           </button>
 
           <button
             onClick={handleContinue}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:brightness-110 text-slate-950 text-xs font-black shadow-lg shadow-emerald-500/20 active:scale-95 transition min-h-[44px]"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-105 text-white text-xs font-black shadow-md shadow-emerald-500/25 active:scale-95 transition min-h-[42px]"
           >
             <span>ต่อไปสนามแข่ง (Continue)</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content Grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 max-w-7xl mx-auto w-full">
-        {/* Left Column: Motor Selector + Visual Hangar (7 Cols) */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
-          {/* Motor Selection Bar (6V / 12V / 24V) */}
-          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-4 shadow-xl">
-            <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-cyan-300 flex items-center gap-1.5 uppercase">
-                <Cpu className="w-4 h-4 text-cyan-400" />
-                เลือกขนาดมอเตอร์ขับเคลื่อน (Electric Motor Rating)
+      {/* ─── Main Content Grid ─────────────────────────────────────────── */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 p-4 md:p-6 max-w-7xl mx-auto w-full">
+        {/* Left Column: Motor Selection + 3D Showroom Stage (7 Cols) */}
+        <div className="lg:col-span-7 flex flex-col gap-5">
+          {/* 1. Motor Selector Infographic Cards */}
+          <section className="bg-white/90 border border-slate-200/90 rounded-2xl p-4 shadow-sm backdrop-blur-md">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2.5">
+              <span className="text-xs font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide">
+                <Cpu className="w-4 h-4 text-sky-600" />
+                เลือกพิกัดมอเตอร์ขับเคลื่อน (Electric Motor Rating)
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                จำกัดโควตาแบตเตอรี่เท่ากันที่ 8 ก้อน
+              <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                โควตาแบต 8 เซลล์เท่ากัน
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {Object.values(MOTOR_CATALOG).map((motor) => {
                 const isSelected = selectedMotorId === motor.id;
+                const isEco = motor.ratedVoltage === 6;
+                const isSport = motor.ratedVoltage === 12;
+                const isMonster = motor.ratedVoltage === 24;
+
                 return (
                   <button
                     key={motor.id}
                     onClick={() => handleSelectMotor(motor.id)}
-                    className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between ${
+                    className={`p-3.5 rounded-xl border text-left transition relative flex flex-col justify-between ${
                       isSelected
-                        ? 'bg-cyan-950/70 border-cyan-400 text-white shadow-lg ring-2 ring-cyan-500/40'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                        ? 'bg-gradient-to-b from-sky-50 to-white border-sky-500 ring-2 ring-sky-400/30 shadow-md'
+                        : 'bg-slate-50/70 border-slate-200 text-slate-600 hover:bg-slate-100/80 hover:border-slate-300'
                     }`}
                   >
                     <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-cyan-200">{motor.ratedVoltage}V</span>
-                        <span className="text-[10px] font-mono font-bold text-amber-400">
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span
+                          className={`px-2 py-0.5 rounded-lg text-xs font-black font-mono ${
+                            isMonster
+                              ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                              : isSport
+                              ? 'bg-sky-100 text-sky-700 border border-sky-200'
+                              : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          }`}
+                        >
+                          {motor.ratedVoltage}V
+                        </span>
+                        <span className="text-xs font-bold font-mono text-amber-600 flex items-center gap-0.5">
+                          <Zap className="w-3.5 h-3.5 fill-current" />
                           {motor.powerWatts}W
                         </span>
                       </div>
-                      <span className="text-[11px] font-bold text-white block mt-0.5">
-                        {motor.name.split('(')[0]}
+
+                      {/* Motor Title */}
+                      <span className="text-xs font-black text-slate-900 block">
+                        {isEco ? '🌱 มอเตอร์ Eco' : isSport ? '⚡ มอเตอร์ Sport' : '🚀 มอเตอร์ Monster'}
                       </span>
-                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                        {motor.description}
-                      </p>
+                      <span className="text-[11px] text-slate-500 block">
+                        {isEco ? 'ประหยัดไฟ วิ่งไกล' : isSport ? 'สมดุลรอบด้าน' : 'แรงบิดสูงสุด เนินชัน'}
+                      </span>
                     </div>
 
-                    <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
-                      <span className="text-emerald-400">แรงบิด {motor.torqueNm} Nm</span>
-                      <span className="text-slate-400">{motor.maxRpm} RPM</span>
+                    {/* Infographic Specs Bar */}
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-mono">
+                      <span className="font-bold text-emerald-700 flex items-center gap-1">
+                        <Gauge className="w-3 h-3" />
+                        {motor.torqueNm} Nm
+                      </span>
+                      <span className="text-slate-500 font-bold">
+                        {motor.maxRpm} RPM
+                      </span>
                     </div>
                   </button>
                 );
               })}
             </div>
-          </div>
+          </section>
 
-          {/* Visual Hangar with Avatar & E-Bike */}
-          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl flex flex-col justify-between min-h-[460px] relative overflow-hidden">
-            {/* Background Studio Lights */}
-            <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
+          {/* 2. Visual Showroom Stage: 3D Character (Kwanjai) + 3D E-Bike (Blender GLB) */}
+          <section className="bg-white/95 border border-slate-200/90 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col justify-between min-h-[490px] relative overflow-hidden backdrop-blur-md">
+            {/* Soft Ambient Workshop Lighting Flare */}
+            <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-sky-100/60 via-emerald-50/20 to-transparent pointer-events-none" />
 
-            {/* Hangar Header Status */}
-            <div className="relative z-10 flex items-center justify-between text-xs border-b border-slate-800 pb-2">
+            {/* Showroom Header */}
+            <div className="relative z-10 flex items-center justify-between text-xs border-b border-slate-100 pb-2.5">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-black text-indigo-300">
-                  อู่ประกอบยานยนต์ไฟฟ้า (Electric Vehicle Assembly Bay)
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-black text-slate-800 uppercase tracking-wide">
+                  โซนประกอบและปรับแต่งยานยนต์ (Vehicle Showcase & Assembly)
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-2.5 py-0.5 rounded border border-cyan-800 font-bold">
+                <span className="text-[10px] font-mono font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-lg border border-sky-200">
                   MOTOR: {selectedMotor.ratedVoltage}V ({selectedMotor.powerWatts}W)
                 </span>
-                <span className="text-[10px] font-mono text-purple-400 bg-purple-950/80 px-2.5 py-0.5 rounded border border-purple-800 font-bold">
-                  BUDGET: 8 CELLS
+                <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                  BUDGET: 8 เซลล์
                 </span>
               </div>
             </div>
 
-            {/* Stage: Player's Avatar standing beside the Cartoon Electric-Assist Bike */}
-            <div className="relative z-10 flex flex-col sm:flex-row items-center justify-center gap-6 my-auto py-4">
-              {/* Cadet Avatar */}
-              <div className="flex flex-col items-center shrink-0">
-                <div className="w-32 h-44 drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)]">
-                  <AvatarRenderer avatar={state.character} size="lg" mode="3d" />
-                </div>
-                <div className="mt-1 bg-slate-950/80 px-2.5 py-0.5 rounded-full border border-slate-800 text-center">
-                  <span className="text-[11px] font-bold text-emerald-400">
-                    {state.character.name}
+            {/* Split Stage: Character (Scene 2) & Bicycle (Scene 11) */}
+            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-12 gap-3 my-auto py-3 items-stretch">
+              {/* Left Stage (4 Cols): Customized 3D Character from Character Creator */}
+              <div className="sm:col-span-4 flex flex-col items-center justify-between bg-gradient-to-b from-sky-50/70 via-emerald-50/40 to-slate-50/80 rounded-2xl border border-slate-200/80 p-2 shadow-inner relative overflow-hidden min-h-[300px]">
+                {/* Character Name & Role Badge */}
+                <div className="w-full flex items-center justify-between px-2 pt-1 z-10">
+                  <span className="text-[11px] font-black text-slate-800 bg-white/90 px-2.5 py-0.5 rounded-full border border-slate-200 shadow-sm">
+                    {state.character.name || 'ขวัญใจ (Kwanjai)'}
                   </span>
-                  <span className="text-[9px] text-slate-400 block -mt-0.5">นักประดิษฐ์ประจำรถ</span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                    นักปั่น & วิศวกร
+                  </span>
                 </div>
+
+                {/* 3D Character Viewer (Same model as CharacterCreatorScreen) */}
+                <div className="w-full flex-1 flex items-center justify-center my-1 relative">
+                  <Character3DViewer character={state.character} className="w-full h-[250px]" />
+                </div>
+
+                {/* Character Footnote */}
+                <span className="text-[10px] font-mono text-slate-500 bg-white/80 px-2.5 py-0.5 rounded-full border border-slate-200 shadow-sm z-10">
+                  🖱️ ลากหมุนดู 360°
+                </span>
               </div>
 
-              {/* Interactive 3D Electric Bicycle Viewer (Supports Custom GLB from Blender) */}
-              <div className="relative flex-1 min-h-[320px] w-full flex flex-col items-center justify-center bg-slate-950/70 rounded-2xl border border-indigo-500/30 p-2 shadow-2xl overflow-hidden">
-                <Bike3DViewer
-                  frameColor={frameColor}
-                  motorVoltage={selectedMotor.ratedVoltage}
-                  batteryPackName={isBatteryInstalled ? selectedPack.name : undefined}
-                />
+              {/* Right Stage (8 Cols): 3D Bicycle Viewer (Enlarged GLB on Podium) */}
+              <div className="sm:col-span-8 flex flex-col items-center justify-between bg-gradient-to-b from-white via-slate-50/50 to-sky-50/30 rounded-2xl border border-slate-200/80 p-2 shadow-inner relative overflow-hidden min-h-[320px]">
+                {/* 3D E-Bike Canvas */}
+                <div className="w-full flex-1 flex items-center justify-center relative">
+                  <Bike3DViewer
+                    frameColor={frameColor}
+                    motorVoltage={selectedMotor.ratedVoltage}
+                    batteryPackName={isBatteryInstalled ? selectedPack.name : undefined}
+                  />
+                </div>
 
-                {/* Battery Mount Status Tag */}
-                <div className="flex items-center gap-2 mt-1 z-10">
+                {/* Mounted Battery Indicator Badge */}
+                <div className="w-full flex items-center justify-between px-3 py-1.5 bg-white/90 border-t border-slate-100 rounded-b-xl z-10">
+                  <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                    <Battery className="w-3.5 h-3.5 text-sky-600" />
+                    สถานะแบตเตอรี่:
+                  </span>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold flex items-center gap-1 ${
                       isBatteryInstalled
                         ? isVoltageMatch
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-800 border border-amber-300'
+                        : 'bg-slate-100 text-slate-500 border border-slate-300'
                     }`}
                   >
                     {isBatteryInstalled ? (
                       <>
-                        <Zap className="w-3.5 h-3.5" />
-                        ติดตั้ง: {selectedPack.code} ({selectedPack.nominalVoltage.toFixed(1)}V {selectedPack.capacityMah}mAh)
+                        <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                        ติดตั้งแล้ว: {selectedPack.code} ({selectedPack.nominalVoltage.toFixed(1)}V {selectedPack.capacityMah}mAh)
                       </>
                     ) : (
                       'ยังไม่ได้ติดตั้งแบตเตอรี่'
@@ -523,52 +571,99 @@ export const BikeGarageScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Expected Operating Limits Dashboard */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-              <div className="text-center">
-                <span className="text-[10px] text-slate-400 block">ความเร็วสูงสุดประเมิน</span>
-                <span className="font-mono font-black text-emerald-400 text-sm">
-                  {topSpeedKmh} กม./ชม.
+            {/* 3. Performance Dashboard Infographic (Bottom Banner) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50/90 p-3.5 rounded-2xl border border-slate-200/90 mt-2">
+              {/* Top Speed */}
+              <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 text-center shadow-sm">
+                <span className="text-[10px] font-bold text-slate-500 flex items-center justify-center gap-1">
+                  <Gauge className="w-3.5 h-3.5 text-emerald-600" />
+                  ความเร็วประเมิน
+                </span>
+                <span className="font-mono font-black text-emerald-700 text-base md:text-lg block mt-0.5">
+                  {topSpeedKmh} <span className="text-xs font-sans text-slate-500 font-bold">กม./ชม.</span>
                 </span>
               </div>
-              <div className="text-center">
-                <span className="text-[10px] text-slate-400 block">อัตราเร่ง 0-30 กม./ชม.</span>
-                <span className="font-mono font-black text-amber-400 text-sm">
-                  {accelSeconds < 90 ? `${accelSeconds} วิ` : '-'}
+
+              {/* 0-30 Accel */}
+              <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 text-center shadow-sm">
+                <span className="text-[10px] font-bold text-slate-500 flex items-center justify-center gap-1">
+                  <Timer className="w-3.5 h-3.5 text-amber-600" />
+                  อัตราเร่ง 0-30
+                </span>
+                <span className="font-mono font-black text-amber-700 text-base md:text-lg block mt-0.5">
+                  {accelSeconds < 90 ? accelSeconds : '-'} <span className="text-xs font-sans text-slate-500 font-bold">วิ</span>
                 </span>
               </div>
-              <div className="text-center">
-                <span className="text-[10px] text-slate-400 block">ระยะทางวิ่งต่อเนื่อง</span>
-                <span className="font-mono font-black text-cyan-400 text-sm">
-                  ~{rangeKm} กม.
+
+              {/* Range */}
+              <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 text-center shadow-sm">
+                <span className="text-[10px] font-bold text-slate-500 flex items-center justify-center gap-1">
+                  <Compass className="w-3.5 h-3.5 text-sky-600" />
+                  ระยะทางวิ่ง
+                </span>
+                <span className="font-mono font-black text-sky-700 text-base md:text-lg block mt-0.5">
+                  ~{rangeKm} <span className="text-xs font-sans text-slate-500 font-bold">กม.</span>
                 </span>
               </div>
-              <div className="text-center">
-                <span className="text-[10px] text-slate-400 block">พลังงานสะสม (Stored)</span>
-                <span className="font-mono font-black text-purple-400 text-sm">
-                  {storedEnergyWh} Wh
+
+              {/* Stored Energy */}
+              <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 text-center shadow-sm">
+                <span className="text-[10px] font-bold text-slate-500 flex items-center justify-center gap-1">
+                  <BatteryCharging className="w-3.5 h-3.5 text-indigo-600" />
+                  พลังงานรวม (Stored)
+                </span>
+                <span className="font-mono font-black text-indigo-700 text-base md:text-lg block mt-0.5">
+                  {storedEnergyWh} <span className="text-xs font-sans text-slate-500 font-bold">Wh</span>
                 </span>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Right Column: 8-Cell Budget Pack Selector & Engineering Trade-Offs (5 Cols) */}
-        <div className="lg:col-span-5 flex flex-col gap-4">
-          {/* Battery Pack Selection Card */}
-          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-amber-300 flex items-center gap-1.5 uppercase">
-                <BatteryCharging className="w-4 h-4 text-amber-400" />
-                โควตาแบตเตอรี่ 8 ก้อน (8-Cell Budget Quota)
+        {/* Right Column: 8-Cell Budget Quota & Engineering Checks (5 Cols) */}
+        <div className="lg:col-span-5 flex flex-col gap-5">
+          {/* 1. Battery Pack Quota Infographic Card */}
+          <section className="bg-white/95 border border-slate-200/90 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col gap-3.5 backdrop-blur-md">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <span className="text-xs font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide">
+                <BatteryCharging className="w-4 h-4 text-amber-600" />
+                โควตาแบตเตอรี่ 8 ก้อน (8-Cell Quota)
               </span>
-              <span className="text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
-                เซลล์: {selectedPack.totalCells}/8 ก้อน
+              <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-300">
+                เซลล์ที่ใช้: {selectedPack.totalCells}/8 ก้อน
               </span>
             </div>
 
-            {/* Pack Options List */}
-            <div className="space-y-2">
+            {/* Visual 8-Cell Battery Bank Infographic */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between text-[10px] text-slate-600 font-bold mb-2">
+                <span>แผนผังช่องใส่เซลล์แบตเตอรี่ (Cell Slots):</span>
+                <span className="font-mono text-sky-700">{selectedPack.circuitTag}</span>
+              </div>
+              <div className="grid grid-cols-8 gap-1.5">
+                {Array.from({ length: 8 }).map((_, idx) => {
+                  const isOccupied = idx < selectedPack.totalCells;
+                  return (
+                    <div
+                      key={idx}
+                      className={`h-9 rounded-lg flex flex-col items-center justify-center text-[10px] font-mono font-bold transition-all shadow-sm ${
+                        isOccupied
+                          ? isVoltageMatch
+                            ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-white shadow-emerald-500/20'
+                            : 'bg-gradient-to-b from-amber-400 to-amber-600 text-white'
+                          : 'bg-slate-200 text-slate-400 border border-dashed border-slate-300'
+                      }`}
+                    >
+                      <span>🔋</span>
+                      <span className="text-[8px] -mt-1 font-sans">{idx + 1}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Pack Options List (Visual Cards) */}
+            <div className="space-y-2.5">
               {GARAGE_PACKS.map((pack) => {
                 const isSelected = selectedPackId === pack.id;
                 const matchesCurrentMotor = pack.recommendedForMotorVoltage === selectedMotor.ratedVoltage;
@@ -578,43 +673,46 @@ export const BikeGarageScreen: React.FC = () => {
                   <button
                     key={pack.id}
                     onClick={() => handleSelectPack(pack)}
-                    className={`w-full p-3 rounded-xl border text-left transition flex items-start justify-between gap-2 ${
+                    className={`w-full p-3 rounded-xl border text-left transition flex items-center justify-between gap-3 ${
                       isSelected
                         ? matchesCurrentMotor
-                          ? 'bg-emerald-950/70 border-emerald-500 text-white shadow-md ring-1 ring-emerald-500/50'
+                          ? 'bg-emerald-50/80 border-emerald-500 ring-2 ring-emerald-400/30 shadow-md'
                           : isPackOver
-                          ? 'bg-rose-950/70 border-rose-500 text-white shadow-md'
-                          : 'bg-amber-950/60 border-amber-500 text-white shadow-md'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                          ? 'bg-rose-50/80 border-rose-500 shadow-md'
+                          : 'bg-amber-50/80 border-amber-500 shadow-md'
+                        : 'bg-slate-50/70 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
                     }`}
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-xs text-slate-100">{pack.name}</span>
+                        <span className="font-black text-xs text-slate-900">{pack.name}</span>
+                        <span className="text-[10px] font-mono font-bold bg-white text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+                          {pack.code}
+                        </span>
                         {matchesCurrentMotor && (
-                          <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded font-mono font-bold">
+                          <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
                             คู่มอเตอร์ {pack.recommendedForMotorVoltage}V
                           </span>
                         )}
                         {isPackOver && (
-                          <span className="text-[9px] bg-rose-500/20 text-rose-300 px-1.5 py-0.2 rounded font-mono font-bold">
+                          <span className="text-[9px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold">
                             แรงดันเกิน!
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-slate-400 block mt-1 leading-relaxed">
-                        {pack.description}
+                      <span className="text-[11px] text-slate-500 block mt-1">
+                        {pack.tagline}
                       </span>
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="font-mono text-xs font-bold text-amber-300 block">
+                      <span className="font-mono text-xs font-black text-slate-900 block">
                         {pack.nominalVoltage.toFixed(1)}V
                       </span>
-                      <span className="text-[10px] font-mono text-cyan-400 block">
+                      <span className="text-[11px] font-mono font-bold text-sky-700 block">
                         {pack.capacityMah} mAh
                       </span>
-                      <span className="text-[9px] font-mono text-slate-500 block">
+                      <span className="text-[10px] font-mono text-slate-400 block">
                         {pack.totalCells} ก้อน
                       </span>
                     </div>
@@ -623,57 +721,57 @@ export const BikeGarageScreen: React.FC = () => {
               })}
             </div>
 
-            {/* Strategic Vocational Trade-off Guidance Card */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold text-indigo-300">
-                <Scale className="w-3.5 h-3.5 text-indigo-400" />
-                <span>หลักการคราฟต์แบตเตอรี่ตามกฎไฟฟ้า (Vocational Physics):</span>
+            {/* Vocational Strategy Callout (Visual Tip) */}
+            <div className="bg-sky-50/80 p-3 rounded-xl border border-sky-200 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-sky-900 mb-1">
+                <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                <span>คำแนะนำกลยุทธ์ช่างยนต์:</span>
               </div>
-              <p className="text-slate-300 leading-relaxed text-[10px]">
+              <p className="text-slate-700 text-[11px] leading-relaxed">
                 {selectedMotor.ratedVoltage === 24 && selectedPack.nominalVoltage === 24 ? (
-                  <span className="text-amber-300">
-                    ⚡ <strong>คำเตือนกลยุทธ์ 24V (8S 1P):</strong> ได้แรงบิดสูงสุด 2.8 Nm ไต่เขาชันเร็วที่สุด แต่ความจุเหลือเพียง <strong>2,000 mAh</strong> เพราะต้องอนุกรมทั้ง 8 ก้อน! หากกด Boost แช่ตลอดทาง แบตเตอรี่จะหมดก่อนถึงยอดเขา! ต้องอาศัยแรงคนปั่นผสมและปล่อยไหลลงเขา
+                  <span>
+                    ⚡ <strong>อนุกรม 8 ก้อน (24V 2,000mAh):</strong> แรงบิดมหาศาล 2.8 Nm ไต่เขาชันเร็วที่สุด แต่ความจุคายเร็ว แนะนำกด Boost สั้นๆ แล้วปล่อยไหลลงเขา
                   </span>
                 ) : selectedMotor.ratedVoltage === 12 && selectedPack.nominalVoltage === 12 ? (
-                  <span className="text-emerald-300">
-                    ⚖️ <strong>ความสมดุล 12V (4S 2P):</strong> อนุกรม 4 ก้อน (12V) และขนาน 2 แถว ได้ความจุ <strong>4,000 mAh</strong> สมดุลทั้งแรงบิดขึ้นเขาและระยะทางวิ่ง ไม่หมดกลางทางง่ายๆ
+                  <span>
+                    ⚖️ <strong>ผสมสมดุล (12V 4,000mAh):</strong> อนุกรม 4 ก้อน ขนาน 2 แถว ได้ทั้งแรงบิดขึ้นเขาและความจุวิ่งต่อเนื่อง เหมาะกับสนามแข่งทุกรูปแบบ
                   </span>
                 ) : selectedMotor.ratedVoltage === 6 && selectedPack.nominalVoltage === 6 ? (
-                  <span className="text-cyan-300">
-                    🔋 <strong>ความจุสูงสุด 6V (2S 4P):</strong> ขนาน 4 แถว ความจุมหาศาลถึง <strong>8,000 mAh</strong> วิ่งได้ไกลสุดยอด แต่แรงบิด 0.8 Nm อาจไต่เขาชัน 15% ได้ช้ามาก
+                  <span>
+                    🔋 <strong>ขนานความจุสูงสุด (6V 8,000mAh):</strong> ขนาน 4 แถว ความจุมหาศาล วิ่งไกลสุด ไม่หมดกลางทางแน่นอน
                   </span>
                 ) : isUnderVoltage ? (
-                  <span className="text-rose-300">
-                    ⚠️ <strong>แรงดันตกพิกัด (Undervoltage):</strong> มอเตอร์ {selectedMotor.ratedVoltage}V ทำงานด้วยไฟ {selectedPack.nominalVoltage}V กำลังขับลดลงเหลือ {Math.round(Math.pow(voltageRatio, 2) * 100)}% รถจะติดค้าง (Stall) บนเนินชัน!
+                  <span className="text-amber-800">
+                    ⚠️ <strong>แรงดันตกพิกัด:</strong> มอเตอร์ {selectedMotor.ratedVoltage}V ได้ไฟ {selectedPack.nominalVoltage}V ทำให้กำลังตกเหลือ {Math.round(Math.pow(voltageRatio, 2) * 100)}%
                   </span>
                 ) : (
-                  <span className="text-rose-400">
-                    ⛔ <strong>แรงดันเกินพิกัด (Overvoltage):</strong> มอเตอร์ไม่สามารถรับแรงดันนี้ได้ เสี่ยงต่อการลุกไหม้
+                  <span className="text-rose-700 font-bold">
+                    ⛔ <strong>แรงดันเกินพิกัด:</strong> อันตราย! มอเตอร์เสี่ยงต่อการลุกไหม้ ห้ามติดตั้ง
                   </span>
                 )}
               </p>
             </div>
 
             {/* Installation Action Button */}
-            <div className="mt-1">
+            <div>
               <button
                 onClick={handleInstallBattery}
                 disabled={isInstalling}
-                className={`w-full py-3 rounded-xl font-black text-xs shadow-lg flex items-center justify-center gap-2 transition active:scale-95 ${
+                className={`w-full py-3 rounded-xl font-black text-xs shadow-md flex items-center justify-center gap-2 transition active:scale-95 ${
                   isBatteryInstalled
-                    ? 'bg-slate-800 text-emerald-400 border border-emerald-500/40'
-                    : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-slate-950 shadow-emerald-500/30'
+                    ? 'bg-slate-100 hover:bg-slate-200 text-emerald-800 border border-emerald-300'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-105 text-white shadow-emerald-500/25'
                 }`}
               >
                 {isInstalling ? (
                   <>
                     <RotateCw className="w-4 h-4 animate-spin" />
-                    <span>กำลังติดตั้งและเชื่อมต่อขั้วสาย...</span>
+                    <span>กำลังติดตั้งและเชื่อมต่อระบบสายไฟ...</span>
                   </>
                 ) : isBatteryInstalled ? (
                   <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>ติดตั้งเรียบร้อยแล้ว (คลิกเพื่อสลับแพ็ก)</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>ติดตั้งในโครงรถแล้ว (คลิกเพื่อสลับแพ็ก)</span>
                   </>
                 ) : (
                   <>
@@ -684,81 +782,81 @@ export const BikeGarageScreen: React.FC = () => {
               </button>
             </div>
 
-            {/* Rejection Error Alert if Incompatible */}
+            {/* Incompatibility Alert */}
             {installationError && (
-              <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-600 text-rose-200 text-xs flex items-start gap-2.5 animate-in fade-in">
-                <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                <div className="leading-relaxed">{installationError}</div>
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in">
+                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div className="leading-relaxed font-bold">{installationError}</div>
               </div>
             )}
-          </div>
+          </section>
 
-          {/* Safety Checklist Card */}
-          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-2.5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5 uppercase">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                การตรวจสอบความเข้ากันได้ทางวิศวกรรม (Engineering Check)
+          {/* 2. Engineering Compatibility Checklist Card */}
+          <section className="bg-white/95 border border-slate-200/90 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col gap-3 backdrop-blur-md">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <span className="text-xs font-black text-slate-800 flex items-center gap-2 uppercase tracking-wide">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                การตรวจสอบความเข้ากันได้ (Engineering Check)
               </span>
             </div>
 
-            <div className="space-y-1.5 text-xs">
-              {/* Check 1: Voltage Compatibility */}
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="flex items-center gap-2 text-slate-300">
+            <div className="space-y-2 text-xs">
+              {/* Check 1: Voltage Match */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="flex items-center gap-2 text-slate-700 font-bold">
                   {isVoltageMatch ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   ) : isUnderVoltage ? (
-                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
                   ) : (
-                    <XCircle className="w-4 h-4 text-rose-400" />
+                    <XCircle className="w-4 h-4 text-rose-600" />
                   )}
                   <span>ความเข้ากันได้ของแรงดัน (Voltage Matching):</span>
                 </span>
                 <span
-                  className={`font-mono font-bold ${
+                  className={`font-mono font-black ${
                     isVoltageMatch
-                      ? 'text-emerald-400'
+                      ? 'text-emerald-700'
                       : isUnderVoltage
-                      ? 'text-amber-400'
-                      : 'text-rose-400'
+                      ? 'text-amber-700'
+                      : 'text-rose-700'
                   }`}
                 >
                   {selectedPack.nominalVoltage.toFixed(1)}V / {selectedMotor.ratedVoltage.toFixed(1)}V
                 </span>
               </div>
 
-              {/* Check 2: 8-Cell Budget Quota */}
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="flex items-center gap-2 text-slate-300">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              {/* Check 2: Cell Quota */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="flex items-center gap-2 text-slate-700 font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   <span>โควตาเซลล์ไม่เกิน 8 ก้อน (Cell Budget):</span>
                 </span>
-                <span className="font-mono font-bold text-emerald-400">
+                <span className="font-mono font-black text-emerald-700">
                   {selectedPack.totalCells} / 8 เซลล์ (ผ่าน)
                 </span>
               </div>
 
-              {/* Check 3: Current Capacity */}
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="flex items-center gap-2 text-slate-300">
-                  <BatteryCharging className="w-4 h-4 text-cyan-400" />
+              {/* Check 3: Capacity */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="flex items-center gap-2 text-slate-700 font-bold">
+                  <BatteryCharging className="w-4 h-4 text-sky-600" />
                   <span>ความจุเพื่อความต่อเนื่อง (Capacity):</span>
                 </span>
-                <span className="font-mono font-bold text-cyan-400">
+                <span className="font-mono font-black text-sky-700">
                   {selectedPack.capacityMah} mAh
                 </span>
               </div>
             </div>
-          </div>
+          </section>
         </div>
       </div>
 
       {/* Floating Save Toast */}
       {saveToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border-2 border-emerald-500 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
-          <Sparkles className="w-5 h-5 text-emerald-400 animate-spin" />
-          <span className="text-xs font-bold">{saveToast}</span>
+        <div className="fixed bottom-6 right-6 z-50 bg-white/95 border-2 border-emerald-500 text-slate-900 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4">
+          <Sparkles className="w-5 h-5 text-emerald-600 animate-spin" />
+          <span className="text-xs font-black">{saveToast}</span>
         </div>
       )}
     </div>
