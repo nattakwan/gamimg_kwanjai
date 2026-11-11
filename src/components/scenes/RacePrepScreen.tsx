@@ -76,7 +76,7 @@ const RACE_TRACKS: TrackOption[] = [
     lapCount: 1,
     terrainType: 'พื้นยางสังเคราะห์ความเร็วสูง (High-Speed Polymer)',
     learningObjective:
-      'สังเกตว่าแรงดันพิกัด 3.0V ช่วยให้มอเตอร์ทำความเร็วรอบสูงสุด (RPM) ได้เร็วที่สุดในการแข่งขันระยะสั้น',
+      'ทดสอบความเร็วปลายและอัตราเร่ง: มอเตอร์ 6V / 12V / 24V จะใช้กำลังเต็มพิกัดบนทางราบ',
     recommendedStrategy: 'เปิดคันเร่งเต็ม 100% พร้อมใช้ไนโตรบูสต์ในช่วง 100 เมตรสุดท้าย',
     gradientBadge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
   },
@@ -84,13 +84,13 @@ const RACE_TRACKS: TrackOption[] = [
     id: 'hill_climb',
     name: 'ฮิลล์ ไคลมบ์ (Hill Climb - 600m)',
     distanceMeters: 600,
-    elevation: 'ทางลาดชันขึ้นเขา (+8% ถึง +12%)',
-    slopeProfile: 'ทางไต่เขาชันต่อเนื่อง ต้องใช้แรงบิดมอเตอร์สูงในการเอาชนะแรงโน้มถ่วง',
+    elevation: 'ทางไต่เขาชันสลับลงเขา (+16% / -9%)',
+    slopeProfile: 'ไต่เขาชัน 14-16% สลับทางปล่อยไหลลงเขา 9% (1 รอบจบ Point-to-Point)',
     lapCount: 1,
     terrainType: 'พื้นคอนกรีตหยาบยึดเกาะสูง (High-Traction Concrete)',
     learningObjective:
-      'ศึกษาผลของแรงดันตกคร่อม (Voltage Sag) ใต้ภาระโหลดหนัก: แพ็ก 2S2P (R_in 0.15Ω) จะรักษาแรงดันและไม่ร้อนจัดเท่าแพ็ก 2S1P (R_in 0.30Ω)',
-    recommendedStrategy: 'รักษาคันเร่งที่ 80-90% เพื่อหลีกเลี่ยงกระแสโอเวอร์โหลดขณะไต่ทางชัน',
+      'ศึกษาผลของแรงโน้มถ่วง F = mg*sin(θ): ตอนขึ้นเขาต้องใช้แรงบิดสูง ตอนลงเขาปล่อยไหลได้โดยกินไฟ 0W และพิสูจน์ว่าต่อแบตเตอรี่โควตา 8 ก้อนแบบใดจะไม่หมดกลางทาง!',
+    recommendedStrategy: 'หากใช้มอเตอร์ 24V (8S 1P 2000mAh) อย่ากด Boost ตอนลงเขา ให้ปล่อยไหลเพื่อประหยัดไฟไว้ขึ้นยอดเขาสุดท้าย!',
     gradientBadge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
   },
   {
@@ -102,7 +102,7 @@ const RACE_TRACKS: TrackOption[] = [
     lapCount: 3,
     terrainType: 'สนามแข่งแอสฟัลต์มาตรฐานสากล (Academy Grand Prix Circuit)',
     learningObjective:
-      'การบริหารประจุแบตเตอรี่ในระยะทางไกล: ชุด 2S2P มีความจุ 4,000 mAh ช่วยให้ไม่หมดพลังงานกลางคันเมื่อเทียบกับชุด 2,000 mAh',
+      'การบริหารประจุแบตเตอรี่ในระยะทางไกล: แพ็กความจุสูง (8,000 mAh หรือ 4,000 mAh) จะช่วยให้วิ่งจนจบ 3 รอบได้',
     recommendedStrategy: 'บริหารพลังงานให้สม่ำเสมอ ผ่อนคันเร่งเข้าโค้ง และเร่งเต็มที่ในทางตรง',
     gradientBadge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
   },
@@ -163,13 +163,15 @@ export const RacePrepScreen: React.FC = () => {
   const [countdownText, setCountdownText] = useState<string>('');
 
   // Installed Pack & Bike Specs
-  const packV = state.batteryPack.nominalVoltage || state.batteryPack.totalVoltage || 3.0;
+  const packV = state.batteryPack.nominalVoltage || state.batteryPack.totalVoltage || 12.0;
   const packMah = state.batteryPack.nominalCapacityMah || state.batteryPack.totalCapacityMah || 4000;
-  const motorRatedV = state.bikeSetup?.motorRatedVoltage || 3.0;
-  const bikeTopSpeed = state.bikeSetup?.topSpeedKmh || 32;
+  const motorRatedV = state.bikeSetup?.motorRatedVoltage || state.bikeSetup?.motorVoltageRating || 12.0;
+  const motorName = state.bikeSetup?.motorName || `${motorRatedV}V Motor`;
+  const bikeTopSpeed = state.bikeSetup?.topSpeedKmh || 35;
 
-  // Validation: Must be 3.0V compatible (<= 3.3V and >= 2.5V)
-  const isSetupValid = packV >= 2.5 && packV <= 3.3 && packMah >= 1000;
+  // Validation: Overvoltage (> 110% of motor rating) is dangerous; undervoltage is permitted with warning
+  const isOverVoltage = packV > motorRatedV * 1.1;
+  const isSetupValid = !isOverVoltage && packMah >= 1000;
 
   // Countdown sequence loop
   useEffect(() => {
@@ -407,7 +409,7 @@ export const RacePrepScreen: React.FC = () => {
                     {state.batteryPack.name || `แบตเตอรี่ 2S2P (${packV.toFixed(1)}V ${packMah}mAh)`}
                   </div>
                   <span className="text-[10px] text-slate-400 block">
-                    ความเร็วสูงสุด: {bikeTopSpeed} กม./ชม. | มอเตอร์ DC 3.0V
+                    ความเร็วสูงสุด: {bikeTopSpeed} กม./ชม. | มอเตอร์ {motorName}
                   </span>
                 </div>
               </div>
@@ -459,7 +461,7 @@ export const RacePrepScreen: React.FC = () => {
                   ชุดแบตเตอรี่ที่ติดตั้ง:
                 </span>
                 <span className="font-mono font-bold text-amber-300">
-                  {packV.toFixed(1)}V / {packMah} mAh
+                  {packV.toFixed(1)}V / {packMah} mAh ({state.batteryPack.totalCells || 8} ก้อน)
                 </span>
               </div>
 
@@ -469,7 +471,7 @@ export const RacePrepScreen: React.FC = () => {
                   พิกัดมอเตอร์ไฟฟ้า:
                 </span>
                 <span className="font-mono font-bold text-indigo-300">
-                  DC {motorRatedV.toFixed(1)}V (Max 3.0V)
+                  DC {motorRatedV.toFixed(1)}V ({motorName})
                 </span>
               </div>
 
@@ -485,14 +487,18 @@ export const RacePrepScreen: React.FC = () => {
                   ความปลอดภัยระบบไฟฟ้า:
                 </span>
                 <span className="font-bold">
-                  {isSetupValid ? 'ผ่านเกณฑ์ความปลอดภัย 100%' : 'แรงดันไม่เข้ากัน! ห้ามลงแข่ง'}
+                  {isSetupValid
+                    ? packV === motorRatedV
+                      ? 'แรงดันตรงพิกัด 100% (สมบูรณ์แบบ)'
+                      : 'ผ่านเกณฑ์ (แรงดันต่ำกว่าพิกัด มอเตอร์หมุนช้าลง)'
+                    : 'อันตราย! แรงดันเกินพิกัด ห้ามลงแข่ง'}
                 </span>
               </div>
             </div>
 
             {!isSetupValid && (
               <p className="text-[11px] text-rose-400 leading-relaxed bg-rose-950/40 p-2 rounded-lg border border-rose-800">
-                คำเตือน: คุณยังไม่ได้ติดตั้งชุดแบตเตอรี่ 3.0V ที่ผ่านการรับรอง กรุณากดปุ่ม <strong>"กลับโรงเก็บจักรยาน"</strong> เพื่อติดตั้งชุด 2S2P หรือ 2S1P ให้เรียบร้อย
+                คำเตือน: แรงดันแบตเตอรี่ ({packV}V) เกินพิกัดมอเตอร์ ({motorRatedV}V) กรุณากดปุ่ม <strong>"กลับโรงเก็บจักรยาน"</strong> เพื่อเลือกชุดแบตเตอรี่ที่ไม่เกินพิกัด
               </p>
             )}
           </div>
@@ -502,8 +508,8 @@ export const RacePrepScreen: React.FC = () => {
             mood={isSetupValid ? 'celebrate' : 'warning'}
             message={
               isSetupValid
-                ? `ทุกอย่างพร้อมแล้วครับคุณ ${state.character.name}! แบตเตอรี่ 3.0V และมอเตอร์ 3V จับคู่กันอย่างลงตัวบนสนาม ${selectedTrack.name} กดปุ่ม 'พร้อมแข่ง' เพื่อเริ่มนับถอยหลังได้เลยครับ!`
-                : 'ระบบความปลอดภัยตรวจพบว่าแรงดันแบตเตอรี่ยังไม่ถูกต้อง กรุณาย้อนกลับไปโรงเก็บจักรยานเพื่อเลือกติดตั้งชุด 2S2P ให้พร้อมก่อนครับ'
+                ? `ทุกอย่างพร้อมแล้วครับคุณ ${state.character.name}! มอเตอร์ ${motorRatedV}V และแบตเตอรี่ ${packV}V (${packMah}mAh) บนสนาม ${selectedTrack.name} กดปุ่ม 'พร้อมแข่ง' เพื่อเริ่มนับถอยหลังได้เลยครับ!`
+                : 'ระบบความปลอดภัยตรวจพบว่าแรงดันแบตเตอรี่เกินพิกัดมอเตอร์ กรุณาย้อนกลับไปโรงเก็บจักรยานเพื่อปรับแต่งให้ถูกต้องก่อนครับ'
             }
           />
         </div>

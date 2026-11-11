@@ -1,0 +1,15 @@
+name: DeepSeek Project Config
+version: 1.0.0
+schema: v1
+models:
+  - name: DeepSeek Chat
+    provider: openai
+    model: deepseek-chat
+    apiBase: https://api.deepseek.com/v1
+    apiKey: ${{ env.DEEPSEEK_API_KEY }}
+  - name: DeepSeek Reasoner
+    provider: openai
+    model: deepseek-reasoner
+    apiBase: https://api.deepseek.com/v1
+    apiKey: ${{ env.DEEPSEEK_API_KEY }}
+

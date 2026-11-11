@@ -21,6 +21,7 @@ import {
   Flame,
   Star,
   Info,
+  AlertTriangle,
 } from 'lucide-react';
 import { useGameState } from '../../context/GameStateContext';
 import { AvatarRenderer } from '../common/AvatarRenderer';
@@ -122,43 +123,70 @@ export const RaceResultsScreen: React.FC = () => {
   const podium3rd = competitorResults.find((c) => c.rank === 3) || competitorResults[2];
   const rank4th = competitorResults.find((c) => c.rank === 4) || competitorResults[3];
 
-  // Dynamic scientific explanation of how battery choice affected the race outcome
+  const isExhausted = Boolean(state.raceData?.batteryExhaustedMidway);
+  const isStalled = Boolean(state.raceData?.stalledOnHill);
+  const chosenMotorV = state.raceData?.chosenMotorVoltage || 12;
+  const downhillSavedWh = state.raceData?.downhillEnergySavedWh || 0;
+
+  // Dynamic scientific explanation of how battery choice & physics affected the race outcome
   const getBatteryExplanation = () => {
+    if (isStalled || isExhausted) {
+      if (chosenMotorV === 24 && packMah <= 2000) {
+        return `❌ วิกฤตพลังงานหมดกลางทาง (Energy Exhaustion): คุณเลือกมอเตอร์กำลังสูง 24V (800W) ซึ่งต้องการกระแสสูงถึง 6.8A แต่ภายใต้กฎการจำกัดโควตา 8 ก้อน การต่อแบบ 8S 1P ให้ความจุเหลือเพียง 2,000 mAh ทำให้ประจุไฟฟ้าหมดก่อนถึงยอดเขา! ในทางฟิสิกส์ แรงถีบของมนุษย์ (~60N) ไม่สามารถเอาชนะแรงดึงดูดของโลกบนเนิน 16% (F = mg*sin(θ) ≈ 127N) ได้ จึงทำให้รถติดค้างบนเนิน (Stalled)!`;
+      }
+      if (packV < chosenMotorV * 0.7) {
+        return `❌ เกิดปัญหาแรงดันตกพิกัดรุนแรง (Severe Undervoltage): คุณใช้มอเตอร์พิกัด ${chosenMotorV}V แต่จ่ายไฟด้วยแบตเตอรี่ ${packV}V ทำให้กำลังขับของมอเตอร์ลดลงเหลือเพียง ${Math.round(Math.pow(packV / chosenMotorV, 2) * 100)}% แรงบิดไม่เพียงพอที่จะเอาชนะแรงโน้มถ่วงความชัน 14-16% ได้!`;
+      }
+      return `❌ แบตเตอรี่หมดพลังงานระหว่างการแข่งขัน ส่งผลให้มอเตอร์ไฟฟ้าหยุดทำงานกะทันหัน และรถสูญเสียแรงขับเคลื่อนจนหยุดนิ่งบนเนินเขา`;
+    }
+
     if (trackId === 'hill_climb') {
-      return `ในการแข่งขันทางลาดชัน (+8% ถึง +12%) มอเตอร์ไฟฟ้าต้องการแรงบิดสูงและดึงกระแสถึง 2.5 แอมแปร์ ชุดแบตเตอรี่ 2S2P ที่คุณเลือกมีความต้านทานภายในต่ำเพียง ${internalR.toFixed(
-        2
-      )}Ω จึงเกิดแรงดันตกคร่อม (Voltage Sag) น้อยมาก มอเตอร์จึงรักษาความเร็วรอบ RPM ได้อย่างต่อเนื่อง ต่างจากชุด 2S1P ของคู่แข่งที่แรงดันตกฮวบจนความเร็วตกลงอย่างเห็นได้ชัด!`;
+      return `🏆 ผลสำเร็จจากการจับคู่วิศวกรรมยอดเยี่ยม! มอเตอร์ ${chosenMotorV}V ทำงานคู่กับชุดแบตเตอรี่ ${packV}V (${packMah} mAh) ได้อย่างกลมกลืน ช่วงไต่เขาชัน 14-16% มอเตอร์สร้างแรงบิดเอาชนะแรงโน้มถ่วง F = mg*sin(θ) ได้อย่างราบรื่น และในช่วงลงเขาชัน 9% คุณประหยัดพลังงานได้ ${downhillSavedWh > 0 ? downhillSavedWh.toFixed(1) : '1.2'} Wh จากการปล่อยไหลฟรี (Coasting) ทำให้มีพลังงานเหลือรอดเข้าเส้นชัยได้อย่างสง่างาม!`;
     }
     if (trackId === 'endurance_route') {
-      return `การแข่งขันระยะทางยาว 1,200 เมตร (3 รอบสนาม) อาศัยความจุพลังงานเป็นหลัก ชุดแบตเตอรี่ 2S2P ความจุ ${packMah} mAh ทำให้มีประจุเพียงพอตลอดการแข่งขันโดยเหลือพลังงานสำรองถึง ${remainingPct}% (${remainingMah} mAh) ป้องกันไม่ให้ระบบตัดการทำงานหรือแบตเตอรี่หมดกลางทาง`;
+      return `การแข่งขันระยะทางยาว 1,200 เมตร (3 รอบสนาม) อาศัยความจุพลังงานเป็นหลัก ชุดแบตเตอรี่ ${packMah} mAh ทำให้มีประจุเพียงพอตลอดการแข่งขันโดยเหลือพลังงานสำรองถึง ${remainingPct}% (${remainingMah} mAh) ป้องกันไม่ให้ระบบตัดการทำงานหรือแบตเตอรี่หมดกลางทาง`;
     }
     return `บนสนามทางเรียบความเร็วสูง (400m) แรงดันไฟฟ้าพิกัด ${packV.toFixed(
       1
-    )}V ตรงกับมอเตอร์ DC 3.0V พอดี ทำให้มอเตอร์สามารถทำรอบการหมุนสูงสุดได้อย่างปลอดภัย และการต่อขนานช่วยจ่ายกระแสให้อัตราเร่งออกตัวช่วงต้นทรงพลังจนคว้าชัยชนะได้สำเร็จ!`;
+    )}V ตรงกับมอเตอร์ DC ${chosenMotorV}V พอดี ทำให้มอเตอร์สามารถทำรอบการหมุนสูงสุดได้อย่างปลอดภัย และการจ่ายกระแสช่วยให้อัตราเร่งออกตัวช่วงต้นทรงพลังจนคว้าชัยชนะได้สำเร็จ!`;
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white flex flex-col font-sans select-none p-3 md:p-6">
       <div className="max-w-5xl mx-auto w-full flex-1 flex flex-col gap-5 justify-between">
         {/* Top Header Card: Title & Trophy */}
-        <div className="bg-slate-900/95 border-2 border-indigo-500/40 rounded-3xl p-5 md:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4 relative overflow-hidden">
+        <div className={`bg-slate-900/95 border-2 rounded-3xl p-5 md:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4 relative overflow-hidden ${
+          isStalled || isExhausted ? 'border-rose-500/60' : 'border-indigo-500/40'
+        }`}>
           <div className="flex items-center gap-4">
             <div
               className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center shadow-xl border-2 shrink-0 ${
-                rank === 1
+                isStalled || isExhausted
+                  ? 'bg-rose-500/20 border-rose-500 text-rose-400'
+                  : rank === 1
                   ? 'bg-amber-500/20 border-amber-400 text-amber-400 shadow-amber-500/30'
                   : rank === 2
                   ? 'bg-slate-300/20 border-slate-300 text-slate-300'
                   : 'bg-amber-700/20 border-amber-600 text-amber-600'
               }`}
             >
-              <Trophy className="w-8 h-8 md:w-10 md:h-10" />
+              {isStalled || isExhausted ? (
+                <AlertTriangle className="w-8 h-8 md:w-10 md:h-10" />
+              ) : (
+                <Trophy className="w-8 h-8 md:w-10 md:h-10" />
+              )}
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/20 px-3 py-0.5 rounded-full">
-                  สรุปผลการแข่งขันทางการ (Official Race Results)
+                <span className={`text-[11px] font-black uppercase tracking-wider px-3 py-0.5 rounded-full ${
+                  isStalled || isExhausted
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                    : 'bg-amber-500/20 text-amber-400'
+                }`}>
+                  {isStalled || isExhausted
+                    ? 'สรุปผลการแข่งขัน: รถติดค้างบนเนิน (STALLED ON HILL)'
+                    : 'สรุปผลการแข่งขันทางการ (Official Race Results)'}
                 </span>
                 <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold">
                   {trackName.split('(')[0]}
@@ -166,7 +194,9 @@ export const RaceResultsScreen: React.FC = () => {
               </div>
 
               <h1 className="text-xl md:text-3xl font-black text-white mt-1">
-                {rank === 1
+                {isStalled || isExhausted
+                  ? `⚠️ แบตเตอรี่หมดกลางทาง! คุณ ${state.character.name} ติดค้างบนเนินชัน`
+                  : rank === 1
                   ? `🏆 ชัยชนะอันดับที่ 1! ยอดเยี่ยมมากคุณ ${state.character.name}!`
                   : `🏁 เข้าเส้นชัยอันดับที่ #${rank}! ทำผลงานได้ยอดเยี่ยมคุณ ${state.character.name}!`}
               </h1>
@@ -181,7 +211,7 @@ export const RaceResultsScreen: React.FC = () => {
                 </span>
                 <span>•</span>
                 <span>
-                  แบตเตอรี่คงเหลือ: <strong className="text-amber-400 font-mono">{remainingPct}%</strong>
+                  แบตเตอรี่คงเหลือ: <strong className={remainingPct <= 5 ? 'text-rose-400 font-mono' : 'text-amber-400 font-mono'}>{remainingPct}%</strong>
                 </span>
               </p>
             </div>

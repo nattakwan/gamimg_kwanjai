@@ -8,8 +8,6 @@ import {
   Wrench,
   Zap,
   Gauge,
-  Palette,
-  Layers,
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
@@ -20,16 +18,17 @@ import {
   ShieldAlert,
   Flame,
   BatteryCharging,
-  Sliders,
-  Check,
   Play,
   RotateCw,
-  HelpCircle,
   AlertTriangle,
+  Cpu,
+  Layers,
+  Scale,
+  Mountain,
 } from 'lucide-react';
 import { useGameState } from '../../context/GameStateContext';
 import { AvatarRenderer } from '../common/AvatarRenderer';
-import { VoltDialog } from '../common/VoltDialog';
+import { MOTOR_CATALOG, MotorSpec, MotorVoltageRating } from '../../types/game';
 
 const playTone = (freq: number, type: OscillatorType = 'sine', duration: number = 0.15) => {
   try {
@@ -53,7 +52,7 @@ const playTone = (freq: number, type: OscillatorType = 'sine', duration: number 
   }
 };
 
-interface AvailablePack {
+interface GaragePack {
   id: string;
   code: string;
   name: string;
@@ -61,66 +60,81 @@ interface AvailablePack {
   capacityMah: number;
   seriesCount: number;
   parallelCount: number;
-  isCompatible: boolean;
-  statusText: string;
-  rejectionReason?: string;
-  isRecommended?: boolean;
+  totalCells: number;
+  internalResistance: number;
+  description: string;
+  recommendedForMotorVoltage: MotorVoltageRating;
 }
 
-const GARAGE_PACKS: AvailablePack[] = [
+const GARAGE_PACKS: GaragePack[] = [
   {
-    id: 'pack_2s2p',
-    code: '2S2P (4 ก้อน)',
-    name: 'ชุดผสม 2S2P (3.0V 4000mAh)',
-    nominalVoltage: 3.0,
+    id: 'pack_2s4p_6v',
+    code: '2S4P (8 ก้อน - โควตาเต็ม)',
+    name: 'ชุดผสมความจุสูง 2S4P (6.0V 8,000mAh)',
+    nominalVoltage: 6.0,
+    capacityMah: 8000,
+    seriesCount: 2,
+    parallelCount: 4,
+    totalCells: 8,
+    internalResistance: 0.08,
+    description: 'ต่อขนาน 4 แถว ความจุสูงถึง 8,000mAh แบตอึดมาก ไม่มีวันหมดกลางทาง เหมาะกับมอเตอร์ 6V',
+    recommendedForMotorVoltage: 6,
+  },
+  {
+    id: 'pack_4s2p_12v',
+    code: '4S2P (8 ก้อน - โควตาเต็ม)',
+    name: 'ชุดผสมสมดุล 4S2P (12.0V 4,000mAh)',
+    nominalVoltage: 12.0,
+    capacityMah: 4000,
+    seriesCount: 4,
+    parallelCount: 2,
+    totalCells: 8,
+    internalResistance: 0.15,
+    description: 'สมดุลยอดเยี่ยม 12V ความจุ 4,000mAh จ่ายกำลังได้สม่ำเสมอ เหมาะกับมอเตอร์ 12V',
+    recommendedForMotorVoltage: 12,
+  },
+  {
+    id: 'pack_8s1p_24v',
+    code: '8S1P (8 ก้อน - โควตาเต็ม)',
+    name: 'ชุดอนุกรมแรงบิดสูง 8S1P (24.0V 2,000mAh)',
+    nominalVoltage: 24.0,
+    capacityMah: 2000,
+    seriesCount: 8,
+    parallelCount: 1,
+    totalCells: 8,
+    internalResistance: 0.35,
+    description: 'แรงดันสูงสุด 24V เพื่อพลังปีนเขา แต่ความจุมีเพียง 2,000mAh แบตเตอรี่จะหมดเร็วมากหากเร่งสปรินต์ต่อเนื่อง!',
+    recommendedForMotorVoltage: 24,
+  },
+  {
+    id: 'pack_2s2p_6v',
+    code: '2S2P (4 ก้อน - ครึ่งโควตา)',
+    name: 'ชุดประหยัด 2S2P (6.0V 4,000mAh)',
+    nominalVoltage: 6.0,
     capacityMah: 4000,
     seriesCount: 2,
     parallelCount: 2,
-    isCompatible: true,
-    statusText: 'เข้ากันได้อย่างสมบูรณ์ (แรงดัน 3.0V พอดิบพอดีกับมอเตอร์)',
-    isRecommended: true,
-  },
-  {
-    id: 'pack_2s1p',
-    code: '2S1P (2 ก้อน)',
-    name: 'ชุดอนุกรม 2S1P (3.0V 2000mAh)',
-    nominalVoltage: 3.0,
-    capacityMah: 2000,
-    seriesCount: 2,
-    parallelCount: 1,
-    isCompatible: true,
-    statusText: 'เข้ากันได้ (แรงดัน 3.0V ความจุ 2000mAh)',
-  },
-  {
-    id: 'pack_3s_unregulated',
-    code: '3S Unregulated (3 ก้อน)',
-    name: 'ชุดแรงดันสูง 3S (4.5V 2000mAh)',
-    nominalVoltage: 4.5,
-    capacityMah: 2000,
-    seriesCount: 3,
-    parallelCount: 1,
-    isCompatible: false,
-    statusText: 'อันตราย! แรงดัน 4.5V เกินพิกัดมอเตอร์ 3.0V',
-    rejectionReason:
-      'ระบบความปลอดภัยตัดการติดตั้งอัตโนมัติ! แบตเตอรี่ 4.5V เกินพิกัดมอเตอร์ 3.0V ถึง 150% ขดลวดมอเตอร์จะร้อนจัดและไหม้เสียหายทันที',
-  },
-  {
-    id: 'pack_1s2p',
-    code: '1S2P (2 ก้อน)',
-    name: 'ชุดแรงดันต่ำ 1S (1.5V 4000mAh)',
-    nominalVoltage: 1.5,
-    capacityMah: 4000,
-    seriesCount: 1,
-    parallelCount: 2,
-    isCompatible: false,
-    statusText: 'ไม่แนะนำ (แรงดัน 1.5V ต่ำเกินไป มอเตอร์หมุนไม่ไหว)',
-    rejectionReason:
-      'แรงดัน 1.5V ไม่เพียงพอที่จะสร้างแรงบิดเอาชนะแรงเสียดทานของระบบขับเคลื่อนจักรยาน มอเตอร์จะติดค้าง (Stall)',
+    totalCells: 4,
+    internalResistance: 0.16,
+    description: 'ชุดทดสอบ 4 ก้อน น้ำหนักเบาแต่แรงดัน 6V เหมาะสำหรับการทดสอบขั้นต้น',
+    recommendedForMotorVoltage: 6,
   },
 ];
 
 export const BikeGarageScreen: React.FC = () => {
   const { state, goToScene, updateBikeSetup, updateBatteryPack } = useGameState();
+
+  // Selected Motor: 6V, 12V, 24V
+  const [selectedMotorId, setSelectedMotorId] = useState<string>(() => {
+    if (state.bikeSetup?.motorId && MOTOR_CATALOG[state.bikeSetup.motorId]) {
+      return state.bikeSetup.motorId;
+    }
+    if (state.bikeSetup?.motorVoltageRating === 24) return 'motor_24v';
+    if (state.bikeSetup?.motorVoltageRating === 6) return 'motor_6v';
+    return 'motor_12v';
+  });
+
+  const selectedMotor: MotorSpec = MOTOR_CATALOG[selectedMotorId] || MOTOR_CATALOG.motor_12v;
 
   // Cosmetics
   const [frameType, setFrameType] = useState<string>(
@@ -132,10 +146,14 @@ export const BikeGarageScreen: React.FC = () => {
   const [tireType, setTireType] = useState<string>(
     state.bikeSetup?.tireType || 'slick_street'
   );
-  const [accentColor, setAccentColor] = useState<string>('#f59e0b');
 
   // Battery Selection & Animated Installation
-  const [selectedPackId, setSelectedPackId] = useState<string>('pack_2s2p');
+  const [selectedPackId, setSelectedPackId] = useState<string>(() => {
+    if (selectedMotor.ratedVoltage === 24) return 'pack_8s1p_24v';
+    if (selectedMotor.ratedVoltage === 6) return 'pack_2s4p_6v';
+    return 'pack_4s2p_12v';
+  });
+
   const [isBatteryInstalled, setIsBatteryInstalled] = useState<boolean>(true);
   const [isInstalling, setIsInstalling] = useState<boolean>(false);
   const [installationError, setInstallationError] = useState<string | null>(null);
@@ -146,34 +164,49 @@ export const BikeGarageScreen: React.FC = () => {
 
   // Modals & Feedback
   const [saveToast, setSaveToast] = useState<string | null>(null);
-  const [showSafetyModal, setShowSafetyModal] = useState<boolean>(false);
 
   const selectedPack =
-    GARAGE_PACKS.find((p) => p.id === selectedPackId) || GARAGE_PACKS[0];
+    GARAGE_PACKS.find((p) => p.id === selectedPackId) || GARAGE_PACKS[1];
 
-  // Motor Specification
-  const motorRatedVoltage = 3.0; // V
-  const motorMaxRpm = 1760;
+  // Engineering Compatibility Logic
+  const isVoltageMatch = selectedPack.nominalVoltage === selectedMotor.ratedVoltage;
+  const isOverVoltage = selectedPack.nominalVoltage > selectedMotor.ratedVoltage;
+  const isUnderVoltage = selectedPack.nominalVoltage < selectedMotor.ratedVoltage;
 
-  // Stored Energy Calculation
+  const isCompatible = !isOverVoltage; // Overvoltage is prohibited to prevent motor blowout
+  const voltageRatio = Number((selectedPack.nominalVoltage / selectedMotor.ratedVoltage).toFixed(2));
+
+  // Stored Energy Calculation (Wh = V * Ah)
   const storedEnergyWh = Number(
     ((selectedPack.nominalVoltage * selectedPack.capacityMah) / 1000).toFixed(1)
   );
 
-  // Expected Operating Limits
-  const topSpeedKmh = selectedPack.isCompatible
-    ? selectedPack.id === 'pack_2s2p'
-      ? 32
-      : 28
-    : 0;
-  const accelSeconds = selectedPack.isCompatible
-    ? selectedPack.id === 'pack_2s2p'
-      ? 3.8
-      : 4.6
-    : 99;
-  const rangeKm = selectedPack.isCompatible
-    ? Number(((selectedPack.capacityMah / 1000) * 5.5).toFixed(1))
-    : 0;
+  // Expected Operating Limits based on Motor + Pack Match
+  let topSpeedKmh = 0;
+  let accelSeconds = 99;
+  let rangeKm = 0;
+
+  if (isVoltageMatch) {
+    if (selectedMotor.ratedVoltage === 24) {
+      topSpeedKmh = 42;
+      accelSeconds = 2.4;
+      rangeKm = Number(((selectedPack.capacityMah / 1000) * 3.2).toFixed(1)); // Drains fast!
+    } else if (selectedMotor.ratedVoltage === 12) {
+      topSpeedKmh = 35;
+      accelSeconds = 3.4;
+      rangeKm = Number(((selectedPack.capacityMah / 1000) * 4.8).toFixed(1));
+    } else {
+      topSpeedKmh = 27;
+      accelSeconds = 4.8;
+      rangeKm = Number(((selectedPack.capacityMah / 1000) * 6.5).toFixed(1)); // Very long range
+    }
+  } else if (isUnderVoltage) {
+    // Severely degraded performance under undervoltage
+    const powerScale = Math.pow(voltageRatio, 2);
+    topSpeedKmh = Math.max(12, Math.round(30 * powerScale));
+    accelSeconds = Math.min(15, Number((5.0 / powerScale).toFixed(1)));
+    rangeKm = Number(((selectedPack.capacityMah / 1000) * 5.0).toFixed(1));
+  }
 
   // Wheel rotation animation loop when bench testing
   useEffect(() => {
@@ -184,8 +217,23 @@ export const BikeGarageScreen: React.FC = () => {
     return () => clearInterval(interval);
   }, [isTestSpinning]);
 
+  // Handle Motor Selection
+  const handleSelectMotor = (motorId: string) => {
+    playTone(520, 'sine', 0.1);
+    setSelectedMotorId(motorId);
+    const motor = MOTOR_CATALOG[motorId];
+    if (motor) {
+      // Auto-suggest optimal pack for this motor
+      if (motor.ratedVoltage === 24) setSelectedPackId('pack_8s1p_24v');
+      else if (motor.ratedVoltage === 12) setSelectedPackId('pack_4s2p_12v');
+      else setSelectedPackId('pack_2s4p_6v');
+    }
+    setIsBatteryInstalled(false);
+    setInstallationError(null);
+  };
+
   // Handle Battery Selection
-  const handleSelectPack = (pack: AvailablePack) => {
+  const handleSelectPack = (pack: GaragePack) => {
     playTone(500, 'sine', 0.08);
     setSelectedPackId(pack.id);
     setIsBatteryInstalled(false);
@@ -194,10 +242,10 @@ export const BikeGarageScreen: React.FC = () => {
 
   // Handle Animated Battery Installation Action
   const handleInstallBattery = () => {
-    if (!selectedPack.isCompatible) {
+    if (isOverVoltage) {
       playTone(180, 'sawtooth', 0.35);
       setInstallationError(
-        selectedPack.rejectionReason || 'ชุดแบตเตอรี่นี้ไม่เข้ากันกับมอเตอร์ 3V!'
+        `อันตรายร้ายแรง! แรงดันแบตเตอรี่ ${selectedPack.nominalVoltage}V เกินพิกัดมอเตอร์ ${selectedMotor.ratedVoltage}V (${Math.round((selectedPack.nominalVoltage / selectedMotor.ratedVoltage) * 100)}%) ขดลวดมอเตอร์จะไหม้เสียหายทันที ระบบตัดการติดตั้งอัตโนมัติ!`
       );
       setIsBatteryInstalled(false);
       return;
@@ -211,27 +259,31 @@ export const BikeGarageScreen: React.FC = () => {
       playTone(880, 'triangle', 0.2);
       setIsInstalling(false);
       setIsBatteryInstalled(true);
-      setSaveToast(`ติดตั้ง ${selectedPack.name} ลงในโครงจักรยานเรียบร้อยและล็อกแน่นหนา!`);
+      setSaveToast(`ติดตั้ง ${selectedPack.name} กับมอเตอร์ ${selectedMotor.name} เรียบร้อยแล้ว!`);
       setTimeout(() => setSaveToast(null), 3000);
-    }, 600);
+    }, 500);
   };
 
   // Handle Test Setup Run
   const handleTestSetup = () => {
     if (!isBatteryInstalled) {
       playTone(280, 'square', 0.2);
-      setSaveToast('กรุณาติดตั้งชุดแบตเตอรี่ที่เข้ากันได้ลงในโครงจักรยานก่อนทดสอบ!');
+      setSaveToast('กรุณาติดตั้งชุดแบตเตอรี่ลงในโครงจักรยานก่อนทดสอบ!');
       setTimeout(() => setSaveToast(null), 3000);
       return;
     }
 
     playTone(650, 'sawtooth', 0.2);
     setIsTestSpinning(true);
-    setSaveToast(`กำลังทดสอบการหมุนของล้อและมอเตอร์: ความเร็วสูงสุด ${topSpeedKmh} กม./ชม.!`);
+    setSaveToast(
+      isVoltageMatch
+        ? `กำลังทดสอบมอเตอร์ ${selectedMotor.ratedVoltage}V: รอบหมุน ${selectedMotor.maxRpm} RPM ความเร็วสูงสุดประเมิน ${topSpeedKmh} กม./ชม.!`
+        : `คำเตือนการทดสอบ: แรงดัน ${selectedPack.nominalVoltage}V ไม่ตรงพิกัดมอเตอร์ ${selectedMotor.ratedVoltage}V มอเตอร์ทำงานได้เพียง ${Math.round(Math.pow(voltageRatio, 2) * 100)}% ของกำลังสูงสุด!`
+    );
 
     setTimeout(() => {
       setIsTestSpinning(false);
-      setTimeout(() => setSaveToast(null), 2500);
+      setTimeout(() => setSaveToast(null), 3000);
     }, 2200);
   };
 
@@ -239,40 +291,49 @@ export const BikeGarageScreen: React.FC = () => {
   const handleSaveAll = () => {
     if (!isBatteryInstalled) {
       playTone(280, 'square', 0.2);
-      setSaveToast('กรุณาติดตั้งแบตเตอรี่ให้ถูกต้องก่อนบันทึก');
+      setSaveToast('กรุณาติดตั้งแบตเตอรี่ให้เรียบร้อยก่อนบันทึก');
       setTimeout(() => setSaveToast(null), 3000);
       return;
     }
 
     playTone(600, 'sine', 0.15);
 
-    // Save to GameState
+    // Save Battery Pack Setup to GameState
     updateBatteryPack({
       id: selectedPack.id,
       name: selectedPack.name,
       configType: selectedPack.parallelCount > 1 ? 'mixed_series_parallel' : 'series',
       seriesCount: selectedPack.seriesCount,
       parallelCount: selectedPack.parallelCount,
+      totalCells: selectedPack.totalCells,
       nominalVoltage: selectedPack.nominalVoltage,
       nominalCapacityMah: selectedPack.capacityMah,
       totalVoltage: selectedPack.nominalVoltage,
       totalCapacityMah: selectedPack.capacityMah,
+      internalResistance: selectedPack.internalResistance,
       isValidated: true,
-      notes: `ติดตั้งในจักรยานแข่ง: ${selectedPack.name}`,
+      notes: `ติดตั้งในจักรยานแข่ง: มอเตอร์ ${selectedMotor.ratedVoltage}V คู่กับ ${selectedPack.name}`,
     });
 
+    // Save Bike Setup to GameState
     updateBikeSetup({
+      motorId: selectedMotor.id,
+      motorName: selectedMotor.name,
+      motorRatedVoltage: selectedMotor.ratedVoltage,
+      motorVoltageRating: selectedMotor.ratedVoltage,
+      motorPowerWatts: selectedMotor.powerWatts,
+      motorTorqueNm: selectedMotor.torqueNm,
+      motorMaxRpm: selectedMotor.maxRpm,
+      batteryCellBudget: 8,
       frameType,
       frameColor,
       tireType,
       topSpeedKmh,
       accelSeconds,
       rangeKm,
-      motorRatedVoltage: 3.0,
-      motorMaxRpm,
     });
 
-    setSaveToast('บันทึกการปรับแต่งจักรยานแข่งและชุดแบตเตอรี่เรียบร้อยแล้ว!');
+    setSaveToast('บันทึกการปรับแต่งจักรยาน มอเตอร์ และชุดแบตเตอรี่ 8 ก้อนเรียบร้อยแล้ว!');
     setTimeout(() => setSaveToast(null), 3500);
   };
 
@@ -303,7 +364,7 @@ export const BikeGarageScreen: React.FC = () => {
                 โรงเก็บจักรยานพาวเวอร์ไบค์ (Electric-Assist Bike Garage)
               </h1>
               <p className="text-[11px] text-slate-400">
-                ติดตั้งชุดแบตเตอรี่ ปรับแต่งสีตัวถัง และตรวจสอบความปลอดภัยตามพิกัดมอเตอร์ 3.0V
+                เลือกพิกัดมอเตอร์ (6V / 12V / 24V) และบริหารโควตาเซลล์แบตเตอรี่ 8 ก้อน
               </p>
             </div>
           </div>
@@ -316,7 +377,7 @@ export const BikeGarageScreen: React.FC = () => {
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 text-xs font-bold border border-indigo-700 transition min-h-[44px]"
           >
             <Play className={`w-4 h-4 ${isTestSpinning ? 'animate-spin' : ''}`} />
-            <span>ทดสอบระบบ (Test Setup)</span>
+            <span>ทดสอบระบบ (Test Bench)</span>
           </button>
 
           <button
@@ -339,9 +400,60 @@ export const BikeGarageScreen: React.FC = () => {
 
       {/* Main Content Grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 max-w-7xl mx-auto w-full">
-        {/* Left Column: Visual Hangar with Avatar & Cartoon E-Bike (7 Cols) */}
+        {/* Left Column: Motor Selector + Visual Hangar (7 Cols) */}
         <div className="lg:col-span-7 flex flex-col gap-4">
-          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl flex flex-col justify-between min-h-[500px] relative overflow-hidden">
+          {/* Motor Selection Bar (6V / 12V / 24V) */}
+          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-4 shadow-xl">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+              <span className="text-xs font-black text-cyan-300 flex items-center gap-1.5 uppercase">
+                <Cpu className="w-4 h-4 text-cyan-400" />
+                เลือกขนาดมอเตอร์ขับเคลื่อน (Electric Motor Rating)
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                จำกัดโควตาแบตเตอรี่เท่ากันที่ 8 ก้อน
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {Object.values(MOTOR_CATALOG).map((motor) => {
+                const isSelected = selectedMotorId === motor.id;
+                return (
+                  <button
+                    key={motor.id}
+                    onClick={() => handleSelectMotor(motor.id)}
+                    className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-cyan-950/70 border-cyan-400 text-white shadow-lg ring-2 ring-cyan-500/40'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-cyan-200">{motor.ratedVoltage}V</span>
+                        <span className="text-[10px] font-mono font-bold text-amber-400">
+                          {motor.powerWatts}W
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-bold text-white block mt-0.5">
+                        {motor.name.split('(')[0]}
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                        {motor.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-emerald-400">แรงบิด {motor.torqueNm} Nm</span>
+                      <span className="text-slate-400">{motor.maxRpm} RPM</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Visual Hangar with Avatar & E-Bike */}
+          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl flex flex-col justify-between min-h-[460px] relative overflow-hidden">
             {/* Background Studio Lights */}
             <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
 
@@ -353,9 +465,14 @@ export const BikeGarageScreen: React.FC = () => {
                   อู่ประกอบยานยนต์ไฟฟ้า (Electric Vehicle Assembly Bay)
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800">
-                MOTOR: DC 3.0V (RATED)
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-2.5 py-0.5 rounded border border-cyan-800 font-bold">
+                  MOTOR: {selectedMotor.ratedVoltage}V ({selectedMotor.powerWatts}W)
+                </span>
+                <span className="text-[10px] font-mono text-purple-400 bg-purple-950/80 px-2.5 py-0.5 rounded border border-purple-800 font-bold">
+                  BUDGET: 8 CELLS
+                </span>
+              </div>
             </div>
 
             {/* Stage: Player's Avatar standing beside the Cartoon Electric-Assist Bike */}
@@ -398,10 +515,13 @@ export const BikeGarageScreen: React.FC = () => {
                     <circle cx="260" cy="125" r="7" fill="#64748b" />
                   </g>
 
-                  {/* Rear Hub Motor (DC 3V Motor) */}
-                  <circle cx="60" cy="125" r="14" fill="#0f172a" stroke="#06b6d4" strokeWidth="2.5" />
-                  <text x="60" y="128" fill="#06b6d4" fontSize="6" fontWeight="bold" textAnchor="middle">
-                    3V MOTOR
+                  {/* Rear Hub Motor */}
+                  <circle cx="60" cy="125" r="16" fill="#0f172a" stroke="#06b6d4" strokeWidth="2.5" />
+                  <text x="60" y="127" fill="#06b6d4" fontSize="6.5" fontWeight="bold" textAnchor="middle">
+                    {selectedMotor.ratedVoltage}V
+                  </text>
+                  <text x="60" y="134" fill="#38bdf8" fontSize="5" fontWeight="bold" textAnchor="middle">
+                    {selectedMotor.powerWatts}W
                   </text>
 
                   {/* Frame Tubes */}
@@ -429,10 +549,10 @@ export const BikeGarageScreen: React.FC = () => {
 
                   {/* Battery Downtube Mounting Bracket */}
                   <rect
-                    x="152"
-                    y="76"
-                    width="46"
-                    height="22"
+                    x="150"
+                    y="74"
+                    width="50"
+                    height="26"
                     rx="5"
                     fill="#020617"
                     stroke="#475569"
@@ -440,21 +560,24 @@ export const BikeGarageScreen: React.FC = () => {
                     strokeDasharray={isBatteryInstalled ? 'none' : '3 2'}
                   />
 
-                  {/* Battery Pack Graphic (Sliding / Installed) */}
+                  {/* Battery Pack Graphic */}
                   {isBatteryInstalled && (
                     <g className={isInstalling ? 'animate-bounce' : ''}>
                       <rect
-                        x="154"
-                        y="78"
-                        width="42"
-                        height="18"
+                        x="152"
+                        y="76"
+                        width="46"
+                        height="22"
                         rx="4"
-                        fill={selectedPack.isCompatible ? '#10b981' : '#f43f5e'}
+                        fill={isVoltageMatch ? '#10b981' : isUnderVoltage ? '#f59e0b' : '#f43f5e'}
                         stroke="#ffffff"
                         strokeWidth="1.5"
                       />
-                      <text x="175" y="90" fill="#022c22" fontSize="7.5" fontWeight="black" textAnchor="middle">
+                      <text x="175" y="87" fill="#022c22" fontSize="7" fontWeight="black" textAnchor="middle">
                         ⚡ {selectedPack.nominalVoltage.toFixed(1)}V
+                      </text>
+                      <text x="175" y="94" fill="#022c22" fontSize="5.5" fontWeight="bold" textAnchor="middle">
+                        {selectedPack.capacityMah}mAh
                       </text>
                     </g>
                   )}
@@ -471,14 +594,18 @@ export const BikeGarageScreen: React.FC = () => {
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
                       isBatteryInstalled
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        ? isVoltageMatch
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-slate-800 text-slate-400 border border-slate-700'
                     }`}
                   >
                     {isBatteryInstalled ? (
                       <>
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>ติดตั้งแล้ว: {selectedPack.name}</span>
+                        <span>
+                          ติดตั้งแล้ว: {selectedPack.name} (คู่กับมอเตอร์ {selectedMotor.ratedVoltage}V)
+                        </span>
                       </>
                     ) : (
                       <>
@@ -502,7 +629,7 @@ export const BikeGarageScreen: React.FC = () => {
               <div className="text-center">
                 <span className="text-[10px] text-slate-400 block">อัตราเร่ง 0-30 กม./ชม.</span>
                 <span className="font-mono font-black text-amber-400 text-sm">
-                  {selectedPack.isCompatible ? `${accelSeconds} วิ` : '-'}
+                  {accelSeconds < 90 ? `${accelSeconds} วิ` : '-'}
                 </span>
               </div>
               <div className="text-center">
@@ -521,14 +648,17 @@ export const BikeGarageScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Battery Selector, Installation & Safety Checklist (5 Cols) */}
+        {/* Right Column: 8-Cell Budget Pack Selector & Engineering Trade-Offs (5 Cols) */}
         <div className="lg:col-span-5 flex flex-col gap-4">
           {/* Battery Pack Selection Card */}
           <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <span className="text-xs font-black text-amber-300 flex items-center gap-1.5 uppercase">
                 <BatteryCharging className="w-4 h-4 text-amber-400" />
-                เลือกชุดแบตเตอรี่ที่ผ่านการทดสอบ (Select Battery Pack)
+                โควตาแบตเตอรี่ 8 ก้อน (8-Cell Budget Quota)
+              </span>
+              <span className="text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                เซลล์: {selectedPack.totalCells}/8 ก้อน
               </span>
             </div>
 
@@ -536,34 +666,39 @@ export const BikeGarageScreen: React.FC = () => {
             <div className="space-y-2">
               {GARAGE_PACKS.map((pack) => {
                 const isSelected = selectedPackId === pack.id;
+                const matchesCurrentMotor = pack.recommendedForMotorVoltage === selectedMotor.ratedVoltage;
+                const isPackOver = pack.nominalVoltage > selectedMotor.ratedVoltage;
+
                 return (
                   <button
                     key={pack.id}
                     onClick={() => handleSelectPack(pack)}
-                    className={`w-full p-2.5 rounded-xl border text-left transition flex items-center justify-between ${
+                    className={`w-full p-3 rounded-xl border text-left transition flex items-start justify-between gap-2 ${
                       isSelected
-                        ? pack.isCompatible
-                          ? 'bg-emerald-950/60 border-emerald-500 text-white shadow-md'
-                          : 'bg-rose-950/60 border-rose-500 text-white shadow-md'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                        ? matchesCurrentMotor
+                          ? 'bg-emerald-950/70 border-emerald-500 text-white shadow-md ring-1 ring-emerald-500/50'
+                          : isPackOver
+                          ? 'bg-rose-950/70 border-rose-500 text-white shadow-md'
+                          : 'bg-amber-950/60 border-amber-500 text-white shadow-md'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                     }`}
                   >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs">{pack.name}</span>
-                        {pack.isRecommended && (
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-xs text-slate-100">{pack.name}</span>
+                        {matchesCurrentMotor && (
                           <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded font-mono font-bold">
-                            แนะนำ
+                            คู่มอเตอร์ {pack.recommendedForMotorVoltage}V
                           </span>
                         )}
-                        {!pack.isCompatible && (
+                        {isPackOver && (
                           <span className="text-[9px] bg-rose-500/20 text-rose-300 px-1.5 py-0.2 rounded font-mono font-bold">
-                            ห้ามใช้!
+                            แรงดันเกิน!
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">
-                        {pack.statusText}
+                      <span className="text-[10px] text-slate-400 block mt-1 leading-relaxed">
+                        {pack.description}
                       </span>
                     </div>
 
@@ -571,13 +706,47 @@ export const BikeGarageScreen: React.FC = () => {
                       <span className="font-mono text-xs font-bold text-amber-300 block">
                         {pack.nominalVoltage.toFixed(1)}V
                       </span>
-                      <span className="text-[10px] font-mono text-slate-400">
+                      <span className="text-[10px] font-mono text-cyan-400 block">
                         {pack.capacityMah} mAh
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-500 block">
+                        {pack.totalCells} ก้อน
                       </span>
                     </div>
                   </button>
                 );
               })}
+            </div>
+
+            {/* Strategic Vocational Trade-off Guidance Card */}
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-indigo-300">
+                <Scale className="w-3.5 h-3.5 text-indigo-400" />
+                <span>หลักการคราฟต์แบตเตอรี่ตามกฎไฟฟ้า (Vocational Physics):</span>
+              </div>
+              <p className="text-slate-300 leading-relaxed text-[10px]">
+                {selectedMotor.ratedVoltage === 24 && selectedPack.nominalVoltage === 24 ? (
+                  <span className="text-amber-300">
+                    ⚡ <strong>คำเตือนกลยุทธ์ 24V (8S 1P):</strong> ได้แรงบิดสูงสุด 2.8 Nm ไต่เขาชันเร็วที่สุด แต่ความจุเหลือเพียง <strong>2,000 mAh</strong> เพราะต้องอนุกรมทั้ง 8 ก้อน! หากกด Boost แช่ตลอดทาง แบตเตอรี่จะหมดก่อนถึงยอดเขา! ต้องอาศัยแรงคนปั่นผสมและปล่อยไหลลงเขา
+                  </span>
+                ) : selectedMotor.ratedVoltage === 12 && selectedPack.nominalVoltage === 12 ? (
+                  <span className="text-emerald-300">
+                    ⚖️ <strong>ความสมดุล 12V (4S 2P):</strong> อนุกรม 4 ก้อน (12V) และขนาน 2 แถว ได้ความจุ <strong>4,000 mAh</strong> สมดุลทั้งแรงบิดขึ้นเขาและระยะทางวิ่ง ไม่หมดกลางทางง่ายๆ
+                  </span>
+                ) : selectedMotor.ratedVoltage === 6 && selectedPack.nominalVoltage === 6 ? (
+                  <span className="text-cyan-300">
+                    🔋 <strong>ความจุสูงสุด 6V (2S 4P):</strong> ขนาน 4 แถว ความจุมหาศาลถึง <strong>8,000 mAh</strong> วิ่งได้ไกลสุดยอด แต่แรงบิด 0.8 Nm อาจไต่เขาชัน 15% ได้ช้ามาก
+                  </span>
+                ) : isUnderVoltage ? (
+                  <span className="text-rose-300">
+                    ⚠️ <strong>แรงดันตกพิกัด (Undervoltage):</strong> มอเตอร์ {selectedMotor.ratedVoltage}V ทำงานด้วยไฟ {selectedPack.nominalVoltage}V กำลังขับลดลงเหลือ {Math.round(Math.pow(voltageRatio, 2) * 100)}% รถจะติดค้าง (Stall) บนเนินชัน!
+                  </span>
+                ) : (
+                  <span className="text-rose-400">
+                    ⛔ <strong>แรงดันเกินพิกัด (Overvoltage):</strong> มอเตอร์ไม่สามารถรับแรงดันนี้ได้ เสี่ยงต่อการลุกไหม้
+                  </span>
+                )}
+              </p>
             </div>
 
             {/* Installation Action Button */}
@@ -594,17 +763,17 @@ export const BikeGarageScreen: React.FC = () => {
                 {isInstalling ? (
                   <>
                     <RotateCw className="w-4 h-4 animate-spin" />
-                    <span>กำลังติดตั้งและล็อกสลัก...</span>
+                    <span>กำลังติดตั้งและเชื่อมต่อขั้วสาย...</span>
                   </>
                 ) : isBatteryInstalled ? (
                   <>
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>ติดตั้งในโครงจักรยานเรียบร้อยแล้ว (คลิกเพื่อเปลี่ยน)</span>
+                    <span>ติดตั้งเรียบร้อยแล้ว (คลิกเพื่อสลับแพ็ก)</span>
                   </>
                 ) : (
                   <>
                     <Zap className="w-4 h-4 fill-current" />
-                    <span>คลิกเพื่อติดตั้งชุดแบตเตอรี่ที่เลือก</span>
+                    <span>คลิกเพื่อติดตั้งชุดแบตเตอรี่ลงในโครงจักรยาน</span>
                   </>
                 )}
               </button>
@@ -624,7 +793,7 @@ export const BikeGarageScreen: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5 uppercase">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                รายการตรวจสอบความปลอดภัย (Safety Checklist)
+                การตรวจสอบความเข้ากันได้ทางวิศวกรรม (Engineering Check)
               </span>
             </div>
 
@@ -632,117 +801,59 @@ export const BikeGarageScreen: React.FC = () => {
               {/* Check 1: Voltage Compatibility */}
               <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
                 <span className="flex items-center gap-2 text-slate-300">
-                  {selectedPack.nominalVoltage <= motorRatedVoltage ? (
+                  {isVoltageMatch ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : isUnderVoltage ? (
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
                   ) : (
                     <XCircle className="w-4 h-4 text-rose-400" />
                   )}
-                  <span>พิกัดแรงดันไฟฟ้า (Pack Voltage ≤ 3.0V):</span>
+                  <span>ความเข้ากันได้ของแรงดัน (Voltage Matching):</span>
                 </span>
                 <span
                   className={`font-mono font-bold ${
-                    selectedPack.nominalVoltage <= motorRatedVoltage
+                    isVoltageMatch
                       ? 'text-emerald-400'
+                      : isUnderVoltage
+                      ? 'text-amber-400'
                       : 'text-rose-400'
                   }`}
                 >
-                  {selectedPack.nominalVoltage.toFixed(1)}V / 3.0V
+                  {selectedPack.nominalVoltage.toFixed(1)}V / {selectedMotor.ratedVoltage.toFixed(1)}V
                 </span>
               </div>
 
-              {/* Check 2: Overvoltage Hazard */}
+              {/* Check 2: 8-Cell Budget Quota */}
               <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
                 <span className="flex items-center gap-2 text-slate-300">
-                  {selectedPack.nominalVoltage <= motorRatedVoltage ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-rose-400" />
-                  )}
-                  <span>ป้องกันมอเตอร์ไหม้ (No Overvoltage):</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>โควตาเซลล์ไม่เกิน 8 ก้อน (Cell Budget):</span>
                 </span>
-                <span
-                  className={`font-mono font-bold ${
-                    selectedPack.nominalVoltage <= motorRatedVoltage
-                      ? 'text-emerald-400'
-                      : 'text-rose-400'
-                  }`}
-                >
-                  {selectedPack.nominalVoltage <= motorRatedVoltage ? 'ปลอดภัย (Safe)' : 'อันตราย (Hazard)'}
+                <span className="font-mono font-bold text-emerald-400">
+                  {selectedPack.totalCells} / 8 เซลล์ (ผ่าน)
                 </span>
               </div>
 
-              {/* Check 3: Physical Lock */}
+              {/* Check 3: Current Capacity */}
               <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
                 <span className="flex items-center gap-2 text-slate-300">
-                  {isBatteryInstalled ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-amber-400" />
-                  )}
-                  <span>สลักล็อกแบตเตอรี่บนโครง (Downtube Lock):</span>
+                  <BatteryCharging className="w-4 h-4 text-cyan-400" />
+                  <span>ความจุเพื่อความต่อเนื่อง (Capacity):</span>
                 </span>
-                <span
-                  className={`font-mono font-bold ${
-                    isBatteryInstalled ? 'text-emerald-400' : 'text-amber-400'
-                  }`}
-                >
-                  {isBatteryInstalled ? 'ล็อกสมบูรณ์' : 'ยังไม่ล็อก'}
+                <span className="font-mono font-bold text-cyan-400">
+                  {selectedPack.capacityMah} mAh
                 </span>
               </div>
             </div>
           </div>
-
-          {/* Cosmetics: Bicycle Paint Selector */}
-          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-            <span className="text-xs font-black text-indigo-300 flex items-center gap-1.5 uppercase border-b border-slate-800 pb-2">
-              <Palette className="w-4 h-4 text-indigo-400" />
-              สีตัวถังจักรยาน (Bicycle Paint Color)
-            </span>
-
-            <div className="flex items-center gap-3">
-              {[
-                { color: '#06b6d4', name: 'ไซยานนีออน' },
-                { color: '#f59e0b', name: 'ส้มทองซูเปอร์ชาร์จ' },
-                { color: '#ef4444', name: 'แดงเรซซิ่ง' },
-                { color: '#10b981', name: 'เขียวมรกต' },
-                { color: '#8b5cf6', name: 'ม่วงไซเบอร์' },
-                { color: '#e2e8f0', name: 'เงินไททาเนียม' },
-              ].map((c) => (
-                <button
-                  key={c.color}
-                  onClick={() => {
-                    playTone(600, 'sine', 0.05);
-                    setFrameColor(c.color);
-                  }}
-                  className={`w-9 h-9 rounded-full transition-all ring-2 ${
-                    frameColor === c.color
-                      ? 'ring-white scale-110 shadow-lg shadow-white/20'
-                      : 'ring-transparent opacity-75 hover:opacity-100'
-                  }`}
-                  style={{ backgroundColor: c.color }}
-                  title={c.name}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* VOLT Tutor Guidance */}
-          <VoltDialog
-            mood={selectedPack.isCompatible ? 'celebrate' : 'warning'}
-            message={
-              selectedPack.isCompatible
-                ? `รถแข่งของคุณพร้อมแล้วครับ! ติดตั้งชุด ${selectedPack.name} พิกัดแรงดัน 3.0V ปลอดภัยตามเกณฑ์ของมอเตอร์ 3V และวิ่งได้ไกลถึง ${rangeKm} กม. กดปุ่ม 'ต่อไปสนามแข่ง' ได้เลยครับ!`
-                : 'ระวังครับ! มอเตอร์พิกัด 3.0V ไม่สามารถรับแบตเตอรี่ 4.5V หรือแรงดันเกินได้ เพราะกระแสจะล้นจนขดลวดละลาย กรุณาเลือกชุด 2S2P หรือ 2S1P ครับ!'
-            }
-          />
         </div>
       </div>
 
-      {/* Save Toast Notification */}
+      {/* Floating Save Toast */}
       {saveToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs animate-in slide-in-from-bottom-2">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>{saveToast}</span>
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border-2 border-emerald-500 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
+          <Sparkles className="w-5 h-5 text-emerald-400 animate-spin" />
+          <span className="text-xs font-bold">{saveToast}</span>
         </div>
       )}
     </div>

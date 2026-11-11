@@ -28,6 +28,7 @@ import {
   Check,
   Info,
   Lightbulb,
+  AlertTriangle,
 } from 'lucide-react';
 import { useGameState } from '../../context/GameStateContext';
 import { AvatarRenderer } from '../common/AvatarRenderer';
@@ -97,7 +98,7 @@ const playReflectionTone = (type: 'correct' | 'wrong' | 'hint' | 'complete') => 
 
 interface ReflectionQuestion {
   id: number;
-  category: 'series' | 'parallel' | 'mixed_suitability';
+  category: 'series' | 'parallel' | 'quota_tradeoff' | 'slope_physics' | 'multimeter' | 'safety_bms';
   topicTitle: string;
   question: string;
   options: string[];
@@ -113,18 +114,18 @@ const REFLECTION_QUESTIONS: ReflectionQuestion[] = [
     category: 'series',
     topicTitle: '1. หลักการวงจรอนุกรม (Series Circuit Principle)',
     question:
-      'เมื่อนำเซลล์ 1.5V สองก้อนมาต่อกันแบบ "อนุกรม" (+ ชน -) เหตุใดแรงดันรวมจึงเพิ่มเป็น 3.0V แต่ความจุประจุยังคงเป็น 2000mAh เท่าเดิม และส่งผลต่อมอเตอร์อย่างไร?',
+      'เมื่อนำเซลล์แบตเตอรี่มาต่อกันแบบ "อนุกรม" (+ ชน -) เหตุใดแรงดันรวมจึงเพิ่มขึ้น แต่ความจุรวมยังคงเท่าเดิม และส่งผลต่อมอเตอร์อย่างไร?',
     options: [
       'ประจุไฟฟ้าไหลผ่านเซลล์เดียว มอเตอร์จึงหมุนช้าลงและแรงดันตก',
-      'งานต่อหนึ่งหน่วยประจุ (Volt) จากแต่ละเซลล์นำมารวมกัน ผลักดันกระแสให้มอเตอร์หมุนด้วยความเร็วรอบ (RPM) สูงขึ้น ขณะที่ปริมาณประจุรวมที่ไหลผ่านทางเดินเดียวยังเท่าเดิม',
+      'แรงดันไฟฟ้า (งานต่อหนึ่งหน่วยประจุ) จากแต่ละเซลล์นำมารวมกัน ผลักดันให้มอเตอร์หมุนด้วยความเร็วรอบ (RPM) สูงขึ้น ขณะที่ความจุรวมยังเท่ากับเซลล์แถวเดียว',
       'ความต้านทานกลายเป็นศูนย์ทำให้เกิดไฟฟ้าลัดวงจร',
       'แรงดันของทั้งสองเซลล์จะหักล้างกันจนเหลือ 0V',
     ],
     correctIndex: 1,
-    points: 7,
-    hint: 'จำกฎการรวมแรงดันของเซลล์อนุกรมได้ไหมครับ? ทางเดินของประจุไฟฟ้ามีเพียงทางเดียว (Single Loop) แรงดัน V รวมกัน แต่กระแสไหลผ่านแถวเดียว!',
+    points: 3,
+    hint: 'ทางเดินของประจุไฟฟ้ามีเพียงเส้นเดียว (Single Loop) แรงดัน V รวมกัน แต่กระแสไหลผ่านแถวเดียว!',
     explanation:
-      'ถูกต้องครับ! การต่ออนุกรม (V_total = V1 + V2 = 1.5V + 1.5V = 3.0V) จะเพิ่มพลังงานศักย์ไฟฟ้าต่อคูลอมบ์ ส่งผลให้มอเตอร์สร้างแรงเคลื่อนไฟฟ้าต้านกลับ (Back EMF) และทำความเร็วรอบ RPM ได้สูงขึ้น แต่ความจุรวมยังคงเท่ากับเซลล์เดียว (2,000 mAh) เพราะประจุไหลผ่านทางเดินเดียวกัน',
+      'ถูกต้องครับ! การต่ออนุกรมจะเพิ่มแรงดันไฟฟ้า (V_total = V1 + V2 + ...) ส่งผลให้มอเตอร์ทำความเร็วรอบ RPM ได้สูงขึ้น แต่ความจุรวมยังคงเท่ากับความจุของเซลล์แถวเดียว',
   },
   {
     id: 2,
@@ -133,34 +134,88 @@ const REFLECTION_QUESTIONS: ReflectionQuestion[] = [
     question:
       'การนำเซลล์ไฟฟ้ามาต่อขนานกัน (+ ชน +, - ชน -) ช่วยแบ่งเบาภาระกระแสไฟฟ้าและลดความต้านทานภายใน (R_in) อย่างไร และส่งผลดีต่อจักรยานไฟฟ้าอย่างไร?',
     options: [
-      'ทำให้แรงดันไฟฟ้าเพิ่มขึ้นเป็น 6.0V ทันที',
-      'ช่วยแบ่งกระแสไฟฟ้าออกเป็น 2 แถว ทำให้ความต้านทานภายในลดลงเหลือครึ่งหนึ่ง (R_in / 2) เกิดแรงดันตกคร่อมน้อยลง (Low Sag) และความจุรวมเพิ่มเป็น 4,000 mAh ใช้งานได้นาน 2 เท่า',
+      'ทำให้แรงดันไฟฟ้าเพิ่มขึ้นเป็น 2 เท่าทันที',
+      'ช่วยแบ่งกระแสไฟฟ้าออกเป็นหลายแถวขนาน ทำให้ความต้านทานภายในลดลง เกิดแรงดันตกคร่อมน้อยลง (Low Sag) และความจุรวมเพิ่มขึ้นตามจำนวนแถวขนาน ใช้งานได้นานขึ้น',
       'ทำให้มอเตอร์กลับทิศทางการหมุนถอยหลังอัตโนมัติ',
       'ตัดกระแสไฟฟ้าไม่ให้ไหลผ่านมอเตอร์เพื่อประหยัดไฟ',
     ],
     correctIndex: 1,
-    points: 7,
-    hint: 'การต่อขนานเหมือนการเพิ่มเลนถนนคู่ขนานครับ! กระแสแบ่งไหลได้ 2 ทาง และความต้านทานรวมจะลดลงเสมอ!',
+    points: 3,
+    hint: 'การต่อขนานเหมือนการเพิ่มเลนถนนคู่ขนานครับ! กระแสแบ่งไหลได้หลายทาง และความต้านทานรวมจะลดลงเสมอ!',
     explanation:
-      'ถูกต้องครับ! การต่อขนานเพิ่มพื้นที่ทางเดินของกระแสไฟฟ้า ทำให้ความต้านทานภายในลดลง (จาก 0.30Ω เหลือ 0.15Ω ใน 2P) ส่งผลให้เกิดแรงดันตกคร่อม (Voltage Sag = I × R_in) น้อยมากเมื่อเร่งเครื่อง พร้อมทั้งรวมประจุ (C_total = C1 + C2 = 4,000 mAh) ทำให้ขี่ได้ระยะทางไกลขึ้นเป็น 2 เท่า',
+      'ถูกต้องครับ! การต่อขนานเพิ่มพื้นที่ทางเดินของกระแสไฟฟ้า ทำให้ความต้านทานภายในลดลง เกิดแรงดันตกคร่อม (Voltage Sag = I × R_in) น้อยลง และความจุรวมเพิ่มขึ้นตามจำนวนแถว (C_total = C1 + C2 + ...)',
   },
   {
     id: 3,
-    category: 'mixed_suitability',
-    topicTitle: '3. ความเหมาะสมของชุดผสม 2S2P กับการแข่งขัน (Race Pack Suitability)',
+    category: 'quota_tradeoff',
+    topicTitle: '3. การจัดสรรโควตาแบตเตอรี่ 8 ก้อน (8-Cell Budget Quota Trade-Off)',
     question:
-      'เหตุใดชุดแบตเตอรี่ผสม 2S2P (3.0V 4,000 mAh) จึงเหมาะสมที่สุดสำหรับจักรยานแข่งที่ใช้มอเตอร์พิกัด 3.0V ในสนามที่ผ่านมา (เทียบกับชุด 1S 1.5V หรือ 3S 4.5V)?',
+      'ภายใต้กติกาจำกัดโควตาแบตเตอรี่ไม่เกิน 8 เซลล์ หากช่างไฟฟ้าเลือกมอเตอร์ขนาดใหญ่ 24V (800W) และต่อเซลล์แบบ 8S 1P (24V 2000mAh) เหตุใดแบตเตอรี่จึงหมดเร็วกว่าชุด 4S 2P (12V 4000mAh) อย่างมาก และส่งผลอย่างไรในการแข่งขัน?',
     options: [
-      'เพราะชุด 1S แรงดันไม่พอสตาร์ต (Stall) ส่วนชุด 3S แรงดันเกินพิกัดเสี่ยงมอเตอร์ไหม้ ขณะที่ 2S2P ให้แรงดัน 3.0V ตรงสเปก พร้อมความจุ 4,000 mAh และ R_in ต่ำ ช่วยรักษาความเร็วรอบได้ทั้งทางราบและทางชัน',
-      'เพราะชุด 2S2P มีน้ำหนักเบากว่า 1S เสมอ',
-      'เพราะชุด 3S ให้ความเร็วต่ำกว่า 2S2P ในทุกกรณี',
-      'เพราะกติกาการแข่งขันห้ามใช้เซลล์เกิน 2 ก้อน',
+      'เพราะการต่อ 8S ต้องนำเซลล์ทั้ง 8 ก้อนมาอนุกรมกันทั้งหมด ทำให้ได้แรงดัน 24V แต่ความจุเหลือเพียง 2,000 mAh (1P) ขณะที่มอเตอร์ 800W กินกระแสสูงถึง 6.8A แบตเตอรี่จึงหมดลงอย่างรวดเร็ว (t = C/I) หากไม่ปล่อยไหลลงเขาเพื่อประหยัดไฟ แบตจะหมดกลางทางและแพ้การแข่งขัน',
+      'เพราะมอเตอร์ 24V มีแรงเสียดทานเชิงกลมากกว่ามอเตอร์ 12V เสมอ',
+      'เพราะเซลล์ 8 ก้อนสร้างสนามแม่เหล็กดูดพลังงานทิ้งไปในอากาศ',
+      'เพราะกติกาสนามบังคับให้ชุด 8S จ่ายไฟทิ้ง 50% เสมอ',
     ],
     correctIndex: 0,
-    points: 6,
-    hint: 'พิจารณาการจับคู่วิศวกรรม (Engineering Matching) ระหว่างแรงดันแหล่งจ่ายกับพิกัดมอเตอร์ 3.0V และผลของ Voltage Sag เมื่อเจอโหลดหนักครับ!',
+    points: 4,
+    hint: 'พิจารณาความสัมพันธ์ t = Capacity / Current และการจำกัด 8 เซลล์: ถ้าอนุกรมหมดทั้ง 8 ก้อน จะไม่มีเซลล์เหลือมาต่อขนานเพื่อเพิ่มความจุ!',
     explanation:
-      'ยอดเยี่ยมที่สุดครับ! การเลือกแรงดันตรงพิกัด 3.0V ช่วยป้องกันความเสียหายจากแรงดันเกิน (Overvoltage > 3.3V) และป้องกันการติดขัด (Stall) ที่ 1.5V นอกจากนี้ การขนาน 2 แถว (2P) ยังช่วยรักษาแรงดันคงที่ขณะไต่เนินชัน ทำให้คว้าชัยชนะได้อย่างปลอดภัยและมีประสิทธิภาพสูงสุด!',
+      'ยอดเยี่ยมที่สุดครับ! การจำกัดโควตา 8 ก้อนสร้างโจทย์วิศวกรรมที่สมจริง: มอเตอร์ 24V ต้องการ 8S1P ได้แรงบิดมหาศาลแต่ความจุเหลือเพียง 2,000 mAh มอเตอร์ 800W กินกระแสสูงมาก หากกดคันเร่ง Boost ต่อเนื่อง แบตเตอรี่จะหมดก่อนถึงยอดเขา! ต่างจาก 4S2P (12V) ที่มีขนาน 2 แถว ได้ความจุ 4,000 mAh วิ่งได้นานกว่า 2 เท่า',
+  },
+  {
+    id: 4,
+    category: 'slope_physics',
+    topicTitle: '4. ฟิสิกส์ความลาดชัน ขึ้นเขา-ลงเขา (Slope Physics & Energy Coasting)',
+    question:
+      'ในการแข่งขันบนสนามฮิลล์ไคลมบ์ที่มีทั้งทางขึ้นเขาชัน (+14% ถึง +16%) สลับทางลงเขาชัน (-9%) กฎฟิสิกส์และการบริหารพลังงานไฟฟ้าข้อใดถูกต้องที่สุด?',
+    options: [
+      'ตอนขึ้นเขา แรงโน้มถ่วง F = mg*sin(θ) มีทิศต้านการเคลื่อนที่ ต้องใช้แรงบิดมอเตอร์สูง ส่วนตอนลงเขา แรงโน้มถ่วงจะช่วยส่งกำลังผลักรถไปข้างหน้า ช่างไฟฟ้าจึงควรปิดระบบมอเตอร์ช่วยปั่น (0W) เพื่อปล่อยไหลฟรี (Coasting) ประหยัดประจุไฟฟ้าไว้พิชิตยอดเขาสุดท้าย',
+      'ตอนลงเขาควรเปิดมอเตอร์เต็ม 100% เพื่อปั่นแข่งกับแรงโน้มถ่วง',
+      'ความลาดชันไม่มีผลต่อการกินกระแสของมอเตอร์ไฟฟ้า',
+      'รถจะถอยหลังเสมอเมื่อเจอกับทางลงเขา',
+    ],
+    correctIndex: 0,
+    points: 4,
+    hint: 'ตอนลงเขา เวกเตอร์แรงโน้มถ่วง mg*sin(θ) ชี้ไปข้างหน้าในทิศเดียวกับการเคลื่อนที่ รถเคลื่อนที่ได้เองโดยไม่ต้องจ่ายกระแสไฟฟ้าจากแบตเตอรี่ครับ!',
+    explanation:
+      'ถูกต้องแม่นยำตามหลักกลศาสตร์และวิศวกรรมไฟฟ้าครับ! ตอนขึ้นเขา แรงโน้มถ่วงต้านการเคลื่อนที่ (F_slope = mg*sin(θ)) ต้องอาศัยแรงขับมอเตอร์สูง แต่ตอนลงเขา แรงโน้มถ่วงกลายเป็นแรงขับเคลื่อนข้างหน้า (+F_slope) ช่วยให้รถไหลไปข้างหน้าได้เร็ว การปิดมอเตอร์ช่วยปั่นจะทำให้กินพลังงาน 0 วัตต์ (Coasting) ประหยัดประจุสะสมไว้ใช้ไต่ยอดเขาชันลูกสุดท้าย',
+  },
+  {
+    id: 5,
+    category: 'multimeter',
+    topicTitle: '5. การใช้เครื่องมือวัดดิจิทัลมัลติมิเตอร์ (DMM Measurement)',
+    question:
+      'ในการใช้ดิจิทัลมัลติมิเตอร์เพื่อวัดแรงดันตกคร่อมของเซลล์แบตเตอรี่ ช่างไฟฟ้าต้องตั้งย่านวัดใด และหากหน้าจอแสดงค่าติดลบ (-) บ่งชี้ถึงสิ่งใด?',
+    options: [
+      'ตั้งย่าน DCV 20V (สำหรับการวัดแบตเตอรี่แรงดันต่ำกว่า 20V) และค่าติดลบ (-) หมายถึงจิ้มสายวัดโพรบสลับขั้ว (สายแดงแตะขั้วลบ, สายดำแตะขั้วบวก)',
+      'ตั้งย่าน ACV 750V และค่าติดลบหมายถึงมิเตอร์แบตเตอรี่หมด',
+      'ตั้งย่าน DCA 10A และนำสายวัดไปจิ้มคร่อมขั้วแบตเตอรี่โดยตรงเพื่อวัดแอมป์',
+      'ตั้งย่านความต้านทานโอห์ม (Ω) ขณะที่วงจรเปิดและกำลังจ่ายไฟอยู่',
+    ],
+    correctIndex: 0,
+    points: 3,
+    hint: 'แบตเตอรี่จ่ายไฟฟ้ากระแสตรง (DC) และสายสีแดงคือขั้วบวก สายสีดำคือขั้วลบ (COM) ครับ!',
+    explanation:
+      'ถูกต้องแม่นยำมากครับ! ในงานช่างไฟฟ้า แบตเตอรี่เป็นไฟฟ้ากระแสตรง ต้องตั้งย่าน DCV (แนะนำ 20V เพื่อความละเอียด 2 ตำแหน่ง) และเครื่องหมายลบแสดงว่าโพรบสีแดงสัมผัสจุดที่มีศักย์ไฟฟ้าต่ำกว่าโพรบสีดำ (สลับขั้ว)',
+  },
+  {
+    id: 6,
+    category: 'safety_bms',
+    topicTitle: '6. ระบบความปลอดภัย ฟิวส์ และวงจร BMS (Safety & BMS Protection)',
+    question:
+      'ในการประกอบแพ็กแบตเตอรี่ลิเธียมสำหรับจักรยานไฟฟ้า เหตุใดช่างไฟฟ้าจึงต้องติดตั้งแผงวงจร BMS และฟิวส์ป้องกันกระแสเกินเสมอ?',
+    options: [
+      'เพื่อทำหน้าที่ปรับสมดุลแรงดันระหว่างเซลล์ (Cell Balancing), ป้องกันการชาร์จ/คายประจุเกินพิกัด, และตัดวงจรทันทีเมื่อเกิดไฟฟ้าลัดวงจร ป้องกันความร้อนสะสมและเพลิงไหม้',
+      'เพื่อเปลี่ยนไฟฟ้ากระแสตรงให้กลายเป็นกระแสสลับ',
+      'เพื่อเพิ่มน้ำหนักของตัวรถให้ทรงตัวได้ดีขึ้นขณะเลี้ยวโค้ง',
+      'เพื่อบังคับให้แบตเตอรี่จ่ายไฟได้เฉพาะตอนกลางวันเท่านั้น',
+    ],
+    correctIndex: 0,
+    points: 3,
+    hint: 'BMS ย่อมาจาก Battery Management System ทำหน้าที่ควบคุมดูแลเซลล์แต่ละก้อน และฟิวส์คือด่านแรกในการตัดวงจรเมื่อลัดวงจรครับ!',
+    explanation:
+      'ถูกต้องที่สุดตามมาตรฐานช่างไฟฟ้าครับ! วงจร BMS จำเป็นอย่างยิ่งในการเกลี่ยประจุแต่ละเซลล์ให้เท่ากัน ป้องกัน Overcharge/Over-discharge และฟิวส์จะหลอมละลายตัดวงจรทันทีเมื่อกระแสเกินพิกัด ป้องกันความร้อนลุกไหม้ (Thermal Runaway)',
   },
 ];
 
@@ -199,10 +254,11 @@ export const LearningReflectionScreen: React.FC = () => {
   const circuitCorrectnessScore = isValidated ? 30 : 15;
 
   // 2. Battery Suitability out of 20:
-  // - Pack voltage matches motor 3.0V (2.8V - 3.2V): 15 pts
-  // - Low internal resistance (R_in <= 0.20): 5 pts
-  const isVoltageMatched = packV >= 2.8 && packV <= 3.2;
-  const isLowRin = packRin <= 0.2;
+  // - Pack voltage matches chosen motor voltage (6V / 12V / 24V): 15 pts
+  // - Low internal resistance (R_in <= 0.25): 5 pts
+  const chosenMotorV = race?.chosenMotorVoltage || state.bikeSetup?.motorVoltageRating || 12;
+  const isVoltageMatched = Math.abs(packV - chosenMotorV) <= chosenMotorV * 0.15;
+  const isLowRin = packRin <= 0.25;
   const batterySuitabilityScore = (isVoltageMatched ? 15 : 5) + (isLowRin ? 5 : 0);
 
   // 3. Race Performance out of 30:
@@ -365,40 +421,50 @@ export const LearningReflectionScreen: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <span className="text-xs font-black text-cyan-300 uppercase flex items-center gap-1.5">
                 <Gauge className="w-4 h-4 text-cyan-400" />
-                ผลการทดสอบมอเตอร์ (Dyno Test)
+                การจับคู่มอเตอร์กับชุดแบตเตอรี่ (Engineering Match)
               </span>
               <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/20 px-2 py-0.5 rounded">
-                DC 3.0V MOTOR
+                DC {chosenMotorV}V MOTOR
               </span>
             </div>
 
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-300">
                 <span className="text-slate-400">พิกัดมอเตอร์ไฟฟ้า:</span>
-                <span className="font-bold text-white">DC 3.0V (Max 3.3V)</span>
+                <span className="font-bold text-white">DC {chosenMotorV}V ({chosenMotorV === 24 ? '800W' : chosenMotorV === 12 ? '450W' : '200W'})</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">ความเร็วรอบสูงสุด (RPM):</span>
-                <span className="font-mono font-bold text-cyan-300">~1,760 RPM</span>
+                <span className="text-slate-400">แรงดันแบตเตอรี่ที่จ่าย:</span>
+                <span className="font-mono font-bold text-amber-300">{packV.toFixed(1)} โวลต์</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">กระแสขณะมีภาระ (Current):</span>
-                <span className="font-mono font-bold text-amber-300">0.85 A</span>
+                <span className="text-slate-400">อัตราส่วนการจับคู่ (Match Ratio):</span>
+                <span className="font-mono font-bold text-cyan-300">{Math.round((packV / chosenMotorV) * 100)}%</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">กำลังกลเชิงกล (Power):</span>
-                <span className="font-mono font-bold text-emerald-300">~2.4 W</span>
+                <span className="text-slate-400">โควตาเซลล์ที่ใช้:</span>
+                <span className="font-mono font-bold text-purple-300">{pack.totalCells || 8} / 8 เซลล์</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">การป้องกันวงจร:</span>
-                <span className="font-bold text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> ผ่านเกณฑ์ปลอดภัย
+                <span className="text-slate-400">สถานะความปลอดภัย:</span>
+                <span className={`font-bold flex items-center gap-1 ${
+                  packV <= chosenMotorV * 1.05 ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  {packV <= chosenMotorV * 1.05 ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" /> ไม่เกินพิกัด
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-3.5 h-3.5" /> แรงดันเกินพิกัด!
+                    </>
+                  )}
                 </span>
               </div>
             </div>
 
             <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 text-[11px] text-slate-300">
-              🛡️ แรงดัน 3.0V ปลอดภัย ไม่เสี่ยงมอเตอร์ไหม้ และไม่อยู่ในภาวะ Stall แรงบิดไม่พอ
+              🛡️ {packV === chosenMotorV ? `แรงดัน ${packV}V ตรงพิกัดมอเตอร์ ${chosenMotorV}V สมบูรณ์แบบ` : packV < chosenMotorV ? `แรงดันต่ำกว่าพิกัด มอเตอร์สูญเสียกำลังขับ` : `แรงดันเกินพิกัด มอเตอร์เสี่ยงชำรุด`}
             </div>
           </div>
 
@@ -708,75 +774,107 @@ export const LearningReflectionScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Graduation Certificate Modal */}
+      {/* Graduation Certificate & Vocational Competency Assessment Modal */}
       {showCertificate && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-gradient-to-b from-slate-900 via-slate-950 to-indigo-950 border-4 border-amber-400 rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl text-center flex flex-col items-center gap-4 relative">
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in overflow-y-auto">
+          <div className="bg-gradient-to-b from-slate-900 via-slate-950 to-indigo-950 border-4 border-amber-400 rounded-3xl max-w-xl w-full p-5 sm:p-7 shadow-2xl text-center flex flex-col items-center gap-3.5 relative">
             {/* Top Seal & Avatar */}
             <div className="flex items-center gap-4">
-              <div className="w-16 h-20 bg-slate-950 rounded-xl p-1 border-2 border-amber-400 overflow-hidden shadow-lg flex items-center justify-center">
+              <div className="w-14 h-16 bg-slate-950 rounded-xl p-1 border-2 border-amber-400 overflow-hidden shadow-lg flex items-center justify-center">
                 <AvatarRenderer avatar={state.character} size="sm" mode="2d" />
               </div>
-              <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-400 shadow-xl shadow-amber-500/30">
-                <Award className="w-10 h-10" />
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-400 shadow-xl shadow-amber-500/30">
+                <Award className="w-8 h-8" />
               </div>
             </div>
 
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block font-mono">
-                BATTERY QUEST: POWER RACING ACADEMY
+                สถาบันการอาชีวศึกษา · VOCATIONAL EDUCATION EDITION
               </span>
-              <h2 className="text-xl md:text-2xl font-black text-white mt-1">
-                ประกาศนียบัตรสำเร็จหลักสูตรวิศวกรรมไฟฟ้า
+              <h2 className="text-lg sm:text-xl font-black text-white mt-0.5">
+                ใบรายงานผลการประเมินสมรรถนะวิชาชีพ
               </h2>
-              <p className="text-xs text-slate-300 mt-2">ขอมอบประกาศนียบัตรฉบับเกียรติยศนี้ให้แก่</p>
-              <h3 className="text-2xl font-black text-amber-300 mt-1">คุณ {state.character.name}</h3>
+              <p className="text-[11px] text-cyan-300 font-mono">
+                รายวิชา: งานไฟฟ้าและอิเล็กทรอนิกส์เบื้องต้น (หน่วย: แบตเตอรี่และวงจรไฟฟ้า)
+              </p>
 
-              <div className="flex items-center justify-center gap-2 mt-1">
-                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                  คะแนนรวม: {totalCompositeScore} / 100 ({gradeInfo.grade})
+              <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 my-2 text-left space-y-1">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400">ชื่อนักศึกษา:</span>
+                  <span className="font-black text-amber-300 text-sm">คุณ {state.character.name}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400">ยศ / ระดับช่าง:</span>
+                  <span className="font-mono text-cyan-300 font-bold">{state.learning.academyRank}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400">สถานะสมรรถนะ:</span>
+                  <span className="font-mono font-black text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                    ผ่านเกณฑ์มาตรฐานช่าง (COMPETENT)
+                  </span>
+                </div>
+              </div>
+
+              {/* 3 Competency Domains (พุทธิพิสัย, ทักษะพิสัย, จิตพิสัย) */}
+              <div className="grid grid-cols-3 gap-2 w-full text-[10px] font-mono text-slate-300 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-left">
+                <div className="space-y-0.5">
+                  <span className="text-amber-300 font-bold block">1. พุทธิพิสัย (30%)</span>
+                  <span className="text-slate-400 text-[9px] block">ทฤษฎี V, I, R, สูตรอนุกรม-ขนาน</span>
+                  <strong className="text-white text-xs">{circuitCorrectnessScore} / 30</strong>
+                </div>
+
+                <div className="space-y-0.5">
+                  <span className="text-cyan-300 font-bold block">2. ทักษะพิสัย (40%)</span>
+                  <span className="text-slate-400 text-[9px] block">ใช้มัลติมิเตอร์ DCV & แพ็ก 2S2P</span>
+                  <strong className="text-white text-xs">{(batterySuitabilityScore + (racePerformanceScore / 30) * 20).toFixed(0)} / 40</strong>
+                </div>
+
+                <div className="space-y-0.5">
+                  <span className="text-emerald-300 font-bold block">3. จิตพิสัย (30%)</span>
+                  <span className="text-slate-400 text-[9px] block">ฟิวส์, BMS & เซฟตี้ลัดวงจร</span>
+                  <strong className="text-white text-xs">{(learningExplanationScore / 20 * 30).toFixed(0)} / 30</strong>
+                </div>
+              </div>
+
+              {/* Total Score & Grade */}
+              <div className="flex items-center justify-center gap-3 mt-3">
+                <span className="text-sm font-mono font-black text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40">
+                  เกรดประเมิน: {gradeInfo.grade} ({totalCompositeScore} / 100)
                 </span>
-                <span className="text-xs font-mono font-bold text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full">
+                <span className="text-xs font-mono font-bold text-amber-300">
                   {gradeInfo.text.split('(')[0]}
                 </span>
               </div>
-
-              <p className="text-xs text-slate-300 mt-3 leading-relaxed max-w-md mx-auto">
-                ในฐานะผู้สำเร็จการศึกษาที่มีความเชี่ยวชาญด้านวงจรปิด วงจรอนุกรม วงจรขนาน การออกแบบชุดแบตเตอรี่ผสม 2S2P
-                และการขับเคลื่อนจักรยานไฟฟ้าตามหลักวิศวกรรมไฟฟ้ากระแสตรงระดับยอดเยี่ยม
-              </p>
             </div>
 
-            {/* Score Grid on Certificate */}
-            <div className="grid grid-cols-4 gap-2 w-full text-[10px] font-mono text-slate-300 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
-              <div>
-                <span className="text-slate-400 block font-sans">วงจร</span>
-                <strong className="text-amber-300">{circuitCorrectnessScore}/30</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-sans">ความเหมาะสม</span>
-                <strong className="text-cyan-300">{batterySuitabilityScore}/20</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-sans">การแข่งขัน</span>
-                <strong className="text-emerald-300">{racePerformanceScore}/30</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-sans">สะท้อนคิด</span>
-                <strong className="text-purple-300">{learningExplanationScore}/20</strong>
-              </div>
+            {/* Signature Seal */}
+            <div className="w-full flex items-center justify-between border-t border-slate-800 pt-2 text-[10px] text-slate-400 font-mono">
+              <span>อาจารย์ผู้ประเมิน: ศ.ดร.วัตต์ (Prof. Watt)</span>
+              <span>ระบบตรวจสอบอัตโนมัติ AI-DMM Certified</span>
             </div>
 
-            <div className="w-full flex flex-col sm:flex-row gap-2 mt-2">
+            <div className="w-full flex flex-col sm:flex-row gap-2 mt-1">
               <button
+                type="button"
+                onClick={() => window.print()}
+                className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>🖨️ พิมพ์ / แคปเจอร์ส่งครูผู้สอน</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setShowCertificate(false)}
-                className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition min-h-[44px]"
+                className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
               >
                 ปิดหน้าต่าง
               </button>
+
               <button
+                type="button"
                 onClick={() => goToScene('mission_map')}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-slate-950 text-xs font-black transition min-h-[44px] shadow-lg shadow-emerald-500/30"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-slate-950 text-xs font-black transition shadow-lg shadow-emerald-500/30 cursor-pointer"
               >
                 กลับสู่แผนที่ภารกิจ (Mission Map)
               </button>

@@ -34,6 +34,8 @@ import {
 } from '../../engine/circuitSimulator';
 import { CircuitComponent, CircuitWire } from '../../types/game';
 import { VoltDialog } from '../common/VoltDialog';
+import { DigitalMultimeter, TestPoint } from '../common/DigitalMultimeter';
+import { BatteryCell3D, KnifeSwitch3D, LightBulb3D, Wire3DRenderer } from '../circuit3d';
 
 const playTone = (freq: number, type: OscillatorType = 'sine', duration: number = 0.15) => {
   try {
@@ -82,7 +84,19 @@ export const BasicCircuitLabScreen: React.FC = () => {
   const [testResult, setTestResult] = useState<BasicCircuitValidation | null>(null);
   const [showCelebration, setShowCelebration] = useState<boolean>(false);
   const [showHintModal, setShowHintModal] = useState<boolean>(false);
+  const [showMultimeter, setShowMultimeter] = useState<boolean>(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  const testPoints: TestPoint[] = useMemo(() => {
+    const vBatt = isBatteryReversed ? -1.5 : 1.5;
+    return [
+      { id: 'tp_cell_pos', name: 'ขั้วบวกเซลล์ (+)', voltagePotential: vBatt },
+      { id: 'tp_sw_in', name: 'ขาสวิตช์ขาเข้า (Switch In)', voltagePotential: vBatt },
+      { id: 'tp_sw_out', name: 'ขาสวิตช์ขาออก (Switch Out)', voltagePotential: isSwitchClosed ? vBatt : 0.0 },
+      { id: 'tp_bulb_in', name: 'ขั้วหลอดไฟ (Lamp In)', voltagePotential: isSwitchClosed ? vBatt : 0.0 },
+      { id: 'tp_cell_neg', name: 'ขั้วลบเซลล์ (-) กราวด์', voltagePotential: 0.0, isGround: true },
+    ];
+  }, [isBatteryReversed, isSwitchClosed]);
 
   const [terminalCoords, setTerminalCoords] = useState<Record<string, { x: number; y: number }>>({});
   const workbenchRef = useRef<HTMLDivElement | null>(null);
@@ -345,6 +359,15 @@ export const BasicCircuitLabScreen: React.FC = () => {
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
           <button
+            type="button"
+            onClick={() => setShowMultimeter(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition shadow cursor-pointer active:scale-95"
+            title="เปิดมัลติมิเตอร์วัดแรงดัน"
+          >
+            <span>🎛️ มัลติมิเตอร์ (DMM)</span>
+          </button>
+
+          <button
             onClick={() => setShowHintModal(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all cursor-pointer"
           >
@@ -474,16 +497,18 @@ export const BasicCircuitLabScreen: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 my-auto py-4">
-              {/* Battery */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-lg space-y-3">
+              {/* 3D Battery Cell */}
+              <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-xl space-y-2">
                 <div className="text-xs font-bold text-slate-300">เซลล์ AA 1.5V (2000 mAh)</div>
-                <div className="relative w-40 h-20 bg-gradient-to-r from-amber-500 via-amber-400 to-slate-800 rounded-xl border-2 border-amber-300 shadow-xl flex items-center justify-between px-3 text-slate-950 font-black">
-                  <div className="text-base font-mono">{isBatteryReversed ? '-' : '+'}</div>
-                  <div className="text-center font-bold">
-                    <div className="text-[9px] uppercase">CELL AA</div>
-                    <div className="text-sm font-mono">1.50V</div>
-                  </div>
-                  <div className="text-base font-mono text-white">{isBatteryReversed ? '+' : '-'}</div>
+                <div className="w-full">
+                  <BatteryCell3D
+                    voltage={1.5}
+                    label="AA 1.50V"
+                    isReversed={isBatteryReversed}
+                    isActive={isLampGlow}
+                    size="md"
+                    onFlip={handleFlipBattery}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between w-full px-2 pt-1">
@@ -501,7 +526,7 @@ export const BasicCircuitLabScreen: React.FC = () => {
 
                   <button
                     onClick={handleFlipBattery}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold flex items-center gap-1"
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold flex items-center gap-1 shadow-md"
                   >
                     <RotateCw className="w-3 h-3" />
                     <span>กลับขั้ว</span>
@@ -521,27 +546,18 @@ export const BasicCircuitLabScreen: React.FC = () => {
                 </div>
               </div>
 
-              {/* Switch */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-lg space-y-3">
-                <div className="text-xs font-bold text-slate-300">สวิตช์ควบคุม (Knife Switch)</div>
-                <button
-                  onClick={handleToggleSwitch}
-                  className={`w-36 h-20 rounded-xl border-2 transition-all p-3 flex flex-col items-center justify-between cursor-pointer ${
-                    isSwitchClosed
-                      ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300'
-                      : 'bg-rose-950/60 border-rose-500 text-rose-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {isSwitchClosed ? (
-                      <ToggleRight className="w-8 h-8 text-emerald-400 animate-pulse" />
-                    ) : (
-                      <ToggleLeft className="w-8 h-8 text-rose-400" />
-                    )}
-                    <span className="text-xs font-black">{isSwitchClosed ? 'สับลง (ON)' : 'ยกขึ้น (OFF)'}</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400">แตะเพื่อสลับ</span>
-                </button>
+              {/* 3D Knife Switch */}
+              <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-xl space-y-2">
+                <div className="text-xs font-bold text-slate-300">สวิตช์ควบคุม (Knife Switch 3D)</div>
+                <div className="w-full">
+                  <KnifeSwitch3D
+                    isClosed={isSwitchClosed}
+                    isActive={isLampGlow}
+                    isShortCircuit={liveValidation.isShortCircuit}
+                    size="md"
+                    onToggle={handleToggleSwitch}
+                  />
+                </div>
 
                 <div className="flex items-center justify-between w-full px-2 pt-1">
                   <button
@@ -570,26 +586,16 @@ export const BasicCircuitLabScreen: React.FC = () => {
                 </div>
               </div>
 
-              {/* Lamp */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-lg space-y-3">
-                <div className="text-xs font-bold text-slate-300">หลอดไฟ 1.5V (3.0 Ω)</div>
-                <div
-                  className={`relative w-28 h-20 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${
-                    isLampGlow
-                      ? 'bg-gradient-to-t from-amber-500/20 via-amber-400/40 to-amber-200/50 border-amber-300 shadow-[0_0_40px_rgba(251,191,36,0.6)]'
-                      : 'bg-slate-950 border-slate-700'
-                  }`}
-                >
-                  <Lightbulb
-                    className={`w-12 h-12 transition-all duration-300 ${
-                      isLampGlow
-                        ? 'text-amber-200 fill-amber-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.9)] animate-pulse'
-                        : 'text-slate-600'
-                    }`}
+              {/* 3D Lamp Bulb */}
+              <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-xl space-y-2">
+                <div className="text-xs font-bold text-slate-300">หลอดไฟทดสอบ (Light Bulb 3D)</div>
+                <div className="w-full">
+                  <LightBulb3D
+                    brightness={isLampGlow ? 1.0 : 0.0}
+                    voltage={1.5}
+                    ratedVoltage={1.5}
+                    size="md"
                   />
-                  <div className={`text-[9px] font-bold mt-1 ${isLampGlow ? 'text-amber-200' : 'text-slate-500'}`}>
-                    {isLampGlow ? 'สว่างเต็มที่ (100%)' : 'ดับ (ไม่มีกระแส)'}
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-between w-full px-2 pt-1">
@@ -620,40 +626,14 @@ export const BasicCircuitLabScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* SVG Wires */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none z-15" style={{ overflow: 'visible' }}>
-              {wires.map((wire) => {
-                const p1 = terminalCoords[wire.fromTerminalId];
-                const p2 = terminalCoords[wire.toTerminalId];
-                if (!p1 || !p2) return null;
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const curvature = Math.min(60, dist * 0.25);
-                const midY = (p1.y + p2.y) / 2 + (p1.y < p2.y ? -curvature : curvature);
-                const pathD = `M ${p1.x} ${p1.y} Q ${(p1.x + p2.x) / 2} ${midY} ${p2.x} ${p2.y}`;
-
-                return (
-                  <g key={wire.id}>
-                    <path d={pathD} fill="none" stroke="#020617" strokeWidth="8" strokeLinecap="round" />
-                    <path d={pathD} fill="none" stroke={wire.color || '#f59e0b'} strokeWidth="4" strokeLinecap="round" />
-                    {isLampGlow && (
-                      <path
-                        d={pathD}
-                        fill="none"
-                        stroke="#fef08a"
-                        strokeWidth="2"
-                        strokeDasharray="6 14"
-                        strokeLinecap="round"
-                        className="animate-[dash_1s_linear_infinite]"
-                      />
-                    )}
-                    <circle cx={p1.x} cy={p1.y} r="5" fill="#f59e0b" stroke="#000" strokeWidth="2" />
-                    <circle cx={p2.x} cy={p2.y} r="5" fill="#f59e0b" stroke="#000" strokeWidth="2" />
-                  </g>
-                );
-              })}
-            </svg>
+            {/* 3D Wires & Connectors Overlay */}
+            <Wire3DRenderer
+              wires={wires}
+              terminalCoords={terminalCoords}
+              isEnergized={isLampGlow}
+              isShortCircuit={liveValidation.isShortCircuit}
+              onRemoveWire={handleRemoveWire}
+            />
 
             {/* Wire Management Strip */}
             {wires.length > 0 && (
@@ -835,6 +815,14 @@ export const BasicCircuitLabScreen: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Digital Multimeter Simulator */}
+      <DigitalMultimeter
+        isOpen={showMultimeter}
+        onClose={() => setShowMultimeter(false)}
+        testPoints={testPoints}
+        circuitIsClosed={isSwitchClosed}
+      />
     </div>
   );
 };

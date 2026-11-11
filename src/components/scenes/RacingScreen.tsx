@@ -22,9 +22,13 @@ import {
   ChevronRight,
   Volume2,
   VolumeX,
+  AlertTriangle,
+  Scale,
+  ShieldAlert,
 } from 'lucide-react';
 import { useGameState } from '../../context/GameStateContext';
 import { AvatarRenderer } from '../common/AvatarRenderer';
+import { Racing3DRenderer, RacerUpdate } from '../../racing3d/Racing3DRenderer';
 
 // Web Audio sound generator for racing immersion
 const playRacingTone = (
@@ -128,18 +132,28 @@ export const RacingScreen: React.FC = () => {
   const totalLaps = isEndurance ? 3 : 1;
   const lapLength = totalTrackLength / totalLaps;
 
-  // Real saved battery pack specs from GameState
-  const nominalPackV = state.batteryPack.nominalVoltage || state.batteryPack.totalVoltage || 3.0;
+  // Real saved battery pack & motor specs from GameState
+  const nominalPackV = state.batteryPack.nominalVoltage || state.batteryPack.totalVoltage || 12.0;
   const totalCapacityMah = state.batteryPack.nominalCapacityMah || state.batteryPack.totalCapacityMah || 4000;
   const internalResistance =
     state.batteryPack.internalResistance || (state.batteryPack.parallelCount === 2 ? 0.15 : 0.30);
   const bikeColor = state.bike?.frameColor || state.bikeSetup?.frameColor || '#0284c7';
+
+  // Chosen Motor Rating (6V, 12V, 24V)
+  const chosenMotorVoltage =
+    state.bikeSetup?.motorVoltageRating || state.bikeSetup?.motorRatedVoltage || 12;
+  const motorName = state.bikeSetup?.motorName || `มอเตอร์ ${chosenMotorVoltage}V`;
 
   // Game flow states
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [raceFinished, setRaceFinished] = useState<boolean>(false);
   const [raceTimeSeconds, setRaceTimeSeconds] = useState<number>(0);
   const [playerRank, setPlayerRank] = useState<number>(2);
+
+  // Failure & Tradeoff States
+  const [hasBatteryExhausted, setHasBatteryExhausted] = useState<boolean>(false);
+  const [isStalledOnHill, setIsStalledOnHill] = useState<boolean>(false);
+  const [downhillSavedWh, setDownhillSavedWh] = useState<number>(0);
 
   // Controls input state (touch and keyboard)
   const [isPedaling, setIsPedaling] = useState<boolean>(false);
@@ -221,7 +235,42 @@ export const RacingScreen: React.FC = () => {
     },
   ]);
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const container3dRef = useRef<HTMLDivElement | null>(null);
+  const renderer3dRef = useRef<Racing3DRenderer | null>(null);
+  const telemetryRef = useRef({
+    playerZ,
+    playerX,
+    playerSpeedMps,
+    isPedaling,
+    isMotorAssistActive,
+    isBraking,
+    batteryRemainingMah,
+    totalCapacityMah,
+    bikeColor,
+    aiRiders,
+    characterName: state.character.name,
+    outfitColor: state.character.outfitColor || '#0284c7',
+    character: state.character,
+  });
+
+  useEffect(() => {
+    telemetryRef.current = {
+      playerZ,
+      playerX,
+      playerSpeedMps,
+      isPedaling,
+      isMotorAssistActive,
+      isBraking,
+      batteryRemainingMah,
+      totalCapacityMah,
+      bikeColor,
+      aiRiders,
+      characterName: state.character.name,
+      outfitColor: state.character.outfitColor || '#0284c7',
+      character: state.character,
+    };
+  });
+
   const prevRankRef = useRef<number>(playerRank);
   const animationFrameRef = useRef<number | null>(null);
   const lastTickTimeRef = useRef<number>(performance.now());
@@ -230,10 +279,11 @@ export const RacingScreen: React.FC = () => {
   const getTrackSlopePercent = useCallback(
     (z: number) => {
       if (isHillClimb) {
-        if (z < 100) return 3;
-        if (z < 350) return 10;
-        if (z < 550) return 12;
-        return 6;
+        if (z < 100) return 5;
+        if (z < 250) return 14; // Steep climb 1 (+14%)
+        if (z < 360) return -9; // Downhill valley (-9%)
+        if (z < 510) return 16; // Steep climb 2 to summit (+16%)
+        return -2;              // Crest to finish (-2%)
       }
       if (isEndurance) {
         // sinusoidal rolling hills (+4% to -3%)
@@ -280,7 +330,13 @@ export const RacingScreen: React.FC = () => {
         setIsSteeringRight(true);
       }
       if (e.key === ' ' || e.key === 'Shift') {
-        setIsMotorAssistActive(true);
+        if (!e.repeat) {
+          setIsMotorAssistActive((prev) => {
+            const next = !prev;
+            if (next) playRacingTone('boost');
+            return next;
+          });
+        }
       }
     };
 
@@ -296,9 +352,6 @@ export const RacingScreen: React.FC = () => {
       }
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
         setIsSteeringRight(false);
-      }
-      if (e.key === ' ' || e.key === 'Shift') {
-        setIsMotorAssistActive(false);
       }
     };
 
@@ -330,60 +383,84 @@ export const RacingScreen: React.FC = () => {
 
         // 1. Forces resisting motion
         // Rolling resistance: F_roll = Crr * m * g * cos(theta)
-        const rollingResistanceN = 0.005 * totalMassKg * gravity * Math.cos(slopeRadians);
-        // Aerodynamic drag: F_drag = 0.5 * rho * Cd * A * v^2
-        const aeroDragN = 0.5 * 1.225 * 0.85 * 0.42 * Math.pow(playerSpeedMps, 2);
+        const rollingResistanceN = 0.004 * totalMassKg * gravity * Math.cos(slopeRadians);
+        // Aerodynamic drag: F_drag = 0.5 * rho * Cd * A * v^2 (Cd*A ~ 0.36)
+        const aeroDragN = 0.5 * 1.225 * 0.36 * Math.pow(playerSpeedMps, 2);
         // Grade / slope resistance: F_slope = m * g * sin(theta)
         const slopeForceN = totalMassKg * gravity * Math.sin(slopeRadians);
         // Braking force
-        const brakeForceN = isBraking ? 180 : 0;
+        const brakeForceN = isBraking ? 200 : 0;
 
         // 2. Human Pedaling Force
         let humanPower = 0;
         let humanForceN = 0;
-        if (isPedaling) {
-          // Cadence model: high power at moderate speeds, dropping slightly at extreme sprint
-          humanPower = 180 + Math.sin(currentTime * 0.008) * 20; // ~180-200 Watts
-          humanForceN = humanPower / Math.max(playerSpeedMps, 1.8);
-          humanForceN = Math.min(130, humanForceN);
+        if (isPedaling && !isBraking) {
+          // Sprint pedaling: full athletic burst (~240-270 Watts)
+          humanPower = 245 + Math.sin(currentTime * 0.008) * 25;
+          humanForceN = Math.min(130, humanPower / Math.max(playerSpeedMps, 2.0));
+        } else if (!isBraking) {
+          // Automatic baseline pedaling / cadence (~110-130 Watts) so player cruises naturally
+          humanPower = 115 + Math.sin(currentTime * 0.005) * 15;
+          humanForceN = Math.min(60, humanPower / Math.max(playerSpeedMps, 2.5));
         }
         setHumanPowerW(Math.round(humanPower));
-        setPedalCadenceRpm(isPedaling ? Math.round(55 + playerSpeedMps * 4.2) : 0);
+        setPedalCadenceRpm(
+          isPedaling
+            ? Math.round(75 + playerSpeedMps * 3.5)
+            : playerSpeedMps > 0.5
+            ? Math.round(45 + playerSpeedMps * 2.5)
+            : 0
+        );
 
-        // 3. Electric Motor Assist Force from Saved Battery Pack
+        // 3. Electric Motor Assist Force from Saved Battery Pack & Motor Selection
         let motorThrustForceN = 0;
         let motorCurrent = 0;
         let loadedVoltage = nominalPackV;
         let motorPower = 0;
 
         const hasBatteryJuice = batteryRemainingMah > 5;
-        if (isMotorAssistActive && hasBatteryJuice && !isBraking) {
-          // Controller current limit: max 2.6A for the 3.0V DC motor
-          const maxMotorCurrentA = 2.6;
-          // Motor back-EMF proportional to bicycle speed
-          const motorBackEmfV = Math.min(nominalPackV * 0.9, playerSpeedMps * 0.32);
-          // Ideal unloaded voltage
-          const openCircuitV = nominalPackV * (0.94 + 0.06 * (batteryRemainingMah / totalCapacityMah));
-          // Motor winding resistance
-          const motorWindingR = 1.0;
+        if (!hasBatteryJuice && !hasBatteryExhausted) {
+          setHasBatteryExhausted(true);
+        }
 
-          // Solve for current with internal resistance: I = (Voc - Eb) / (Rw + Rin)
+        const maxMotorCurrentA = chosenMotorVoltage === 24 ? 6.8 : chosenMotorVoltage === 12 ? 4.2 : 3.5;
+        const voltageMatchRatio = Math.min(1.0, nominalPackV / chosenMotorVoltage);
+        const powerEfficiency = Math.pow(voltageMatchRatio, 2);
+
+        if (isMotorAssistActive && hasBatteryJuice && !isBraking) {
+          const openCircuitV = nominalPackV * (0.95 + 0.05 * (batteryRemainingMah / totalCapacityMah));
+          const motorBackEmfV = Math.min(openCircuitV * 0.85, playerSpeedMps * (chosenMotorVoltage * 0.035));
+          const motorWindingR = chosenMotorVoltage === 24 ? 0.45 : chosenMotorVoltage === 12 ? 0.65 : 0.85;
+
           const effectiveCurrent = Math.max(
-            0,
+            0.6,
             (openCircuitV - motorBackEmfV) / (motorWindingR + internalResistance)
           );
           motorCurrent = Math.min(maxMotorCurrentA, effectiveCurrent);
-          loadedVoltage = Math.max(1.0, openCircuitV - motorCurrent * internalResistance);
-          motorPower = loadedVoltage * motorCurrent;
+          loadedVoltage = Math.max(1.2, openCircuitV - motorCurrent * internalResistance);
 
-          // Electrical motor forward force (P_mech / v)
-          const motorMechPower = motorBackEmfV * motorCurrent * 0.82; // 82% motor efficiency
-          motorThrustForceN = Math.min(85, motorMechPower / Math.max(playerSpeedMps, 1.4));
+          // Real mechanical motor power output scaled by powerEfficiency
+          const elecPower = loadedVoltage * motorCurrent;
+          motorPower = Math.round(
+            elecPower * (chosenMotorVoltage === 24 ? 5.8 : chosenMotorVoltage === 12 ? 9.5 : 18) * powerEfficiency
+          );
 
-          // Drain battery mAh: I (Amps) * dt (seconds) / 3600 (hr) * 1000 (mAh)
-          // scaled slightly for exciting race game length
-          const drainMah = (motorCurrent * 1000 * dt * 8) / 3600;
+          // Motor Thrust Force: Strong starting torque, scaled by motor voltage & matching
+          const speedFactor = Math.max(playerSpeedMps, 2.0);
+          const maxThrust = chosenMotorVoltage === 24 ? 125 : chosenMotorVoltage === 12 ? 85 : 55;
+          motorThrustForceN = Math.min(maxThrust, (motorPower * 0.88) / speedFactor) * voltageMatchRatio;
+
+          // Scaled battery drain for arcade race pacing (24V 8S1P drains rapidly under full throttle!)
+          const drainMultiplier = chosenMotorVoltage === 24 ? 4.8 : 4.2;
+          const drainMah = (motorCurrent * 1000 * dt * drainMultiplier) / 3600;
           setBatteryRemainingMah((prev) => Math.max(0, prev - drainMah));
+        } else if (isMotorAssistActive && !hasBatteryJuice) {
+          setIsMotorAssistActive(false);
+        }
+
+        // Downhill energy saving tracking (Gravity assist saves Wh when coasting)
+        if (currentSlope < 0 && !isMotorAssistActive && playerSpeedMps > 2.5) {
+          setDownhillSavedWh((prev) => prev + (chosenMotorVoltage * 3.5 * dt) / 3600);
         }
 
         setMotorCurrentA(Number(motorCurrent.toFixed(2)));
@@ -399,6 +476,14 @@ export const RacingScreen: React.FC = () => {
         setPlayerSpeedMps(newSpeedMps);
         const speedKmh = newSpeedMps * 3.6;
         setTopSpeedKmhRecorded((prev) => Math.max(prev, Math.round(speedKmh)));
+
+        // Detect Stall on uphill slope (Insufficient torque or depleted battery)
+        if (isHillClimb && currentSlope >= 10 && newSpeedMps <= 0.25 && playerZ > 50 && !isStalledOnHill) {
+          if (!hasBatteryJuice || voltageMatchRatio < 0.6) {
+            setIsStalledOnHill(true);
+            playRacingTone('brake');
+          }
+        }
 
         // 6. Update Distance
         let updatedPlayerZ = playerZ + newSpeedMps * dt;
@@ -426,32 +511,33 @@ export const RacingScreen: React.FC = () => {
             const aiSlope = getTrackSlopePercent(ai.z);
             const aiSlopeRad = Math.atan(aiSlope / 100);
             const aiSlopeForce = 82 * gravity * Math.sin(aiSlopeRad);
-            const aiDrag = 0.5 * 1.225 * 0.85 * 0.42 * Math.pow(ai.speedMps, 2);
-            const aiRoll = 0.005 * 82 * gravity;
+            const aiDrag = 0.5 * 1.225 * 0.36 * Math.pow(ai.speedMps, 2);
+            const aiRoll = 0.004 * 82 * gravity;
 
-            let aiPedalPower = 175;
-            let aiMotorThrust = 0;
+            let aiTotalForwardWatts = 220;
 
             // Strategy behaviors
             if (ai.strategy === 'sprint_burst') {
-              // Speedy Sam: Very fast start, but suffers high voltage sag on slopes
-              const sagPenalty = aiSlope > 6 ? 0.70 : 1.05;
-              aiPedalPower = (ai.z < 250 ? 210 : 160) * sagPenalty;
-              aiMotorThrust = ai.batteryRemainingMah > 20 ? 38 * sagPenalty : 0;
+              // Speedy Sam (2S1P): Very fast aggressive start (~32-34 km/h), but fades as battery sags
+              if (ai.z < totalTrackLength * 0.32) {
+                aiTotalForwardWatts = 330; // Early explosive burst
+              } else if (ai.z < totalTrackLength * 0.65) {
+                aiTotalForwardWatts = 210; // Fading
+              } else {
+                aiTotalForwardWatts = 175; // Heavy voltage sag
+              }
+              if (aiSlope > 4) aiTotalForwardWatts *= 0.72; // Greatly penalized on steep slopes
             } else if (ai.strategy === 'steady_pacing') {
-              // Turbo Tina: Solid 2S2P pack (R_in 0.15), consistent power uphill and downhill
-              const pacing = aiSlope > 5 ? 1.15 : 1.0;
-              aiPedalPower = 185 * pacing;
-              aiMotorThrust = ai.batteryRemainingMah > 20 ? 46 : 0;
+              // Turbo Tina (2S2P): Benchmark competitor - steady solid 30-32 km/h
+              aiTotalForwardWatts = 260;
+              if (aiSlope > 4) aiTotalForwardWatts = 280; // Handles hill climb well
             } else if (ai.strategy === 'hill_power') {
-              // Captain Big-Block: High torque crawler, accelerates on hills!
-              const hillBoost = aiSlope > 5 ? 1.35 : 0.95;
-              aiPedalPower = 170 * hillBoost;
-              aiMotorThrust = ai.batteryRemainingMah > 20 ? 52 * hillBoost : 0;
+              // Captain Big-Block: Heavy bike, 26-28 km/h on flat, pulls strong 29-30 km/h on hills
+              aiTotalForwardWatts = aiSlope > 4 ? 295 : 210;
             }
 
-            const aiHumanForce = aiPedalPower / Math.max(ai.speedMps, 1.6);
-            const aiNetForce = aiHumanForce + aiMotorThrust - aiDrag - aiRoll - aiSlopeForce;
+            const aiThrustForce = Math.min(78, aiTotalForwardWatts / Math.max(ai.speedMps, 2.4));
+            const aiNetForce = aiThrustForce - aiDrag - aiRoll - aiSlopeForce;
             const aiAccel = aiNetForce / 82;
             const newAiSpeed = Math.max(0, ai.speedMps + aiAccel * dt);
 
@@ -470,7 +556,7 @@ export const RacingScreen: React.FC = () => {
             const targetX = Math.max(-0.9, Math.min(0.9, ai.targetLaneX + laneSway));
 
             // Drain AI battery
-            const aiDrain = (1.8 * dt * 8 * 1000) / 3600;
+            const aiDrain = (1.5 * dt * 4.2 * 1000) / 3600;
 
             return {
               ...ai,
@@ -535,367 +621,123 @@ export const RacingScreen: React.FC = () => {
     setPlayerRank(rank);
   }, [playerZ, aiRiders, playerFinishTime]);
 
-  // ----------------- 2.5D CANVAS TRACK RENDERER -----------------
+  // ----------------- THREE.JS 3D RACING RENDERER -----------------
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!container3dRef.current) return;
+    const renderer = new Racing3DRenderer(
+      container3dRef.current,
+      trackId,
+      totalTrackLength,
+      totalLaps
+    );
+    renderer3dRef.current = renderer;
 
-    // Responsive Canvas Size
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
+    let animId: number;
+    let lastRenderTime = performance.now();
 
-    // Clear
-    ctx.clearRect(0, 0, width, height);
+    const renderLoop = (time: number) => {
+      const dt = Math.min(0.05, (time - lastRenderTime) / 1000);
+      lastRenderTime = time;
 
-    const horizonY = height * 0.44;
-    const roadBottomWidth = width * 0.88;
-    const roadTopWidth = width * 0.08;
-    const currentSlope = getTrackSlopePercent(playerZ);
-    const currentCurve = getTrackCurvature(playerZ);
+      if (renderer3dRef.current) {
+        const tel = telemetryRef.current;
+        const playerBattPct = Math.round((tel.batteryRemainingMah / tel.totalCapacityMah) * 100);
 
-    // 1. Sky & Stadium Horizon Background
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
-    skyGrad.addColorStop(0, '#020617');
-    skyGrad.addColorStop(0.6, '#0f172a');
-    skyGrad.addColorStop(1, '#1e1b4b');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, width, horizonY);
+        const racerUpdates: RacerUpdate[] = [
+          {
+            id: 'player',
+            name: `${tel.characterName} (คุณ)`,
+            z: tel.playerZ,
+            x: tel.playerX,
+            speedMps: tel.playerSpeedMps,
+            isPedaling: tel.isPedaling,
+            isMotorActive: tel.isMotorAssistActive && tel.batteryRemainingMah > 5 && !tel.isBraking,
+            isBraking: tel.isBraking,
+            batteryPct: playerBattPct,
+            color: tel.bikeColor,
+            isPlayer: true,
+            jerseyColor: tel.outfitColor,
+            bikeColor: tel.bikeColor,
+            character: tel.character,
+          },
+          ...tel.aiRiders.map((ai) => ({
+            id: ai.id,
+            name: ai.name,
+            z: ai.z,
+            x: ai.x,
+            speedMps: ai.speedMps,
+            isPedaling: ai.speedMps > 0.5,
+            isMotorActive: ai.batteryRemainingMah > 20,
+            isBraking: false,
+            batteryPct: Math.round((ai.batteryRemainingMah / ai.totalCapacityMah) * 100),
+            color: ai.color,
+            isPlayer: false,
+            jerseyColor: ai.color,
+            bikeColor: ai.color,
+            character: ai.id === 'ai_speedy' ? {
+              name: 'Speedy Sam',
+              gender: 'cadet_boy' as const,
+              bodyType: 'boy' as const,
+              hairStyle: 'spiky' as const,
+              hairColor: '#ea580c',
+              skinTone: '#fed7aa',
+              jacketStyle: 'speed_jumpsuit' as const,
+              outfitColor: '#ea580c',
+              suitColor: '#ea580c',
+              avatarId: 'cadet_boy',
+              trousersStyle: 'sleek_racer' as const,
+              gogglesStyle: 'cyber_visor' as const,
+              helmetStyle: 'speedster' as const,
+              title: 'Speed Specialist',
+            } : ai.id === 'ai_tina' ? {
+              name: 'Turbo Tina',
+              gender: 'cadet_girl' as const,
+              bodyType: 'girl' as const,
+              hairStyle: 'ponytail' as const,
+              hairColor: '#ec4899',
+              skinTone: '#ffedd5',
+              jacketStyle: 'speed_jumpsuit' as const,
+              outfitColor: '#a855f7',
+              suitColor: '#a855f7',
+              avatarId: 'cadet_girl',
+              trousersStyle: 'sleek_racer' as const,
+              gogglesStyle: 'none' as const,
+              helmetStyle: 'aerodynamic' as const,
+              title: 'Aero Specialist',
+            } : {
+              name: 'Captain Big-Block',
+              gender: 'cadet_boy' as const,
+              bodyType: 'boy' as const,
+              hairStyle: 'short_crop' as const,
+              hairColor: '#78350f',
+              skinTone: '#d97706',
+              faceStyle: 3,
+              jacketStyle: 'cyber_armor' as const,
+              outfitColor: '#eab308',
+              suitColor: '#eab308',
+              avatarId: 'cadet_boy',
+              trousersStyle: 'cargo_tech' as const,
+              gogglesStyle: 'twin_tech' as const,
+              helmetStyle: 'cyber' as const,
+              title: 'Torque Monster',
+            },
+          })),
+        ];
 
-    // Distant Stadium Grandstand & Floodlights
-    ctx.fillStyle = '#312e81';
-    for (let i = 0; i < 9; i++) {
-      const towerX = (width / 8) * i;
-      ctx.fillRect(towerX - 4, horizonY - 45, 8, 45);
-      // Floodlight yellow glow
-      ctx.beginPath();
-      ctx.arc(towerX, horizonY - 48, 6, 0, Math.PI * 2);
-      ctx.fillStyle = '#fde047';
-      ctx.fill();
-      ctx.fillStyle = '#312e81';
-    }
-
-    // Mountains or City Skyline silhouette
-    ctx.fillStyle = '#1e1b4b';
-    ctx.beginPath();
-    ctx.moveTo(0, horizonY);
-    for (let x = 0; x <= width; x += 40) {
-      const mountainH = Math.sin(x * 0.015 + playerZ * 0.002) * 25 + 20;
-      ctx.lineTo(x, horizonY - mountainH);
-    }
-    ctx.lineTo(width, horizonY);
-    ctx.closePath();
-    ctx.fill();
-
-    // 2. Ground Terrain (Grass / Dirt side verges)
-    const groundGrad = ctx.createLinearGradient(0, horizonY, 0, height);
-    groundGrad.addColorStop(0, '#064e3b');
-    groundGrad.addColorStop(1, '#022c22');
-    ctx.fillStyle = groundGrad;
-    ctx.fillRect(0, horizonY, width, height - horizonY);
-
-    // 3. Perspective Road Trapezius Scanlines (2.5D segment rendering)
-    const numSlices = 40;
-    const scrollOffset = (playerZ * 1.8) % 40;
-
-    for (let i = numSlices - 1; i >= 0; i--) {
-      const sliceNear = i / numSlices;
-      const sliceFar = (i + 1) / numSlices;
-
-      const y1 = horizonY + Math.pow(sliceFar, 1.8) * (height - horizonY);
-      const y2 = horizonY + Math.pow(sliceNear, 1.8) * (height - horizonY);
-
-      // Curve curvature shift
-      const curveOffset1 = Math.pow(sliceFar, 2) * currentCurve * 70;
-      const curveOffset2 = Math.pow(sliceNear, 2) * currentCurve * 70;
-
-      const w1 = roadTopWidth + (roadBottomWidth - roadTopWidth) * Math.pow(sliceFar, 1.6);
-      const w2 = roadTopWidth + (roadBottomWidth - roadTopWidth) * Math.pow(sliceNear, 1.6);
-
-      const xMid1 = width / 2 - playerX * (w1 * 0.4) + curveOffset1;
-      const xMid2 = width / 2 - playerX * (w2 * 0.4) + curveOffset2;
-
-      // Alternating road asphalt & rumble strip colors
-      const isStripe = Math.floor((i + scrollOffset * 0.3) % 2) === 0;
-
-      // Asphalt
-      ctx.fillStyle = isStripe ? '#1e293b' : '#0f172a';
-      ctx.beginPath();
-      ctx.moveTo(xMid1 - w1 / 2, y1);
-      ctx.lineTo(xMid1 + w1 / 2, y1);
-      ctx.lineTo(xMid2 + w2 / 2, y2);
-      ctx.lineTo(xMid2 - w2 / 2, y2);
-      ctx.closePath();
-      ctx.fill();
-
-      // Red/White Kerbs (Rumble Strips) on left and right
-      const kerbWidth1 = w1 * 0.08;
-      const kerbWidth2 = w2 * 0.08;
-
-      ctx.fillStyle = isStripe ? '#ef4444' : '#f8fafc';
-      // Left Kerb
-      ctx.beginPath();
-      ctx.moveTo(xMid1 - w1 / 2 - kerbWidth1, y1);
-      ctx.lineTo(xMid1 - w1 / 2, y1);
-      ctx.lineTo(xMid2 - w2 / 2, y2);
-      ctx.lineTo(xMid2 - w2 / 2 - kerbWidth2, y2);
-      ctx.closePath();
-      ctx.fill();
-
-      // Right Kerb
-      ctx.beginPath();
-      ctx.moveTo(xMid1 + w1 / 2, y1);
-      ctx.lineTo(xMid1 + w1 / 2 + kerbWidth1, y1);
-      ctx.lineTo(xMid2 + w2 / 2 + kerbWidth2, y2);
-      ctx.lineTo(xMid2 + w2 / 2, y2);
-      ctx.closePath();
-      ctx.fill();
-
-      // White Dashed Center Lane Lines
-      if (isStripe) {
-        ctx.fillStyle = '#38bdf8';
-        const dashW1 = w1 * 0.02;
-        const dashW2 = w2 * 0.02;
-        ctx.beginPath();
-        ctx.moveTo(xMid1 - dashW1 / 2, y1);
-        ctx.lineTo(xMid1 + dashW1 / 2, y1);
-        ctx.lineTo(xMid2 + dashW2 / 2, y2);
-        ctx.lineTo(xMid2 - dashW2 / 2, y2);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-
-    // 4. Finish Line Banner in 2.5D space
-    const distanceToFinish = totalTrackLength - playerZ;
-    if (distanceToFinish > 0 && distanceToFinish < 140) {
-      const finishRatio = 1 - distanceToFinish / 140;
-      const finishY = horizonY + Math.pow(finishRatio, 1.8) * (height - horizonY);
-      const finishRoadW = roadTopWidth + (roadBottomWidth - roadTopWidth) * Math.pow(finishRatio, 1.6);
-      const finishMidX = width / 2 - playerX * (finishRoadW * 0.4);
-
-      // Checkered tape across road
-      const numChecks = 16;
-      const checkW = finishRoadW / numChecks;
-      for (let c = 0; c < numChecks; c++) {
-        ctx.fillStyle = c % 2 === 0 ? '#f8fafc' : '#020617';
-        ctx.fillRect(finishMidX - finishRoadW / 2 + c * checkW, finishY - 6, checkW, 12);
+        renderer3dRef.current.update(racerUpdates, dt);
       }
 
-      // Overhead Finish Arch
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 6 * finishRatio + 2;
-      ctx.beginPath();
-      ctx.moveTo(finishMidX - finishRoadW / 2 - 15, finishY);
-      ctx.lineTo(finishMidX - finishRoadW / 2 - 15, finishY - 60 * finishRatio - 20);
-      ctx.lineTo(finishMidX + finishRoadW / 2 + 15, finishY - 60 * finishRatio - 20);
-      ctx.lineTo(finishMidX + finishRoadW / 2 + 15, finishY);
-      ctx.stroke();
+      animId = requestAnimationFrame(renderLoop);
+    };
 
-      // Finish banner text
-      ctx.fillStyle = '#f59e0b';
-      ctx.font = `bold ${Math.max(12, Math.round(18 * finishRatio + 8))}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText('🏁 FINISH LINE 🏁', finishMidX, finishY - 60 * finishRatio - 26);
-    }
+    animId = requestAnimationFrame(renderLoop);
 
-    // 5. Render 3 AI Opponent Cyclists in 2.5D Perspective
-    // Sort riders by relative distance from camera so furthest is drawn first
-    const visibleRiders = aiRiders
-      .map((ai) => ({
-        ...ai,
-        relativeZ: ai.z - playerZ,
-      }))
-      .filter((ai) => ai.relativeZ > -25 && ai.relativeZ < 150)
-      .sort((a, b) => b.relativeZ - a.relativeZ);
-
-    visibleRiders.forEach((ai) => {
-      // Relative distance: 0 is at player, > 0 is ahead, < 0 is behind
-      // Normalize to perspective depth
-      const depthRatio = Math.max(0.04, 1 - ai.relativeZ / 150);
-      const riderY = horizonY + Math.pow(depthRatio, 1.8) * (height - horizonY);
-      const roadWAtDepth = roadTopWidth + (roadBottomWidth - roadTopWidth) * Math.pow(depthRatio, 1.6);
-      const riderX = width / 2 - playerX * (roadWAtDepth * 0.4) + ai.x * (roadWAtDepth * 0.38);
-
-      const spriteScale = Math.max(0.25, Math.min(1.4, Math.pow(depthRatio, 1.4)));
-      const bikeH = 50 * spriteScale;
-      const bikeW = 28 * spriteScale;
-
-      // Draw AI Cyclist
-      ctx.save();
-      ctx.translate(riderX, riderY);
-
-      // Name & Icon Badge overhead
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.strokeStyle = ai.color;
-      ctx.lineWidth = 1.5;
-      const badgeW = 60 * spriteScale + 20;
-      const badgeH = 18 * spriteScale + 6;
-      ctx.beginPath();
-      ctx.roundRect(-badgeW / 2, -bikeH - badgeH - 4, badgeW, badgeH, 6);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${Math.max(9, Math.round(11 * spriteScale))}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(`${ai.icon} ${ai.shortName}`, 0, -bikeH - 8);
-
-      // Bike Wheels
-      ctx.fillStyle = '#0f172a';
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 2 * spriteScale;
-      // Front wheel
-      ctx.beginPath();
-      ctx.arc(0, -6 * spriteScale, 8 * spriteScale, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fill();
-
-      // Bike Frame
-      ctx.strokeStyle = ai.color;
-      ctx.lineWidth = 4 * spriteScale;
-      ctx.beginPath();
-      ctx.moveTo(0, -6 * spriteScale);
-      ctx.lineTo(0, -24 * spriteScale);
-      ctx.lineTo(-6 * spriteScale, -14 * spriteScale);
-      ctx.stroke();
-
-      // Rider Torso & Jersey
-      ctx.fillStyle = ai.color;
-      ctx.beginPath();
-      ctx.roundRect(-8 * spriteScale, -38 * spriteScale, 16 * spriteScale, 18 * spriteScale, 4 * spriteScale);
-      ctx.fill();
-
-      // Helmet & Head
-      ctx.fillStyle = '#f8fafc';
-      ctx.beginPath();
-      ctx.arc(0, -42 * spriteScale, 8 * spriteScale, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
-    });
-
-    // 6. Render Player Cyclist (in Foreground Centered Relative to playerX)
-    const playerScreenX = width / 2;
-    const playerScreenY = height * 0.88;
-    const playerScale = 1.25;
-
-    ctx.save();
-    ctx.translate(playerScreenX, playerScreenY);
-
-    // Bike Shadow on Asphalt
-    ctx.fillStyle = 'rgba(2, 6, 23, 0.6)';
-    ctx.beginPath();
-    ctx.ellipse(0, 4, 30 * playerScale, 10 * playerScale, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Rear Wheel
-    ctx.fillStyle = '#090d16';
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 3 * playerScale;
-    ctx.beginPath();
-    ctx.arc(0, -10 * playerScale, 15 * playerScale, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Spinning Wheel Spokes
-    const spokeAngle = (playerZ * 0.8) % (Math.PI * 2);
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 1.5;
-    for (let s = 0; s < 4; s++) {
-      const a = spokeAngle + (s * Math.PI) / 2;
-      ctx.beginPath();
-      ctx.moveTo(0, -10 * playerScale);
-      ctx.lineTo(Math.cos(a) * 14 * playerScale, -10 * playerScale + Math.sin(a) * 14 * playerScale);
-      ctx.stroke();
-    }
-
-    // Bike Frame (Custom Color from GameState)
-    ctx.strokeStyle = bikeColor;
-    ctx.lineWidth = 6 * playerScale;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(0, -10 * playerScale);
-    ctx.lineTo(0, -42 * playerScale);
-    ctx.stroke();
-
-    // Downtube Battery Pack on Bike
-    ctx.fillStyle = '#0284c7';
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2;
-    ctx.fillRect(-6 * playerScale, -30 * playerScale, 12 * playerScale, 16 * playerScale);
-    // Battery LED glow
-    if (isMotorAssistActive && batteryRemainingMah > 5) {
-      ctx.fillStyle = '#34d399';
-      ctx.beginPath();
-      ctx.arc(0, -22 * playerScale, 3 * playerScale, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Handlebars
-    ctx.strokeStyle = '#cbd5e1';
-    ctx.lineWidth = 4 * playerScale;
-    ctx.beginPath();
-    ctx.moveTo(-18 * playerScale, -44 * playerScale);
-    ctx.lineTo(18 * playerScale, -44 * playerScale);
-    ctx.stroke();
-
-    // Rider Torso & Jersey (Character outfitColor)
-    const riderJerseyColor = state.character.outfitColor || '#0284c7';
-    ctx.fillStyle = riderJerseyColor;
-    ctx.beginPath();
-    ctx.roundRect(-14 * playerScale, -66 * playerScale, 28 * playerScale, 26 * playerScale, 6 * playerScale);
-    ctx.fill();
-
-    // Character Helmet & Head
-    ctx.fillStyle = state.character.hairColor || '#f59e0b';
-    ctx.beginPath();
-    ctx.arc(0, -74 * playerScale, 12 * playerScale, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Cyber Visor / Goggles
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(-10 * playerScale, -77 * playerScale, 20 * playerScale, 5 * playerScale);
-
-    // Motor Turbo Glow FX when Assist is active
-    if (isMotorAssistActive && batteryRemainingMah > 5) {
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, -10 * playerScale, 22 * playerScale, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Braking Sparks FX
-    if (isBraking && playerSpeedMps > 1) {
-      ctx.fillStyle = '#f97316';
-      for (let p = 0; p < 5; p++) {
-        const sparkX = (Math.random() - 0.5) * 24 * playerScale;
-        const sparkY = Math.random() * 8 * playerScale;
-        ctx.fillRect(sparkX, sparkY, 3, 3);
-      }
-    }
-
-    ctx.restore();
-  }, [
-    playerZ,
-    playerX,
-    playerSpeedMps,
-    aiRiders,
-    bikeColor,
-    isMotorAssistActive,
-    batteryRemainingMah,
-    isBraking,
-    state.character,
-    totalTrackLength,
-    getTrackCurvature,
-    getTrackSlopePercent,
-  ]);
+    return () => {
+      cancelAnimationFrame(animId);
+      renderer.dispose();
+      renderer3dRef.current = null;
+    };
+  }, [trackId, totalTrackLength, totalLaps]);
 
   // Complete and transition to Race Results with real 4-racer finish order
   const handleProceedToResults = () => {
@@ -955,7 +797,7 @@ export const RacingScreen: React.FC = () => {
     }));
 
     const playerEntry = finalCompetitorResults.find((c) => c.isPlayer);
-    const finalRank = playerEntry ? playerEntry.rank : playerRank;
+    const finalRank = isStalledOnHill ? 4 : (playerEntry ? playerEntry.rank : playerRank);
 
     // Documented Scoring Rule out of 30:
     // 1. Rank Points (Max 12): 1st = 12, 2nd = 9, 3rd = 6, 4th = 3
@@ -964,10 +806,12 @@ export const RacingScreen: React.FC = () => {
     const speedPoints = avgSpeed >= 30 ? 10 : avgSpeed >= 26 ? 8 : avgSpeed >= 22 ? 6 : 4;
     // 3. Battery Efficiency Points (Max 8): remaining > 25%: 8, > 10%: 6, > 0%: 4, 0%: 2
     const batteryPoints = remainingPct > 25 ? 8 : remainingPct > 10 ? 6 : remainingPct > 0 ? 4 : 2;
-    const totalScore30 = rankPoints + speedPoints + batteryPoints;
+    const totalScore30 = isStalledOnHill ? 8 : (rankPoints + speedPoints + batteryPoints);
 
     const prevBestScore = state.raceData?.bestRaceScore || 0;
     const newBestScore = Math.max(prevBestScore, totalScore30);
+
+    const voltageMatchRatio = Number((Math.min(1.0, nominalPackV / chosenMotorVoltage)).toFixed(2));
 
     updateRaceData({
       rank: finalRank,
@@ -984,11 +828,19 @@ export const RacingScreen: React.FC = () => {
       raceScoreOutOf30: totalScore30,
       bestRaceScore: newBestScore,
       scoringBreakdown: {
-        rankPoints,
-        speedPacingPoints: speedPoints,
-        batteryEfficiencyPoints: batteryPoints,
+        rankPoints: isStalledOnHill ? 3 : rankPoints,
+        speedPacingPoints: isStalledOnHill ? 3 : speedPoints,
+        batteryEfficiencyPoints: isStalledOnHill ? 2 : batteryPoints,
         totalPoints: totalScore30,
       },
+      // Vocational Physics & Battery Tradeoff Reflections
+      batteryExhaustedMidway: hasBatteryExhausted || remainingEnergy <= 5,
+      stalledOnHill: isStalledOnHill,
+      motorVoltageMatchRatio: voltageMatchRatio,
+      maxSlopeEncountered: 16,
+      downhillEnergySavedWh: Math.round(downhillSavedWh * 10) / 10,
+      chosenMotorVoltage,
+      chosenPackVoltage: nominalPackV,
     });
 
     const earnedStars = finalRank === 1 ? 3 : finalRank === 2 ? 2 : 1;
@@ -1049,9 +901,23 @@ export const RacingScreen: React.FC = () => {
           )}
 
           {isHillClimb && (
-            <div className="bg-amber-950/70 border border-amber-500/40 px-2.5 py-1 rounded-lg text-amber-300 text-xs font-mono font-bold flex items-center gap-1">
+            <div
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1 border ${
+                currentSlope > 0
+                  ? 'bg-amber-950/70 border-amber-500/40 text-amber-300'
+                  : currentSlope < 0
+                  ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300 animate-pulse'
+                  : 'bg-slate-900 border-slate-700 text-slate-300'
+              }`}
+            >
               <Mountain className="w-3.5 h-3.5" />
-              <span>ความชัน: +{currentSlope}%</span>
+              <span>
+                {currentSlope > 0
+                  ? `ขึ้นเขา: +${currentSlope}%`
+                  : currentSlope < 0
+                  ? `ลงเขา: ${currentSlope}% (ปล่อยไหลฟรี 0W!)`
+                  : 'ทางราบ'}
+              </span>
             </div>
           )}
         </div>
@@ -1097,7 +963,7 @@ export const RacingScreen: React.FC = () => {
 
       {/* Main 2.5D Race Track View */}
       <div className="relative flex-1 w-full overflow-hidden bg-slate-950 flex flex-col justify-end">
-        <canvas ref={canvasRef} className="w-full h-full block absolute inset-0 cursor-crosshair" />
+        <div ref={container3dRef} className="w-full h-full block absolute inset-0 cursor-crosshair overflow-hidden" />
 
         {/* Electrical & Motor Status Ribbon (Above Controls) */}
         <div className="relative z-20 px-4 py-1.5 bg-slate-900/80 backdrop-blur-md border-t border-indigo-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
@@ -1198,22 +1064,16 @@ export const RacingScreen: React.FC = () => {
           {/* Motor Assist Button (3 Cols) */}
           <div className="col-span-3">
             <button
-              onMouseDown={() => {
-                setIsMotorAssistActive(true);
-                playRacingTone('boost');
-              }}
-              onMouseUp={() => setIsMotorAssistActive(false)}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                setIsMotorAssistActive(true);
-                playRacingTone('boost');
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                setIsMotorAssistActive(false);
+              onClick={() => {
+                if (batteryRemainingMah <= 5) return;
+                setIsMotorAssistActive((prev) => {
+                  const next = !prev;
+                  if (next) playRacingTone('boost');
+                  return next;
+                });
               }}
               disabled={batteryRemainingMah <= 5}
-              className={`w-full py-4 md:py-5 rounded-2xl font-black text-xs md:text-sm flex flex-col items-center justify-center gap-0.5 transition active:scale-95 shadow-xl min-h-[58px] ${
+              className={`w-full py-4 md:py-5 rounded-2xl font-black text-xs md:text-sm flex flex-col items-center justify-center gap-0.5 transition active:scale-95 shadow-xl min-h-[58px] cursor-pointer ${
                 isMotorAssistActive
                   ? 'bg-cyan-400 text-slate-950 ring-4 ring-cyan-300/50 shadow-cyan-400/50 scale-[0.98]'
                   : batteryRemainingMah > 5
@@ -1222,7 +1082,7 @@ export const RacingScreen: React.FC = () => {
               }`}
             >
               <Zap className="w-5 h-5 fill-current" />
-              <span>{isMotorAssistActive ? 'มอเตอร์ทำงาน!' : 'มอเตอร์ช่วยปั่น'}</span>
+              <span>{isMotorAssistActive ? '⚡ มอเตอร์: เปิด (ON)' : '🔌 กดเปิดมอเตอร์ (Assist)'}</span>
             </button>
           </div>
 
@@ -1243,14 +1103,19 @@ export const RacingScreen: React.FC = () => {
                 e.preventDefault();
                 setIsPedaling(false);
               }}
-              className={`w-full py-4 md:py-5 rounded-2xl font-black text-xs md:text-sm flex flex-col items-center justify-center gap-0.5 transition active:scale-95 shadow-xl min-h-[58px] ${
+              onClick={() => {
+                setIsPedaling(true);
+                playRacingTone('pedal');
+                setTimeout(() => setIsPedaling(false), 500);
+              }}
+              className={`w-full py-4 md:py-5 rounded-2xl font-black text-xs md:text-sm flex flex-col items-center justify-center gap-0.5 transition active:scale-95 shadow-xl min-h-[58px] cursor-pointer ${
                 isPedaling
                   ? 'bg-amber-400 text-slate-950 ring-4 ring-amber-300/50 shadow-amber-400/50 scale-[0.98]'
                   : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-slate-950 shadow-amber-500/30'
               }`}
             >
               <span className="text-base md:text-lg">🚴‍♂️</span>
-              <span>{isPedaling ? 'กำลังออกแรงปั่น!' : 'กดค้างเพื่อปั่น (PEDAL)'}</span>
+              <span>{isPedaling ? '🔥 สปรินต์ปั่นเต็มแรง!' : 'กดค้างสปรินต์ (SPRINT)'}</span>
             </button>
           </div>
         </div>
@@ -1372,6 +1237,46 @@ export const RacingScreen: React.FC = () => {
             >
               <span>ดูสรุปผลการแข่งขันและตารางอันดับ</span>
               <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Stalled on Hill / Depleted Battery Modal */}
+      {isStalledOnHill && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-gradient-to-b from-slate-900 to-rose-950 border-2 border-rose-500 rounded-3xl max-w-md w-full p-6 shadow-2xl text-center flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border-2 border-rose-500 flex items-center justify-center text-rose-400">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+
+            <div>
+              <span className="text-[11px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/20 px-3 py-1 rounded-full">
+                ⚠️ การแข่งขันสิ้นสุด: รถติดค้างบนเนิน (STALLED ON HILL)
+              </span>
+              <h2 className="text-xl md:text-2xl font-black text-white mt-2">
+                {hasBatteryExhausted ? 'แบตเตอรี่หมดกลางทาง!' : 'แรงดันตกพิกัด แรงบิดไม่พอ!'}
+              </h2>
+              <p className="text-xs text-rose-200 mt-2 leading-relaxed">
+                {hasBatteryExhausted
+                  ? `พลังงานแบตเตอรี่หมดลงที่ระยะ ${Math.round(playerZ)} เมตร บนเนินชัน ${currentSlope}% แรงปั่นคนอย่างเดียว (~60N) ไม่สามารถต้านทานแรงโน้มถ่วง F = mg*sin(θ) (~120N) ได้!`
+                  : `แรงดันแบตเตอรี่ ${nominalPackV}V ต่ำกว่าพิกัดมอเตอร์ ${chosenMotorVoltage}V ทำให้สูญเสียกำลังขับและติดค้างบนเนินชัน`}
+              </p>
+            </div>
+
+            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-[11px] text-left w-full space-y-1.5 text-slate-300">
+              <span className="font-bold text-amber-300 block">💡 บทเรียนทางวิศวกรรมไฟฟ้า:</span>
+              <p className="text-[10px] leading-relaxed">
+                ภายใต้โควตา 8 ก้อน หากเลือกมอเตอร์กำลังสูง 24V (800W) แต่ต่อแบบ 8S 1P ความจุจะเหลือเพียง 2,000 mAh หากไม่ปล่อยไหลลงเขา (Coasting) แบตเตอรี่จะหมดก่อนถึงยอดเขา!
+              </p>
+            </div>
+
+            <button
+              onClick={handleProceedToResults}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 hover:brightness-110 text-slate-950 font-black text-xs md:text-sm shadow-xl active:scale-95 transition flex items-center justify-center gap-2"
+            >
+              <span>ดูผลวิเคราะห์และสะท้อนคิด (Reflection)</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>

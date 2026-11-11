@@ -34,6 +34,8 @@ import {
 } from '../../engine/circuitSimulator';
 import { CircuitComponent, CircuitWire } from '../../types/game';
 import { VoltDialog } from '../common/VoltDialog';
+import { DigitalMultimeter, TestPoint } from '../common/DigitalMultimeter';
+import { BatteryCell3D, KnifeSwitch3D, LightBulb3D, Wire3DRenderer } from '../circuit3d';
 
 const playTone = (freq: number, type: OscillatorType = 'sine', duration: number = 0.15) => {
   try {
@@ -80,7 +82,22 @@ export const SeriesLabScreen: React.FC = () => {
   const [showCelebration, setShowCelebration] = useState<boolean>(false);
   const [showHintModal, setShowHintModal] = useState<boolean>(false);
   const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
+  const [showMultimeter, setShowMultimeter] = useState<boolean>(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  const testPoints: TestPoint[] = useMemo(() => {
+    const v1 = c1Reversed ? -1.5 : 1.5;
+    const v2 = c2Reversed ? -1.5 : 1.5;
+    const vTotal = v1 + v2;
+    return [
+      { id: 'tp_c1_neg', name: 'ขั้วลบก้อน 1 (-) กราวด์', voltagePotential: 0.0, isGround: true },
+      { id: 'tp_c1_pos', name: 'ขั้วบวกก้อน 1 (+)', voltagePotential: v1 },
+      { id: 'tp_bridge', name: 'จุดเชื่อมบริดจ์อนุกรม', voltagePotential: v1 },
+      { id: 'tp_c2_pos', name: `ขั้วบวกก้อน 2 (แรงดันรวม ${vTotal.toFixed(1)}V)`, voltagePotential: vTotal },
+      { id: 'tp_sw_out', name: 'ขั้วสวิตช์ขาออก', voltagePotential: isSwitchClosed ? vTotal : 0.0 },
+      { id: 'tp_bulb_in', name: 'ขั้วหลอดไฟ 3.0V', voltagePotential: isSwitchClosed ? vTotal : 0.0 },
+    ];
+  }, [c1Reversed, c2Reversed, isSwitchClosed]);
 
   const [terminalCoords, setTerminalCoords] = useState<Record<string, { x: number; y: number }>>({});
   const workbenchRef = useRef<HTMLDivElement | null>(null);
@@ -371,6 +388,15 @@ export const SeriesLabScreen: React.FC = () => {
           </button>
 
           <button
+            type="button"
+            onClick={() => setShowMultimeter(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition min-h-[44px] cursor-pointer active:scale-95 shadow"
+            title="เปิดมัลติมิเตอร์วัดแรงดัน"
+          >
+            <span>🎛️ มัลติมิเตอร์ (DMM)</span>
+          </button>
+
+          <button
             onClick={() => setShowCompareModal(true)}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 text-xs font-semibold border border-indigo-700 transition min-h-[44px]"
           >
@@ -441,63 +467,14 @@ export const SeriesLabScreen: React.FC = () => {
               </span>
             </div>
 
-            {/* SVG Interactive Wires Layer */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-20"
-              style={{ overflow: 'visible' }}
-            >
-              <defs>
-                <linearGradient id="wireGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#38bdf8" />
-                  <stop offset="100%" stopColor="#818cf8" />
-                </linearGradient>
-              </defs>
-              {wires.map((wire) => {
-                const start = terminalCoords[wire.fromTerminalId];
-                const end = terminalCoords[wire.toTerminalId];
-                if (!start || !end) return null;
-
-                // Bezier curve control points
-                const dx = end.x - start.x;
-                const dy = end.y - start.y;
-                const cx1 = start.x + dx * 0.2;
-                const cy1 = start.y + dy * 0.8 + 20;
-                const cx2 = start.x + dx * 0.8;
-                const cy2 = start.y + dy * 0.2 - 20;
-
-                const pathD = `M ${start.x} ${start.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${end.x} ${end.y}`;
-
-                return (
-                  <g key={wire.id} className="group pointer-events-auto">
-                    {/* Shadow / Glow */}
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={liveValidation.isLampLit ? wire.color : '#475569'}
-                      strokeWidth="10"
-                      strokeOpacity="0.2"
-                      strokeLinecap="round"
-                    />
-                    {/* Main wire */}
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={wire.color}
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      className="cursor-pointer transition-all"
-                      onClick={() => removeWire(wire.id)}
-                    />
-                    {/* Current Flow Dots when active */}
-                    {liveValidation.isLampLit && (
-                      <circle r="4" fill="#fef08a">
-                        <animateMotion path={pathD} dur="1.2s" repeatCount="indefinite" />
-                      </circle>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
+            {/* 3D Wire & Connectors Overlay */}
+            <Wire3DRenderer
+              wires={wires}
+              terminalCoords={terminalCoords}
+              isEnergized={liveValidation.isLampLit}
+              isShortCircuit={liveValidation.isShortCircuit}
+              onRemoveWire={removeWire}
+            />
 
             {/* Component Placement Area */}
             <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 my-auto pt-4">
@@ -505,7 +482,7 @@ export const SeriesLabScreen: React.FC = () => {
               <div className="flex flex-col gap-4">
                 {/* Cell 1 */}
                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 shadow-lg relative group">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-amber-400" />
                       ถ่าน AA #1 (1.5V)
@@ -520,9 +497,17 @@ export const SeriesLabScreen: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* AA Battery Graphic */}
-                  <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800 relative">
-                    {/* Positive Terminal Node */}
+                  <BatteryCell3D
+                    voltage={1.5}
+                    label="AA #1 1.5V"
+                    isReversed={c1Reversed}
+                    isActive={liveValidation.isLampLit}
+                    size="sm"
+                    onFlip={handleFlipCell1}
+                  />
+
+                  {/* Terminal Nodes */}
+                  <div className="flex items-center justify-between px-2 pt-2">
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-cell_1_pos"
@@ -540,15 +525,6 @@ export const SeriesLabScreen: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Battery Body Graphic */}
-                    <div className="flex-1 mx-3 h-10 rounded-md bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 flex items-center justify-center shadow-inner relative overflow-hidden">
-                      <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.15)_50%,transparent_75%)] bg-[length:250%_250%] animate-pulse" />
-                      <span className="text-[11px] font-black text-slate-950 tracking-wider">
-                        AA 1.5V (2000mAh)
-                      </span>
-                    </div>
-
-                    {/* Negative Terminal Node */}
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-cell_1_neg"
@@ -570,7 +546,7 @@ export const SeriesLabScreen: React.FC = () => {
 
                 {/* Cell 2 */}
                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 shadow-lg relative group">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-amber-400" />
                       ถ่าน AA #2 (1.5V)
@@ -585,9 +561,17 @@ export const SeriesLabScreen: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* AA Battery Graphic */}
-                  <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800 relative">
-                    {/* Positive Terminal Node */}
+                  <BatteryCell3D
+                    voltage={1.5}
+                    label="AA #2 1.5V"
+                    isReversed={c2Reversed}
+                    isActive={liveValidation.isLampLit}
+                    size="sm"
+                    onFlip={handleFlipCell2}
+                  />
+
+                  {/* Terminal Nodes */}
+                  <div className="flex items-center justify-between px-2 pt-2">
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-cell_2_pos"
@@ -605,14 +589,6 @@ export const SeriesLabScreen: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Battery Body Graphic */}
-                    <div className="flex-1 mx-3 h-10 rounded-md bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 flex items-center justify-center shadow-inner relative overflow-hidden">
-                      <span className="text-[11px] font-black text-slate-950 tracking-wider">
-                        AA 1.5V (2000mAh)
-                      </span>
-                    </div>
-
-                    {/* Negative Terminal Node */}
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-cell_2_neg"
@@ -633,37 +609,32 @@ export const SeriesLabScreen: React.FC = () => {
                 </div>
               </div>
 
-              {/* Column 2: Switch Component */}
+              {/* Column 2: 3D Knife Switch Component */}
               <div className="flex flex-col justify-center">
                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 shadow-lg flex flex-col items-center text-center">
-                  <div className="flex items-center justify-between w-full mb-3">
-                    <span className="text-xs font-bold text-slate-300">สวิตช์ตัดต่อวงจร</span>
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className="text-xs font-bold text-slate-300">สวิตช์ตัดต่อวงจร 3 มิติ</span>
                     <span
                       className={`text-[10px] font-black px-2 py-0.5 rounded ${
                         isSwitchClosed ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
                       }`}
                     >
-                      {isSwitchClosed ? 'สถานะ: ปิด (ON)' : 'สถานะ: ยกขึ้น (OFF)'}
+                      {isSwitchClosed ? 'ON (สับลง)' : 'OFF (ยกขึ้น)'}
                     </span>
                   </div>
 
-                  {/* Switch Lever Visual */}
-                  <div
-                    onClick={handleToggleSwitch}
-                    className="w-24 h-24 rounded-2xl bg-slate-950 border-2 border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-amber-400/80 transition-all p-2 shadow-inner group"
-                  >
-                    {isSwitchClosed ? (
-                      <ToggleRight className="w-12 h-12 text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)] transition" />
-                    ) : (
-                      <ToggleLeft className="w-12 h-12 text-slate-500 group-hover:text-amber-400 transition" />
-                    )}
-                    <span className="text-[10px] text-slate-400 mt-1 font-semibold">
-                      แตะเพื่อ{isSwitchClosed ? 'ยกสวิตช์ขึ้น' : 'สับสวิตช์ลง'}
-                    </span>
+                  <div className="w-full">
+                    <KnifeSwitch3D
+                      isClosed={isSwitchClosed}
+                      isActive={liveValidation.isLampLit}
+                      isShortCircuit={liveValidation.isShortCircuit}
+                      size="lg"
+                      onToggle={handleToggleSwitch}
+                    />
                   </div>
 
                   {/* Terminals IN & OUT */}
-                  <div className="flex items-center justify-between w-full mt-4 px-2">
+                  <div className="flex items-center justify-between w-full mt-3 px-2">
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-sw_1_in"
@@ -701,48 +672,20 @@ export const SeriesLabScreen: React.FC = () => {
               <div className="flex flex-col justify-center">
                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 shadow-lg flex flex-col items-center text-center relative overflow-hidden">
                   <div className="flex items-center justify-between w-full mb-2">
-                    <span className="text-xs font-bold text-slate-300">หลอดไฟโหลด (3.0V)</span>
+                    <span className="text-xs font-bold text-slate-300">หลอดไฟโหลด (3.0V) 3 มิติ</span>
                     <span className="text-[10px] text-indigo-400 font-mono">พิกัด: 3.0V 0.5A</span>
                   </div>
 
-                  {/* Light Bulb Visual */}
-                  <div className="relative w-28 h-28 flex items-center justify-center my-2">
-                    {/* Glow animation */}
-                    {liveValidation.isLampLit && (
-                      <div
-                        className="absolute inset-0 rounded-full blur-2xl transition-all duration-500"
-                        style={{
-                          backgroundColor:
-                            liveValidation.bulbBrightness >= 0.8
-                              ? 'rgba(250, 204, 21, 0.45)'
-                              : 'rgba(250, 204, 21, 0.15)',
-                          transform: `scale(${1 + liveValidation.bulbBrightness * 0.4})`,
-                        }}
-                      />
-                    )}
-
-                    <div
-                      className={`w-20 h-20 rounded-full flex items-center justify-center border-2 transition-all duration-300 relative ${
-                        liveValidation.isLampLit
-                          ? liveValidation.bulbBrightness >= 0.8
-                            ? 'bg-amber-100 border-amber-300 shadow-[0_0_40px_rgba(251,191,36,0.9)]'
-                            : 'bg-amber-400/30 border-amber-500/50 shadow-[0_0_15px_rgba(251,191,36,0.4)]'
-                          : 'bg-slate-950 border-slate-700 opacity-60'
-                      }`}
-                    >
-                      <Lightbulb
-                        className={`w-12 h-12 transition-all ${
-                          liveValidation.isLampLit
-                            ? liveValidation.bulbBrightness >= 0.8
-                              ? 'text-amber-500 fill-amber-400 animate-pulse'
-                              : 'text-amber-600 fill-amber-500/40'
-                            : 'text-slate-600'
-                        }`}
-                      />
-                    </div>
+                  <div className="w-full">
+                    <LightBulb3D
+                      brightness={liveValidation.bulbBrightness}
+                      voltage={liveValidation.measuredVoltage}
+                      ratedVoltage={3.0}
+                      size="lg"
+                    />
                   </div>
 
-                  <span className="text-xs font-bold mt-1">
+                  <span className="text-xs font-bold mt-2">
                     {liveValidation.isLampLit
                       ? liveValidation.bulbBrightness >= 0.8
                         ? '🔥 สว่างเต็มที่ 100% (3.0V / 1.50W)'
@@ -751,7 +694,7 @@ export const SeriesLabScreen: React.FC = () => {
                   </span>
 
                   {/* Bulb Terminals */}
-                  <div className="flex items-center justify-between w-full mt-4 px-2">
+                  <div className="flex items-center justify-between w-full mt-3 px-2">
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-bulb_1_a"
@@ -1046,6 +989,14 @@ export const SeriesLabScreen: React.FC = () => {
           <span>{saveToast}</span>
         </div>
       )}
+
+      {/* Digital Multimeter Simulator */}
+      <DigitalMultimeter
+        isOpen={showMultimeter}
+        onClose={() => setShowMultimeter(false)}
+        testPoints={testPoints}
+        circuitIsClosed={isSwitchClosed}
+      />
     </div>
   );
 };

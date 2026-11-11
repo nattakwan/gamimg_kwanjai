@@ -32,6 +32,8 @@ import {
 import { useGameState } from '../../context/GameStateContext';
 import { CircuitWire } from '../../types/game';
 import { VoltDialog } from '../common/VoltDialog';
+import { DigitalMultimeter, TestPoint } from '../common/DigitalMultimeter';
+import { DCMotor3D, BatteryCell3D, KnifeSwitch3D, Wire3DRenderer } from '../circuit3d';
 
 const playTone = (freq: number, type: OscillatorType = 'sine', duration: number = 0.15) => {
   try {
@@ -138,6 +140,7 @@ export const MotorTestScreen: React.FC = () => {
   const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
   const [showHintModal, setShowHintModal] = useState<boolean>(false);
   const [showCelebration, setShowCelebration] = useState<boolean>(false);
+  const [showMultimeter, setShowMultimeter] = useState<boolean>(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
   const workbenchRef = useRef<HTMLDivElement | null>(null);
@@ -305,6 +308,23 @@ export const MotorTestScreen: React.FC = () => {
     selectedPack,
     mechanicalLoadFactor,
   ]);
+
+  // Vocational Electrical Metrics (สมรรถนะ ปวช.)
+  const voltageSag = Math.max(0, selectedPack.nominalVoltage - simulation.terminalVoltage);
+  const cRate = Number((simulation.currentAmps / (selectedPack.capacityMah / 1000)).toFixed(2));
+  const heatLossWatts = Number((Math.pow(simulation.currentAmps, 2) * selectedPack.internalResistance).toFixed(2));
+
+  const testPoints: TestPoint[] = useMemo(() => {
+    const voc = selectedPack.nominalVoltage;
+    const vTerm = simulation.terminalVoltage;
+    const eb = simulation.backEmf;
+    return [
+      { id: 'tp_pack_oc', name: `แรงดันเปิดวงจรแบตเตอรี่ Voc (${voc.toFixed(1)}V)`, voltagePotential: voc },
+      { id: 'tp_motor_pos', name: `ขั้วบวกมอเตอร์ขณะมีโหลด (${vTerm.toFixed(2)}V)`, voltagePotential: vTerm },
+      { id: 'tp_back_emf', name: `แรงเคลื่อนไฟฟ้าย้อนกลับ Back-EMF (${eb.toFixed(2)}V)`, voltagePotential: eb },
+      { id: 'tp_ground', name: 'ขั้วลบกราวด์ 0V', voltagePotential: 0.0, isGround: true },
+    ];
+  }, [selectedPack, simulation]);
 
   // Terminal Metadata
   const terminalMeta: Record<string, { label: string; componentName: string; color: string }> = {
@@ -547,6 +567,15 @@ export const MotorTestScreen: React.FC = () => {
           </button>
 
           <button
+            type="button"
+            onClick={() => setShowMultimeter(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition min-h-[44px] cursor-pointer active:scale-95 shadow"
+            title="เปิดมัลติมิเตอร์วัดแรงดัน"
+          >
+            <span>🎛️ มัลติมิเตอร์ (DMM)</span>
+          </button>
+
+          <button
             onClick={() => setShowCompareModal(true)}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-900/50 hover:bg-purple-800/70 text-purple-300 text-xs font-semibold border border-purple-700 transition min-h-[44px]"
           >
@@ -626,57 +655,14 @@ export const MotorTestScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* SVG Interactive Wires Layer */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-20"
-              style={{ overflow: 'visible' }}
-            >
-              {wires.map((wire) => {
-                const start = terminalCoords[wire.fromTerminalId];
-                const end = terminalCoords[wire.toTerminalId];
-                if (!start || !end) return null;
-
-                const dx = end.x - start.x;
-                const dy = end.y - start.y;
-                const cx1 = start.x + dx * 0.3;
-                const cy1 = start.y + dy * 0.7 + 25;
-                const cx2 = start.x + dx * 0.7;
-                const cy2 = start.y + dy * 0.3 - 25;
-
-                const pathD = `M ${start.x} ${start.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${end.x} ${end.y}`;
-
-                return (
-                  <g key={wire.id} className="group pointer-events-auto">
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={simulation.rpm > 0 ? wire.color : '#475569'}
-                      strokeWidth="10"
-                      strokeOpacity="0.2"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={wire.color}
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      className="cursor-pointer transition-all hover:stroke-white"
-                      onClick={() => removeWire(wire.id)}
-                    />
-                    {simulation.rpm > 0 && (
-                      <circle r="4" fill="#a5f3fc">
-                        <animateMotion
-                          path={pathD}
-                          dur={`${Math.max(0.4, 2500 / simulation.rpm)}s`}
-                          repeatCount="indefinite"
-                        />
-                      </circle>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
+            {/* 3D Wire & Connectors Overlay */}
+            <Wire3DRenderer
+              wires={wires}
+              terminalCoords={terminalCoords}
+              isEnergized={simulation.rpm > 0}
+              isShortCircuit={isDirectShort}
+              onRemoveWire={removeWire}
+            />
 
             {/* Test Bench Component Area */}
             <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-5 my-auto pt-2 items-center">
@@ -723,6 +709,16 @@ export const MotorTestScreen: React.FC = () => {
                   })}
                 </div>
 
+                {/* 3D Battery Pack Preview */}
+                <div className="w-full bg-slate-900/60 rounded-xl border border-slate-800 p-1.5">
+                  <BatteryCell3D
+                    voltage={selectedPack.nominalVoltage}
+                    label={selectedPack.code}
+                    isActive={simulation.rpm > 0}
+                    size="sm"
+                  />
+                </div>
+
                 {/* Battery Pack Output Terminals */}
                 <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex items-center justify-between mt-1">
                   <div className="flex flex-col items-center gap-1">
@@ -745,7 +741,7 @@ export const MotorTestScreen: React.FC = () => {
                       {selectedPack.nominalVoltage.toFixed(1)}V
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      {selectedPack.capacityMah} mAh
+                      {selectedPack.capacityMah} mAh (R_in: {selectedPack.internalResistance}Ω)
                     </span>
                   </div>
 
@@ -766,22 +762,18 @@ export const MotorTestScreen: React.FC = () => {
                 </div>
               </div>
 
-              {/* Middle: Switch Control (2 Cols) */}
+              {/* Middle: 3D Knife Switch Control (2 Cols) */}
               <div className="md:col-span-2 flex flex-col items-center justify-center">
-                <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 shadow-lg flex flex-col items-center text-center w-full">
-                  <span className="text-[10px] font-bold text-slate-400 mb-2">สวิตช์ไดโน</span>
-                  <div
-                    onClick={handleToggleSwitch}
-                    className="w-16 h-16 rounded-2xl bg-slate-900 border-2 border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-400 transition-all p-2 shadow-inner group"
-                  >
-                    <span className="text-xl">{isSwitchClosed ? '⚡' : '⭕'}</span>
-                    <span
-                      className={`text-[9px] font-bold mt-1 ${
-                        isSwitchClosed ? 'text-emerald-400' : 'text-slate-500'
-                      }`}
-                    >
-                      {isSwitchClosed ? 'ON' : 'OFF'}
-                    </span>
+                <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-2.5 shadow-lg flex flex-col items-center text-center w-full">
+                  <span className="text-[10px] font-bold text-slate-400 mb-1">สวิตช์ไดโน 3 มิติ</span>
+                  <div className="w-full">
+                    <KnifeSwitch3D
+                      isClosed={isSwitchClosed}
+                      isActive={simulation.rpm > 0}
+                      isShortCircuit={isDirectShort}
+                      size="sm"
+                      onToggle={handleToggleSwitch}
+                    />
                   </div>
                 </div>
               </div>
@@ -791,44 +783,22 @@ export const MotorTestScreen: React.FC = () => {
                 <div className="w-full flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
                   <span className="text-xs font-black text-cyan-300 flex items-center gap-1.5 uppercase">
                     <Gauge className="w-4 h-4 text-cyan-400" />
-                    มอเตอร์ไฟฟ้า DC (Rated 3.0V)
+                    มอเตอร์ไฟฟ้า DC ไฮทอร์ก 3 มิติ (DC 130 Racing)
                   </span>
                   <span className="text-[9px] font-mono bg-cyan-950 text-cyan-400 px-2 py-0.5 rounded border border-cyan-800">
                     Rw = 1.0Ω | Kv = 800
                   </span>
                 </div>
 
-                {/* Motor Physical Visual with Spinning Flywheel / Propeller */}
-                <div className="relative my-3 flex flex-col items-center">
-                  {/* Warning Glow if Stalled or Overvoltage */}
-                  {simulation.isOvervoltage && (
-                    <div className="absolute -inset-4 rounded-full bg-rose-500/30 blur-xl animate-pulse" />
-                  )}
-                  {simulation.isStalled && (
-                    <div className="absolute -inset-4 rounded-full bg-amber-500/25 blur-lg animate-pulse" />
-                  )}
-
-                  {/* Stator Casing */}
-                  <div className="w-32 h-32 rounded-full bg-slate-900 border-4 border-cyan-500/60 shadow-[0_0_30px_rgba(6,182,212,0.3)] flex items-center justify-center relative p-2">
-                    {/* Rotor / Flywheel */}
-                    <div
-                      className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-800 via-slate-900 to-cyan-950 border-2 border-cyan-400 flex items-center justify-center relative shadow-inner"
-                      style={{ transform: `rotate(${rotationAngle}deg)` }}
-                    >
-                      {/* Rotor Armatures */}
-                      <div className="absolute w-20 h-3 bg-amber-600 rounded-sm" />
-                      <div className="absolute h-20 w-3 bg-amber-600 rounded-sm" />
-                      {/* Shaft center */}
-                      <div className="w-8 h-8 rounded-full bg-slate-300 border-2 border-slate-600 flex items-center justify-center z-10 shadow-md">
-                        <div className="w-2.5 h-2.5 rounded-full bg-slate-900" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <span className="text-xl font-black font-mono text-cyan-300 mt-2">
-                    {simulation.rpm.toLocaleString()}{' '}
-                    <span className="text-xs font-normal text-slate-400">RPM</span>
-                  </span>
+                {/* 3D High-Detail DC Motor with live RPM & Spinning Pinion Gear */}
+                <div className="w-full my-1">
+                  <DCMotor3D
+                    rpm={simulation.rpm}
+                    isRunning={simulation.rpm > 0}
+                    voltage={simulation.terminalVoltage}
+                    hasFan={true}
+                    size="md"
+                  />
                 </div>
 
                 {/* Motor Terminals */}
@@ -998,6 +968,28 @@ export const MotorTestScreen: React.FC = () => {
                 <span className="text-[9px] text-slate-500 block">Eb = V_term - I×Rw</span>
               </div>
 
+              {/* Vocational Battery Electrical Metrics (มาตรฐานช่าง ปวช.) */}
+              <div className="bg-slate-950 p-2.5 rounded-lg border border-amber-500/30 col-span-2 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-bold text-amber-400">
+                  <span>⚡ สมรรถนะแบตเตอรี่ช่างไฟฟ้า (Vocational Battery Analysis)</span>
+                  <span className="font-mono text-[10px]">Ri = {selectedPack.internalResistance}Ω</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono text-center">
+                  <div className="bg-slate-900 p-1.5 rounded border border-slate-800">
+                    <span className="text-slate-400 block text-[9px]">แรงดันตก (Voltage Sag)</span>
+                    <span className="font-black text-rose-400">-{voltageSag.toFixed(2)} V</span>
+                  </div>
+                  <div className="bg-slate-900 p-1.5 rounded border border-slate-800">
+                    <span className="text-slate-400 block text-[9px]">อัตราจ่าย C-Rate</span>
+                    <span className="font-black text-cyan-400">{cRate} C</span>
+                  </div>
+                  <div className="bg-slate-900 p-1.5 rounded border border-slate-800">
+                    <span className="text-slate-400 block text-[9px]">ความร้อน I²Ri</span>
+                    <span className="font-black text-amber-400">{heatLossWatts} W</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 col-span-2 flex items-center justify-between">
                 <div>
                   <span className="text-slate-400 block text-[10px]">พลังงานที่ใช้ไปสะสม (Energy Used)</span>
@@ -1150,6 +1142,14 @@ export const MotorTestScreen: React.FC = () => {
           <span>{saveToast}</span>
         </div>
       )}
+
+      {/* Digital Multimeter Simulator */}
+      <DigitalMultimeter
+        isOpen={showMultimeter}
+        onClose={() => setShowMultimeter(false)}
+        testPoints={testPoints}
+        circuitIsClosed={isCircuitClosed && isSwitchClosed}
+      />
     </div>
   );
 };

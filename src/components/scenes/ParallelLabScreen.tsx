@@ -36,6 +36,7 @@ import {
 } from '../../engine/circuitSimulator';
 import { CircuitComponent, CircuitWire } from '../../types/game';
 import { VoltDialog } from '../common/VoltDialog';
+import { BatteryCell3D, KnifeSwitch3D, LightBulb3D, Wire3DRenderer } from '../circuit3d';
 
 const playTone = (freq: number, type: OscillatorType = 'sine', duration: number = 0.15) => {
   try {
@@ -469,53 +470,14 @@ export const ParallelLabScreen: React.FC = () => {
               </span>
             </div>
 
-            {/* SVG Interactive Wires Layer */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-20"
-              style={{ overflow: 'visible' }}
-            >
-              {wires.map((wire) => {
-                const start = terminalCoords[wire.fromTerminalId];
-                const end = terminalCoords[wire.toTerminalId];
-                if (!start || !end) return null;
-
-                const dx = end.x - start.x;
-                const dy = end.y - start.y;
-                const cx1 = start.x + dx * 0.2;
-                const cy1 = start.y + dy * 0.8 + 20;
-                const cx2 = start.x + dx * 0.8;
-                const cy2 = start.y + dy * 0.2 - 20;
-
-                const pathD = `M ${start.x} ${start.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${end.x} ${end.y}`;
-
-                return (
-                  <g key={wire.id} className="group pointer-events-auto">
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={liveValidation.isLampLit ? wire.color : '#475569'}
-                      strokeWidth="10"
-                      strokeOpacity="0.2"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={wire.color}
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      className="cursor-pointer transition-all"
-                      onClick={() => removeWire(wire.id)}
-                    />
-                    {liveValidation.isLampLit && (
-                      <circle r="4" fill="#a7f3d0">
-                        <animateMotion path={pathD} dur="1.4s" repeatCount="indefinite" />
-                      </circle>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
+            {/* 3D Wire & Connectors Overlay */}
+            <Wire3DRenderer
+              wires={wires}
+              terminalCoords={terminalCoords}
+              isEnergized={liveValidation.isLampLit}
+              isShortCircuit={liveValidation.isShortCircuit}
+              onRemoveWire={removeWire}
+            />
 
             {/* Component Placement Area */}
             <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 my-auto pt-4">
@@ -523,7 +485,7 @@ export const ParallelLabScreen: React.FC = () => {
               <div className="flex flex-col gap-4">
                 {/* Cell 1 */}
                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 shadow-lg relative group">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-teal-400" />
                       ถ่าน AA #1 (1.5V 2000mAh)
@@ -537,7 +499,16 @@ export const ParallelLabScreen: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800 relative">
+                  <BatteryCell3D
+                    voltage={1.5}
+                    label="AA #1 1.5V"
+                    isReversed={c1Reversed}
+                    isActive={liveValidation.isLampLit}
+                    size="sm"
+                    onFlip={handleFlipCell1}
+                  />
+
+                  <div className="flex items-center justify-between px-2 pt-2">
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-par-cell_1_pos"
@@ -550,12 +521,8 @@ export const ParallelLabScreen: React.FC = () => {
                       >
                         {c1Reversed ? '-' : '+'}
                       </button>
-                      <span className="text-[10px] text-slate-400 font-mono">ขั้วบวก</span>
-                    </div>
-
-                    <div className="flex-1 mx-3 h-10 rounded-md bg-gradient-to-r from-teal-500 via-teal-600 to-teal-700 flex items-center justify-center shadow-inner relative overflow-hidden">
-                      <span className="text-[11px] font-black text-slate-950 tracking-wider">
-                        AA 1.5V 2000mAh
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {c1Reversed ? 'ขั้วลบ' : 'ขั้วบวก'}
                       </span>
                     </div>
 
@@ -571,14 +538,16 @@ export const ParallelLabScreen: React.FC = () => {
                       >
                         {c1Reversed ? '+' : '-'}
                       </button>
-                      <span className="text-[10px] text-slate-400 font-mono">ขั้วลบ</span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {c1Reversed ? 'ขั้วบวก' : 'ขั้วลบ'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Cell 2 */}
                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 shadow-lg relative group">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-teal-400" />
                       ถ่าน AA #2 (1.5V 2000mAh)
@@ -592,7 +561,16 @@ export const ParallelLabScreen: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800 relative">
+                  <BatteryCell3D
+                    voltage={1.5}
+                    label="AA #2 1.5V"
+                    isReversed={c2Reversed}
+                    isActive={liveValidation.isLampLit}
+                    size="sm"
+                    onFlip={handleFlipCell2}
+                  />
+
+                  <div className="flex items-center justify-between px-2 pt-2">
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-par-cell_2_pos"
@@ -605,12 +583,8 @@ export const ParallelLabScreen: React.FC = () => {
                       >
                         {c2Reversed ? '-' : '+'}
                       </button>
-                      <span className="text-[10px] text-slate-400 font-mono">ขั้วบวก</span>
-                    </div>
-
-                    <div className="flex-1 mx-3 h-10 rounded-md bg-gradient-to-r from-teal-500 via-teal-600 to-teal-700 flex items-center justify-center shadow-inner relative overflow-hidden">
-                      <span className="text-[11px] font-black text-slate-950 tracking-wider">
-                        AA 1.5V 2000mAh
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {c2Reversed ? 'ขั้วลบ' : 'ขั้วบวก'}
                       </span>
                     </div>
 
@@ -626,41 +600,39 @@ export const ParallelLabScreen: React.FC = () => {
                       >
                         {c2Reversed ? '+' : '-'}
                       </button>
-                      <span className="text-[10px] text-slate-400 font-mono">ขั้วลบ</span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {c2Reversed ? 'ขั้วบวก' : 'ขั้วลบ'}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Column 2: Switch */}
+              {/* Column 2: 3D Knife Switch */}
               <div className="flex flex-col justify-center">
                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 shadow-lg flex flex-col items-center text-center">
-                  <div className="flex items-center justify-between w-full mb-3">
-                    <span className="text-xs font-bold text-slate-300">สวิตช์ตัดต่อวงจร</span>
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className="text-xs font-bold text-slate-300">สวิตช์ตัดต่อวงจร 3 มิติ</span>
                     <span
                       className={`text-[10px] font-black px-2 py-0.5 rounded ${
                         isSwitchClosed ? 'bg-teal-500/20 text-teal-300' : 'bg-rose-500/20 text-rose-300'
                       }`}
                     >
-                      {isSwitchClosed ? 'สถานะ: ปิด (ON)' : 'สถานะ: ยกขึ้น (OFF)'}
+                      {isSwitchClosed ? 'ON (สับลง)' : 'OFF (ยกขึ้น)'}
                     </span>
                   </div>
 
-                  <div
-                    onClick={handleToggleSwitch}
-                    className="w-24 h-24 rounded-2xl bg-slate-950 border-2 border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400/80 transition-all p-2 shadow-inner group"
-                  >
-                    {isSwitchClosed ? (
-                      <ToggleRight className="w-12 h-12 text-teal-400 drop-shadow-[0_0_10px_rgba(20,184,166,0.5)] transition" />
-                    ) : (
-                      <ToggleLeft className="w-12 h-12 text-slate-500 group-hover:text-teal-400 transition" />
-                    )}
-                    <span className="text-[10px] text-slate-400 mt-1 font-semibold">
-                      แตะเพื่อ{isSwitchClosed ? 'ยกสวิตช์ขึ้น' : 'สับสวิตช์ลง'}
-                    </span>
+                  <div className="w-full">
+                    <KnifeSwitch3D
+                      isClosed={isSwitchClosed}
+                      isActive={liveValidation.isLampLit}
+                      isShortCircuit={liveValidation.isShortCircuit}
+                      size="lg"
+                      onToggle={handleToggleSwitch}
+                    />
                   </div>
 
-                  <div className="flex items-center justify-between w-full mt-4 px-2">
+                  <div className="flex items-center justify-between w-full mt-3 px-2">
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-par-sw_1_in"
@@ -694,44 +666,30 @@ export const ParallelLabScreen: React.FC = () => {
                 </div>
               </div>
 
-              {/* Column 3: 1.5V Rated Light Bulb */}
+              {/* Column 3: 1.5V Rated Light Bulb 3D */}
               <div className="flex flex-col justify-center">
                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 shadow-lg flex flex-col items-center text-center relative overflow-hidden">
                   <div className="flex items-center justify-between w-full mb-2">
-                    <span className="text-xs font-bold text-slate-300">หลอดไฟโหลด (1.5V)</span>
+                    <span className="text-xs font-bold text-slate-300">หลอดไฟโหลด (1.5V) 3 มิติ</span>
                     <span className="text-[10px] text-teal-400 font-mono">พิกัด: 1.5V 0.5A</span>
                   </div>
 
-                  {/* Light Bulb Visual */}
-                  <div className="relative w-28 h-28 flex items-center justify-center my-2">
-                    {liveValidation.isLampLit && (
-                      <div className="absolute inset-0 rounded-full blur-2xl bg-amber-300/30 animate-pulse" />
-                    )}
-
-                    <div
-                      className={`w-20 h-20 rounded-full flex items-center justify-center border-2 transition-all duration-300 relative ${
-                        liveValidation.isLampLit
-                          ? 'bg-amber-100 border-amber-300 shadow-[0_0_35px_rgba(251,191,36,0.8)]'
-                          : 'bg-slate-950 border-slate-700 opacity-60'
-                      }`}
-                    >
-                      <Lightbulb
-                        className={`w-12 h-12 transition-all ${
-                          liveValidation.isLampLit
-                            ? 'text-amber-500 fill-amber-400 animate-pulse'
-                            : 'text-slate-600'
-                        }`}
-                      />
-                    </div>
+                  <div className="w-full">
+                    <LightBulb3D
+                      brightness={liveValidation.bulbBrightness}
+                      voltage={liveValidation.measuredVoltage}
+                      ratedVoltage={1.5}
+                      size="lg"
+                    />
                   </div>
 
-                  <span className="text-xs font-bold mt-1">
+                  <span className="text-xs font-bold mt-2">
                     {liveValidation.isLampLit
                       ? `💡 สว่างปกติ 100% (1.5V / 0.75W)`
                       : 'ดับสนิท (0.0V)'}
                   </span>
 
-                  <div className="flex items-center justify-between w-full mt-4 px-2">
+                  <div className="flex items-center justify-between w-full mt-3 px-2">
                     <div className="flex flex-col items-center gap-1">
                       <button
                         id="terminal-node-par-bulb_1_a"

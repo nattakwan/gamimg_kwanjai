@@ -1,0 +1,32 @@
+{
+  "models": [
+    {
+      "title": "Gemini 2.0 Flash",
+      "provider": "gemini",
+      "model": "gemini-2.0-flash",
+      "apiKey": "${GEMINI_API_KEY}"
+    },
+    {
+      "title": "DeepSeek Reasoner (R1)",
+      "provider": "openai",
+      "model": "deepseek-reasoner",
+      "apiBase": "https://api.deepseek.com/v1",
+      "apiKey": "${DEEPSEEK_API_KEY}"
+    },
+    {
+      "title": "DeepSeek Chat",
+      "provider": "openai",
+      "model": "deepseek-chat",
+      "apiBase": "https://api.deepseek.com/v1",
+      "apiKey": "${DEEPSEEK_API_KEY}"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "DeepSeek Chat",
+    "provider": "openai",
+    "model": "deepseek-chat",
+    "apiBase": "https://api.deepseek.com/v1",
+    "apiKey": "${DEEPSEEK_API_KEY}"
+  }
+}
+

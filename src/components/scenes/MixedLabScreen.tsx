@@ -31,8 +31,10 @@ import {
   validateMixed2S2PCircuit,
   Mixed2S2PValidation,
 } from '../../engine/circuitSimulator';
-import { CircuitComponent, CircuitWire } from '../../types/game';
+import { CircuitComponent, CircuitWire, BATTERY_CHEMISTRIES, CellType } from '../../types/game';
 import { VoltDialog } from '../common/VoltDialog';
+import { DigitalMultimeter, TestPoint } from '../common/DigitalMultimeter';
+import { BatteryCell3D, Fuse3D, BMSBoard3D, Wire3DRenderer } from '../circuit3d';
 
 const playTone = (freq: number, type: OscillatorType = 'sine', duration: number = 0.15) => {
   try {
@@ -86,67 +88,93 @@ export const MixedLabScreen: React.FC = () => {
   const [showHintModal, setShowHintModal] = useState<boolean>(false);
   const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
   const [showDiagramModal, setShowDiagramModal] = useState<boolean>(false);
+  const [showMultimeter, setShowMultimeter] = useState<boolean>(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // Vocational & Safety Options
+  const [selectedChemistry, setSelectedChemistry] = useState<CellType>('AA_1_5V');
+  const [hasBms, setHasBms] = useState<boolean>(true);
+  const [fuseRating, setFuseRating] = useState<number>(10);
 
   const [terminalCoords, setTerminalCoords] = useState<Record<string, { x: number; y: number }>>({});
   const workbenchRef = useRef<HTMLDivElement | null>(null);
 
   const activeComponents = useMemo<CircuitComponent[]>(() => {
+    const chem = BATTERY_CHEMISTRIES[selectedChemistry];
+    const v = chem.nominalVoltage;
+    const cap = chem.capacityMah;
+
     return [
       {
         id: 'cell_1',
         type: 'battery_cell',
-        name: 'ถ่าน AA ก้อน 1 (สตริง A)',
+        name: `${chem.name.split('(')[0]} ก้อน 1 (A)`,
         x: 0,
         y: 0,
         terminals: [
           { id: 'cell_1_pos', componentId: 'cell_1', label: '+', polarity: 'positive', x: 0, y: 0 },
           { id: 'cell_1_neg', componentId: 'cell_1', label: '-', polarity: 'negative', x: 0, y: 0 },
         ],
-        properties: { voltage: 1.5, capacityMah: 2000, isReversed: c1Rev },
+        properties: { voltage: v, capacityMah: cap, isReversed: c1Rev },
       },
       {
         id: 'cell_2',
         type: 'battery_cell',
-        name: 'ถ่าน AA ก้อน 2 (สตริง A)',
+        name: `${chem.name.split('(')[0]} ก้อน 2 (A)`,
         x: 0,
         y: 0,
         terminals: [
           { id: 'cell_2_pos', componentId: 'cell_2', label: '+', polarity: 'positive', x: 0, y: 0 },
           { id: 'cell_2_neg', componentId: 'cell_2', label: '-', polarity: 'negative', x: 0, y: 0 },
         ],
-        properties: { voltage: 1.5, capacityMah: 2000, isReversed: c2Rev },
+        properties: { voltage: v, capacityMah: cap, isReversed: c2Rev },
       },
       {
         id: 'cell_3',
         type: 'battery_cell',
-        name: 'ถ่าน AA ก้อน 3 (สตริง B)',
+        name: `${chem.name.split('(')[0]} ก้อน 3 (B)`,
         x: 0,
         y: 0,
         terminals: [
           { id: 'cell_3_pos', componentId: 'cell_3', label: '+', polarity: 'positive', x: 0, y: 0 },
           { id: 'cell_3_neg', componentId: 'cell_3', label: '-', polarity: 'negative', x: 0, y: 0 },
         ],
-        properties: { voltage: 1.5, capacityMah: 2000, isReversed: c3Rev },
+        properties: { voltage: v, capacityMah: cap, isReversed: c3Rev },
       },
       {
         id: 'cell_4',
         type: 'battery_cell',
-        name: 'ถ่าน AA ก้อน 4 (สตริง B)',
+        name: `${chem.name.split('(')[0]} ก้อน 4 (B)`,
         x: 0,
         y: 0,
         terminals: [
           { id: 'cell_4_pos', componentId: 'cell_4', label: '+', polarity: 'positive', x: 0, y: 0 },
           { id: 'cell_4_neg', componentId: 'cell_4', label: '-', polarity: 'negative', x: 0, y: 0 },
         ],
-        properties: { voltage: 1.5, capacityMah: 2000, isReversed: c4Rev },
+        properties: { voltage: v, capacityMah: cap, isReversed: c4Rev },
       },
     ];
-  }, [c1Rev, c2Rev, c3Rev, c4Rev]);
+  }, [selectedChemistry, c1Rev, c2Rev, c3Rev, c4Rev]);
 
   const liveValidation = useMemo<Mixed2S2PValidation>(() => {
     return validateMixed2S2PCircuit(activeComponents, wires);
   }, [activeComponents, wires]);
+
+  const testPoints: TestPoint[] = useMemo(() => {
+    const chem = BATTERY_CHEMISTRIES[selectedChemistry];
+    const vCell = chem.nominalVoltage;
+    const vStringA = (c1Rev ? -vCell : vCell) + (c2Rev ? -vCell : vCell);
+    const vStringB = (c3Rev ? -vCell : vCell) + (c4Rev ? -vCell : vCell);
+    const vPack = liveValidation.isSuccess ? (liveValidation.totalVoltage || (vCell * 2)) : 0;
+    return [
+      { id: 'bus_neg', name: 'บัสบาร์ขั้วลบ (-) กราวด์ 0V', voltagePotential: 0.0, isGround: true },
+      { id: 'cell_1_pos', name: `ก้อน 1 (+) (${(c1Rev ? -vCell : vCell).toFixed(1)}V)`, voltagePotential: c1Rev ? -vCell : vCell },
+      { id: 'cell_2_pos', name: `ก้อน 2 (+) สตริง A (${vStringA.toFixed(1)}V)`, voltagePotential: vStringA },
+      { id: 'cell_3_pos', name: `ก้อน 3 (+) (${(c3Rev ? -vCell : vCell).toFixed(1)}V)`, voltagePotential: c3Rev ? -vCell : vCell },
+      { id: 'cell_4_pos', name: `ก้อน 4 (+) สตริง B (${vStringB.toFixed(1)}V)`, voltagePotential: vStringB },
+      { id: 'bus_pos', name: `บัสบาร์เอาต์พุต (+) รวม (${vPack.toFixed(1)}V)`, voltagePotential: vPack },
+    ];
+  }, [selectedChemistry, c1Rev, c2Rev, c3Rev, c4Rev, liveValidation]);
 
   const terminalMeta: Record<string, { label: string; componentName: string }> = {
     cell_1_pos: { label: c1Rev ? 'ขั้วลบ (-)' : 'ขั้วบวก (+)', componentName: 'สตริง A - ถ่าน #1' },
@@ -264,22 +292,30 @@ export const MixedLabScreen: React.FC = () => {
     }
 
     playTone(600, 'sine', 0.15);
+    const chem = BATTERY_CHEMISTRIES[selectedChemistry];
+    const packVoltage = chem.nominalVoltage * 2;
+    const packCap = chem.capacityMah * 2;
+
     updateBatteryPack({
-      id: 'pack_2s2p_academy',
-      name: 'Custom 2S2P Power Pack (3.0V 4000mAh)',
+      id: `pack_mixed_${selectedChemistry}`,
+      name: `${chem.name.split('(')[0]} (2S2P ${packVoltage.toFixed(1)}V ${packCap}mAh)`,
       configType: 'mixed_series_parallel',
       seriesCount: 2,
       parallelCount: 2,
       totalCells: 4,
-      nominalVoltage: 3.0,
-      nominalCapacityMah: 4000,
-      totalVoltage: 3.0,
-      totalCapacityMah: 4000,
-      internalResistance: 0.15,
+      nominalVoltage: packVoltage,
+      nominalCapacityMah: packCap,
+      totalVoltage: packVoltage,
+      totalCapacityMah: packCap,
+      internalResistance: chem.internalResistance,
       isValidated: true,
-      notes: 'ชุดแบตเตอรี่ 2S2P (4 ก้อน): 2 สตริงอนุกรม (3.0V) ขนานกันเพิ่มความจุเป็น 4000mAh (12.0 Wh)',
+      notes: `เซลล์ ${chem.name} พร้อมระบบ BMS และฟิวส์ความปลอดภัย ${fuseRating}A`,
+      cellType: selectedChemistry,
+      hasBms,
+      fuseRatingAmps: fuseRating,
+      isBalanced: true,
     });
-    setSaveToast('บันทึกชุดแบตเตอรี่ 2S2P เข้าสู่ระบบยานยนต์เรียบร้อยแล้ว!');
+    setSaveToast(`บันทึกแพ็กแบตเตอรี่ ${chem.name.split('(')[0]} (${packVoltage.toFixed(1)}V) เรียบร้อย!`);
     setTimeout(() => setSaveToast(null), 3500);
   };
 
@@ -347,6 +383,15 @@ export const MixedLabScreen: React.FC = () => {
           </button>
 
           <button
+            type="button"
+            onClick={() => setShowMultimeter(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition min-h-[44px] cursor-pointer active:scale-95 shadow"
+            title="เปิดมัลติมิเตอร์วัดแรงดัน"
+          >
+            <span>🎛️ มัลติมิเตอร์ (DMM)</span>
+          </button>
+
+          <button
             onClick={() => setShowDiagramModal(true)}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 text-xs font-semibold border border-indigo-700 transition min-h-[44px]"
           >
@@ -388,6 +433,63 @@ export const MixedLabScreen: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Vocational Engineering Configuration Bar (มาตรฐานช่าง ปวช.) ── */}
+      <div className="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+        {/* Cell Chemistry Selector */}
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-amber-400 flex items-center gap-1 font-mono">
+            <span>🔬</span>
+            <span>ชนิดเซลล์เคมี:</span>
+          </span>
+          <select
+            value={selectedChemistry}
+            onChange={(e) => setSelectedChemistry(e.target.value as CellType)}
+            className="bg-slate-950 text-white border border-amber-500/40 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
+          >
+            {Object.values(BATTERY_CHEMISTRIES).map((c) => (
+              <option key={c.type} value={c.type}>
+                {c.name} ({c.nominalVoltage}V · Ri: {c.internalResistance}Ω)
+              </option>
+            ))}
+          </select>
+          <span className="hidden xl:inline text-[11px] text-slate-400 font-mono">
+            {BATTERY_CHEMISTRIES[selectedChemistry].description}
+          </span>
+        </div>
+
+        {/* Protection Hardware: BMS & Fuse */}
+        <div className="flex items-center gap-3">
+          {/* BMS Balancing Toggle */}
+          <button
+            type="button"
+            onClick={() => setHasBms((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-xs ${
+              hasBms
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 shadow-sm'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+            title="ระบบจัดการและควบคุมสมดุลแรงดันแต่ละเซลล์ (Cell Balancing)"
+          >
+            <span className={`w-2 h-2 rounded-full ${hasBms ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+            <span>วงจร BMS: {hasBms ? 'ติดตั้ง (Balancing ON)' : 'ไม่ติดตั้ง (เสี่ยง)'}</span>
+          </button>
+
+          {/* Fuse Rating Selector */}
+          <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
+            <span className="text-slate-400 text-[11px]">ฟิวส์:</span>
+            <select
+              value={fuseRating}
+              onChange={(e) => setFuseRating(Number(e.target.value))}
+              className="bg-transparent text-amber-300 font-bold focus:outline-none cursor-pointer"
+            >
+              <option value={5}>5A (กระแสต่ำ)</option>
+              <option value={10}>10A (แนะนำ e-Bike)</option>
+              <option value={25}>25A (พาวเวอร์สปรินต์)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Main Workbench Grid (Split View) */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 max-w-7xl mx-auto w-full">
         {/* Left Workbench (8 Cols) */}
@@ -425,63 +527,24 @@ export const MixedLabScreen: React.FC = () => {
               </span>
             </div>
 
-            {/* SVG Interactive Wires Layer */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-20"
-              style={{ overflow: 'visible' }}
-            >
-              {wires.map((wire) => {
-                const start = terminalCoords[wire.fromTerminalId];
-                const end = terminalCoords[wire.toTerminalId];
-                if (!start || !end) return null;
-
-                const dx = end.x - start.x;
-                const dy = end.y - start.y;
-                const cx1 = start.x + dx * 0.2;
-                const cy1 = start.y + dy * 0.8 + 20;
-                const cx2 = start.x + dx * 0.8;
-                const cy2 = start.y + dy * 0.2 - 20;
-
-                const pathD = `M ${start.x} ${start.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${end.x} ${end.y}`;
-
-                return (
-                  <g key={wire.id} className="group pointer-events-auto">
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={liveValidation.isSuccess ? wire.color : '#475569'}
-                      strokeWidth="10"
-                      strokeOpacity="0.2"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={wire.color}
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      className="cursor-pointer transition-all hover:stroke-white"
-                      onClick={() => removeWire(wire.id)}
-                    />
-                    {liveValidation.isSuccess && (
-                      <circle r="4" fill="#fef08a">
-                        <animateMotion path={pathD} dur="1.3s" repeatCount="indefinite" />
-                      </circle>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
+            {/* 3D Wire & Connectors Overlay */}
+            <Wire3DRenderer
+              wires={wires}
+              terminalCoords={terminalCoords}
+              isEnergized={liveValidation.isSuccess}
+              isShortCircuit={liveValidation.isShortCircuit}
+              onRemoveWire={removeWire}
+            />
 
             {/* Component Layout: 2 Separate Series Strings + Output Bus Bar */}
-            <div className="relative z-10 flex flex-col gap-5 my-auto pt-3">
+            <div className="relative z-10 flex flex-col gap-4 my-auto pt-2">
               {/* String A (Row 1): Cell 1 and Cell 2 in Series */}
-              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 shadow-lg relative">
+              <div className="bg-slate-950/85 border border-slate-800 rounded-2xl p-3 shadow-lg relative">
                 <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800/80">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="text-xs font-black text-emerald-300 uppercase tracking-wider">
-                      สตริง A (Series String A): เซลล์ #1 + เซลล์ #2
+                      สตริง A (Series String A): เซลล์ #1 + เซลล์ #2 (3D)
                     </span>
                   </div>
                   <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
@@ -491,110 +554,132 @@ export const MixedLabScreen: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Cell 1 */}
-                  <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-700/80 flex items-center justify-between">
-                    <div className="flex flex-col items-center gap-1">
-                      <button
-                        id="mixed-term-cell_1_pos"
-                        onClick={() => handleTerminalClick('cell_1_pos')}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
-                          activeTerminalId === 'cell_1_pos'
-                            ? 'ring-white scale-110'
-                            : 'ring-rose-500/30 hover:ring-rose-400/60'
-                        } ${c1Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
-                      >
-                        {c1Rev ? '-' : '+'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        {c1Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 mx-2.5 h-10 rounded-md bg-gradient-to-r from-amber-500 to-amber-600 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
-                      <span className="text-[10px] font-black text-slate-950">เซลล์ #1 (1.5V)</span>
+                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/80 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                      <span>เซลล์ #1 ({BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage.toFixed(1)}V)</span>
                       <button
                         onClick={() => setC1Rev((r) => !r)}
-                        className="text-[9px] text-slate-900 bg-amber-400/80 hover:bg-white px-1.5 py-0.2 rounded font-bold transition flex items-center gap-0.5"
+                        className="text-[10px] text-amber-300 bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded font-bold transition flex items-center gap-1"
                       >
-                        <RotateCw className="w-2.5 h-2.5" />
-                        <span>สลับ</span>
+                        <RotateCw className="w-3 h-3" />
+                        <span>กลับขั้ว</span>
                       </button>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1">
-                      <button
-                        id="mixed-term-cell_1_neg"
-                        onClick={() => handleTerminalClick('cell_1_neg')}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
-                          activeTerminalId === 'cell_1_neg'
-                            ? 'ring-white scale-110'
-                            : 'ring-blue-500/30 hover:ring-blue-400/60'
-                        } ${c1Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
-                      >
-                        {c1Rev ? '+' : '-'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        {c1Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
-                      </span>
+                    <BatteryCell3D
+                      voltage={BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage}
+                      label="CELL #1"
+                      isReversed={c1Rev}
+                      isActive={liveValidation.isSuccess}
+                      size="sm"
+                      onFlip={() => setC1Rev((r) => !r)}
+                    />
+
+                    <div className="flex items-center justify-between px-1 pt-1">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button
+                          id="mixed-term-cell_1_pos"
+                          onClick={() => handleTerminalClick('cell_1_pos')}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                            activeTerminalId === 'cell_1_pos'
+                              ? 'ring-white scale-110'
+                              : 'ring-rose-500/30 hover:ring-rose-400/60'
+                          } ${c1Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
+                        >
+                          {c1Rev ? '-' : '+'}
+                        </button>
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          {c1Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button
+                          id="mixed-term-cell_1_neg"
+                          onClick={() => handleTerminalClick('cell_1_neg')}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                            activeTerminalId === 'cell_1_neg'
+                              ? 'ring-white scale-110'
+                              : 'ring-blue-500/30 hover:ring-blue-400/60'
+                          } ${c1Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
+                        >
+                          {c1Rev ? '+' : '-'}
+                        </button>
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          {c1Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Cell 2 */}
-                  <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-700/80 flex items-center justify-between">
-                    <div className="flex flex-col items-center gap-1">
-                      <button
-                        id="mixed-term-cell_2_pos"
-                        onClick={() => handleTerminalClick('cell_2_pos')}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
-                          activeTerminalId === 'cell_2_pos'
-                            ? 'ring-white scale-110'
-                            : 'ring-rose-500/30 hover:ring-rose-400/60'
-                        } ${c2Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
-                      >
-                        {c2Rev ? '-' : '+'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        {c2Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 mx-2.5 h-10 rounded-md bg-gradient-to-r from-amber-500 to-amber-600 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
-                      <span className="text-[10px] font-black text-slate-950">เซลล์ #2 (1.5V)</span>
+                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/80 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                      <span>เซลล์ #2 ({BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage.toFixed(1)}V)</span>
                       <button
                         onClick={() => setC2Rev((r) => !r)}
-                        className="text-[9px] text-slate-900 bg-amber-400/80 hover:bg-white px-1.5 py-0.2 rounded font-bold transition flex items-center gap-0.5"
+                        className="text-[10px] text-amber-300 bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded font-bold transition flex items-center gap-1"
                       >
-                        <RotateCw className="w-2.5 h-2.5" />
-                        <span>สลับ</span>
+                        <RotateCw className="w-3 h-3" />
+                        <span>กลับขั้ว</span>
                       </button>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1">
-                      <button
-                        id="mixed-term-cell_2_neg"
-                        onClick={() => handleTerminalClick('cell_2_neg')}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
-                          activeTerminalId === 'cell_2_neg'
-                            ? 'ring-white scale-110'
-                            : 'ring-blue-500/30 hover:ring-blue-400/60'
-                        } ${c2Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
-                      >
-                        {c2Rev ? '+' : '-'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        {c2Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
-                      </span>
+                    <BatteryCell3D
+                      voltage={BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage}
+                      label="CELL #2"
+                      isReversed={c2Rev}
+                      isActive={liveValidation.isSuccess}
+                      size="sm"
+                      onFlip={() => setC2Rev((r) => !r)}
+                    />
+
+                    <div className="flex items-center justify-between px-1 pt-1">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button
+                          id="mixed-term-cell_2_pos"
+                          onClick={() => handleTerminalClick('cell_2_pos')}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                            activeTerminalId === 'cell_2_pos'
+                              ? 'ring-white scale-110'
+                              : 'ring-rose-500/30 hover:ring-rose-400/60'
+                          } ${c2Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
+                        >
+                          {c2Rev ? '-' : '+'}
+                        </button>
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          {c2Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button
+                          id="mixed-term-cell_2_neg"
+                          onClick={() => handleTerminalClick('cell_2_neg')}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                            activeTerminalId === 'cell_2_neg'
+                              ? 'ring-white scale-110'
+                              : 'ring-blue-500/30 hover:ring-blue-400/60'
+                          } ${c2Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
+                        >
+                          {c2Rev ? '+' : '-'}
+                        </button>
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          {c2Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* String B (Row 2): Cell 3 and Cell 4 in Series */}
-              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 shadow-lg relative">
+              <div className="bg-slate-950/85 border border-slate-800 rounded-2xl p-3 shadow-lg relative">
                 <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800/80">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                     <span className="text-xs font-black text-cyan-300 uppercase tracking-wider">
-                      สตริง B (Series String B): เซลล์ #3 + เซลล์ #4
+                      สตริง B (Series String B): เซลล์ #3 + เซลล์ #4 (3D)
                     </span>
                   </div>
                   <span className="text-[11px] font-mono font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800">
@@ -604,118 +689,158 @@ export const MixedLabScreen: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Cell 3 */}
-                  <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-700/80 flex items-center justify-between">
-                    <div className="flex flex-col items-center gap-1">
-                      <button
-                        id="mixed-term-cell_3_pos"
-                        onClick={() => handleTerminalClick('cell_3_pos')}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
-                          activeTerminalId === 'cell_3_pos'
-                            ? 'ring-white scale-110'
-                            : 'ring-rose-500/30 hover:ring-rose-400/60'
-                        } ${c3Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
-                      >
-                        {c3Rev ? '-' : '+'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        {c3Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 mx-2.5 h-10 rounded-md bg-gradient-to-r from-teal-500 to-teal-600 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
-                      <span className="text-[10px] font-black text-slate-950">เซลล์ #3 (1.5V)</span>
+                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/80 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                      <span>เซลล์ #3 ({BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage.toFixed(1)}V)</span>
                       <button
                         onClick={() => setC3Rev((r) => !r)}
-                        className="text-[9px] text-slate-900 bg-teal-400/80 hover:bg-white px-1.5 py-0.2 rounded font-bold transition flex items-center gap-0.5"
+                        className="text-[10px] text-teal-300 bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded font-bold transition flex items-center gap-1"
                       >
-                        <RotateCw className="w-2.5 h-2.5" />
-                        <span>สลับ</span>
+                        <RotateCw className="w-3 h-3" />
+                        <span>กลับขั้ว</span>
                       </button>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1">
-                      <button
-                        id="mixed-term-cell_3_neg"
-                        onClick={() => handleTerminalClick('cell_3_neg')}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
-                          activeTerminalId === 'cell_3_neg'
-                            ? 'ring-white scale-110'
-                            : 'ring-blue-500/30 hover:ring-blue-400/60'
-                        } ${c3Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
-                      >
-                        {c3Rev ? '+' : '-'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        {c3Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
-                      </span>
+                    <BatteryCell3D
+                      voltage={BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage}
+                      label="CELL #3"
+                      isReversed={c3Rev}
+                      isActive={liveValidation.isSuccess}
+                      size="sm"
+                      onFlip={() => setC3Rev((r) => !r)}
+                    />
+
+                    <div className="flex items-center justify-between px-1 pt-1">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button
+                          id="mixed-term-cell_3_pos"
+                          onClick={() => handleTerminalClick('cell_3_pos')}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                            activeTerminalId === 'cell_3_pos'
+                              ? 'ring-white scale-110'
+                              : 'ring-rose-500/30 hover:ring-rose-400/60'
+                          } ${c3Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
+                        >
+                          {c3Rev ? '-' : '+'}
+                        </button>
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          {c3Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button
+                          id="mixed-term-cell_3_neg"
+                          onClick={() => handleTerminalClick('cell_3_neg')}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                            activeTerminalId === 'cell_3_neg'
+                              ? 'ring-white scale-110'
+                              : 'ring-blue-500/30 hover:ring-blue-400/60'
+                          } ${c3Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
+                        >
+                          {c3Rev ? '+' : '-'}
+                        </button>
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          {c3Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Cell 4 */}
-                  <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-700/80 flex items-center justify-between">
-                    <div className="flex flex-col items-center gap-1">
-                      <button
-                        id="mixed-term-cell_4_pos"
-                        onClick={() => handleTerminalClick('cell_4_pos')}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
-                          activeTerminalId === 'cell_4_pos'
-                            ? 'ring-white scale-110'
-                            : 'ring-rose-500/30 hover:ring-rose-400/60'
-                        } ${c4Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
-                      >
-                        {c4Rev ? '-' : '+'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        {c4Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 mx-2.5 h-10 rounded-md bg-gradient-to-r from-teal-500 to-teal-600 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
-                      <span className="text-[10px] font-black text-slate-950">เซลล์ #4 (1.5V)</span>
+                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/80 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                      <span>เซลล์ #4 ({BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage.toFixed(1)}V)</span>
                       <button
                         onClick={() => setC4Rev((r) => !r)}
-                        className="text-[9px] text-slate-900 bg-teal-400/80 hover:bg-white px-1.5 py-0.2 rounded font-bold transition flex items-center gap-0.5"
+                        className="text-[10px] text-teal-300 bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded font-bold transition flex items-center gap-1"
                       >
-                        <RotateCw className="w-2.5 h-2.5" />
-                        <span>สลับ</span>
+                        <RotateCw className="w-3 h-3" />
+                        <span>กลับขั้ว</span>
                       </button>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1">
-                      <button
-                        id="mixed-term-cell_4_neg"
-                        onClick={() => handleTerminalClick('cell_4_neg')}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
-                          activeTerminalId === 'cell_4_neg'
-                            ? 'ring-white scale-110'
-                            : 'ring-blue-500/30 hover:ring-blue-400/60'
-                        } ${c4Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
-                      >
-                        {c4Rev ? '+' : '-'}
-                      </button>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        {c4Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
-                      </span>
+                    <BatteryCell3D
+                      voltage={BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage}
+                      label="CELL #4"
+                      isReversed={c4Rev}
+                      isActive={liveValidation.isSuccess}
+                      size="sm"
+                      onFlip={() => setC4Rev((r) => !r)}
+                    />
+
+                    <div className="flex items-center justify-between px-1 pt-1">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button
+                          id="mixed-term-cell_4_pos"
+                          onClick={() => handleTerminalClick('cell_4_pos')}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                            activeTerminalId === 'cell_4_pos'
+                              ? 'ring-white scale-110'
+                              : 'ring-rose-500/30 hover:ring-rose-400/60'
+                          } ${c4Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
+                        >
+                          {c4Rev ? '-' : '+'}
+                        </button>
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          {c4Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-0.5">
+                        <button
+                          id="mixed-term-cell_4_neg"
+                          onClick={() => handleTerminalClick('cell_4_neg')}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                            activeTerminalId === 'cell_4_neg'
+                              ? 'ring-white scale-110'
+                              : 'ring-blue-500/30 hover:ring-blue-400/60'
+                          } ${c4Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
+                        >
+                          {c4Rev ? '+' : '-'}
+                        </button>
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          {c4Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Main Pack Output Bus Bar */}
-              <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-amber-500/40 rounded-2xl p-4 shadow-xl flex items-center justify-between">
+              {/* Main Pack Output Bus Bar with 3D BMS & 3D Fuse */}
+              <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-amber-500/40 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-amber-400 animate-ping" />
                   <div>
                     <span className="text-xs font-black text-amber-300">
-                      บัสบาร์จ่ายไฟหลักของแพ็ก 2S2P (Main Output Bus)
+                      บัสบาร์จ่ายไฟหลัก & อุปกรณ์ความปลอดภัย 3 มิติ (Main Bus & Protection 3D)
                     </span>
                     <span className="text-[10px] text-slate-400 block">
-                      จุดรวมสายไฟขนานจากทั้งสตริง A และ B เพื่อส่งพลังงานเข้ามอเตอร์
+                      ผสาน Smart BMS 4S และฟิวส์แก้วนิรภัยก่อนส่งพลังงานไปยังมอเตอร์
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
+                {/* 3D Hardware Modules Embedded */}
+                <div className="flex items-center gap-3">
+                  <div className="w-36 h-20 bg-slate-900/80 rounded-xl border border-slate-700/60 p-1 overflow-hidden shadow-inner">
+                    <BMSBoard3D
+                      isActive={hasBms}
+                      hasFault={!liveValidation.isSuccess && (liveValidation.isShortCircuit || liveValidation.hasCirculatingCurrent)}
+                      size="sm"
+                    />
+                  </div>
+                  <div className="w-32 h-20 bg-slate-900/80 rounded-xl border border-slate-700/60 p-1 overflow-hidden shadow-inner">
+                    <Fuse3D
+                      ratingAmps={fuseRating}
+                      isBlown={liveValidation.isShortCircuit}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-5">
                   {/* Bus Positive */}
                   <div className="flex flex-col items-center gap-1">
                     <button
@@ -1102,6 +1227,14 @@ export const MixedLabScreen: React.FC = () => {
           <span>{saveToast}</span>
         </div>
       )}
+
+      {/* Digital Multimeter Simulator */}
+      <DigitalMultimeter
+        isOpen={showMultimeter}
+        onClose={() => setShowMultimeter(false)}
+        testPoints={testPoints}
+        circuitIsClosed={liveValidation.isSuccess || liveValidation.isClosedCircuit}
+      />
     </div>
   );
 };
