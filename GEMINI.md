@@ -34,3 +34,13 @@
 * `GEMINI_API_KEY`: จัดเก็บใน `.env`
 * คอนฟิกโมเดลสำหรับ Continue อยู่ที่ `.continue/config.json` และ `~/.continue/config.yaml`
 
+---
+
+## 3. การซิงค์และบันทึกงานไปยัง OneDrive (Cross-Location Sync: Home & University)
+* **โฟลเดอร์เป้าหมายบน OneDrive:** `C:\Users\natta\OneDrive\RMUTL\Gaming`
+* **กฎก่อนเลิกงานทุกครั้ง (Mandatory Pre-Exit Rule):**
+  - ก่อนจบงาน, สรุปผล หรือส่งมอบงานให้ผู้ใช้ทุกครั้ง ต้องทำการซิงค์ไฟล์โปรเจกต์จาก `e:\gittest\gamimg_kwanjai` ไปยัง `C:\Users\natta\OneDrive\RMUTL\Gaming` เสมอ (ยกเว้น `node_modules`, `.vite`, `dist`)
+  - คำสั่งสำหรับซิงค์: `npm run sync:onedrive` (หรือ `node scripts/sync_onedrive.cjs`)
+  - เพื่อให้ผู้ใช้สามารถเดินทางไปเปิดทำงานต่อที่มหาวิทยาลัยได้ทันที โดยโค้ดเป็นเวอร์ชันล่าสุด 100% เสมอ
+
+

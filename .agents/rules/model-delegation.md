@@ -24,3 +24,8 @@ Always follow these principles when distributing or recommending work among mode
    - Helper/utility math converters and formatting
    - Color, materials, and lighting property adjustments
 
+4. **Cross-Location OneDrive Sync Rule (Home & University)**:
+   - Before ending a task/session or when asked to save/wrap up, always run `npm run sync:onedrive` (or `node scripts/sync_onedrive.cjs`).
+   - Syncs all project source code, assets, and configs to `C:\Users\natta\OneDrive\RMUTL\Gaming` (excluding `node_modules`, `.vite`, `dist`).
+   - Ensures the developer can switch seamlessly between Home and University with identical up-to-date files.
+
