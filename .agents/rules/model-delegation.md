@@ -1,6 +1,6 @@
 ---
 trigger: always_on
-description: AI model delegation rules between DeepSeek V4 Pro, DeepSeek Flash, and Gemini Flash
+description: AI model delegation rules between DeepSeek V4 Pro, DeepSeek Flash, and Gemini 3.8 Flash
 ---
 
 # AI Model Delegation Rules for Gaming Kwanjai
@@ -20,9 +20,10 @@ Always follow these principles when distributing or recommending work among mode
    - Material properties (`roughness`, `metalness`, `shininess`), color palettes, Tailwind CSS styling
    - Helper/utility math converters, time formatters, unit tests
 
-3. **Gemini Flash (Vision, UI & Large Context)**:
-   - UI mockup and reference image analysis
-   - Multi-file codebase overview and architectural summarization
+3. **Gemini 3.8 Flash (Vision, UI & Large Context)**:
+   - Model ID: `gemini-3.8-flash` (or `Gemini 3.8 Flash High` in Antigravity IDE)
+   - UI mockup and reference image analysis (Multimodal Vision)
+   - Multi-file codebase overview and architectural summarization with massive context window
    - Fast React/Tailwind frontend layout design & modals
 
 4. **Cross-Location OneDrive Sync Rule (Home & University)**:

@@ -15,9 +15,9 @@
       "apiKey": "${DEEPSEEK_API_KEY}"
     },
     {
-      "title": "Gemini 2.0 Flash",
+      "title": "Gemini 3.8 Flash",
       "provider": "gemini",
-      "model": "gemini-2.0-flash",
+      "model": "gemini-3.8-flash",
       "apiKey": "${GEMINI_API_KEY}"
     },
     {

@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "tsc --noEmit",
     "preview": "vite preview",
-    "sync:onedrive": "node scripts/sync_onedrive.cjs"
+    "sync:onedrive": "node scripts/sync_onedrive.cjs",
+    "chat:export": "node scripts/export_chat.cjs",
+    "chat:import": "node scripts/import_chat.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

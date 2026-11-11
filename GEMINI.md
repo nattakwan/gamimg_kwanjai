@@ -22,10 +22,11 @@
   - **Utility & Helper Functions:** ฟังก์ชันคำนวณแปลงหน่วย ($m/s \leftrightarrow km/h$, $V, A, W$), ฟังก์ชันจัดรูปแบบเวลา (Lap timer, Formatters)
   - **Unit Testing & Test Helpers:** สร้างและรันชุดทดสอบเบื้องต้น
 
-### 🖼️ 1.3 Gemini Flash (Vision, UI & Large Context)
+### 🖼️ 1.3 Gemini 3.8 Flash (Vision, UI & Large Context)
+* **โมเดลที่ใช้งาน:** `gemini-3.8-flash` (หรือ `Gemini 3.8 Flash High` บน Antigravity IDE)
 * **หน้าที่หลัก:**
   - **การประมวลผลรูปภาพ (Vision / Multimodal):** วิเคราะห์ภาพตัวอย่าง UI (เช่น ตัวละคร Mockup, ฉากสนามแข่ง 3D, ภาพถ่ายอุปกรณ์วงจรจริงที่ผู้ใช้อัปโหลด) เพื่อนำมาถอดแบบดีไซน์
-  - **อ่านบริบททั้งโปรเจกต์ (Wide Context):** อ่านและวิเคราะห์ไฟล์จำนวนมากพร้อมกัน สรุปสถาปัตยกรรมระบบ
+  - **อ่านบริบททั้งโปรเจกต์ (Wide Context):** อ่านและวิเคราะห์ไฟล์จำนวนมากพร้อมกัน สรุปสถาปัตยกรรมระบบ ด้วย Context Window ขนาดใหญ่พิเศษและความเร็วสูง
   - **งาน Frontend UI:** ออกแบบและประกอบ UI Component (React + Tailwind CSS) ครอบฉาก 3D เช่น หน้า Dashboard, ปุ่มควบคุม, แถบสถานะ, Modal dialogs
 
 ---

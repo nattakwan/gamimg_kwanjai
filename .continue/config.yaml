@@ -1,4 +1,4 @@
-name: DeepSeek Project Config
+name: DeepSeek & Gemini Project Config
 version: 1.0.0
 schema: v1
 models:
@@ -12,6 +12,10 @@ models:
     model: deepseek-flash
     apiBase: https://api.deepseek.com/v1
     apiKey: ${{ env.DEEPSEEK_API_KEY }}
+  - name: Gemini 3.8 Flash
+    provider: gemini
+    model: gemini-3.8-flash
+    apiKey: ${{ env.GEMINI_API_KEY }}
   - name: DeepSeek Reasoner
     provider: openai
     model: deepseek-reasoner
