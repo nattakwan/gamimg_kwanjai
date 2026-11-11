@@ -1086,15 +1086,15 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
         className="w-full h-full min-h-[300px] cursor-grab active:cursor-grabbing flex items-center justify-center touch-none"
       />
 
-      {/* Rotation Curved Arrow Controls at Feet */}
-      <div className="absolute bottom-6 flex items-center justify-center gap-14 pointer-events-auto z-10">
+      {/* Subtle Rotation Controls at Bottom Right Corner (Never obscuring feet/pedestal) */}
+      <div className="absolute bottom-2 right-2 flex items-center gap-1 pointer-events-auto z-10">
         <button
           type="button"
           onClick={handleRotateLeft}
-          className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-900/40 hover:bg-slate-900/70 active:scale-95 text-white drop-shadow-md flex items-center justify-center transition-all cursor-pointer backdrop-blur-md border border-white/30"
+          className="w-7 h-7 rounded-lg bg-white/80 hover:bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all cursor-pointer backdrop-blur-md border border-slate-200 active:scale-90"
           title="หมุนซ้าย"
         >
-          <svg className="w-6 h-6 fill-current drop-shadow" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
             <path d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
           </svg>
         </button>
@@ -1102,17 +1102,13 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
         <button
           type="button"
           onClick={handleRotateRight}
-          className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-900/40 hover:bg-slate-900/70 active:scale-95 text-white drop-shadow-md flex items-center justify-center transition-all cursor-pointer backdrop-blur-md border border-white/30"
+          className="w-7 h-7 rounded-lg bg-white/80 hover:bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all cursor-pointer backdrop-blur-md border border-slate-200 active:scale-90"
           title="หมุนขวา"
         >
-          <svg className="w-6 h-6 fill-current drop-shadow" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
             <path d="M11.5 8c2.65 0 5.05 1 6.9 2.6L22 7v9h-9l3.62-3.62c-1.39-1.16-3.16-1.88-5.12-1.88-3.54 0-6.55 2.31-7.6 5.5l-2.37-.78C2.92 11.03 6.85 8 11.5 8z" />
           </svg>
         </button>
-      </div>
-
-      <div className="absolute bottom-1 text-[11px] font-bold text-emerald-950/80 bg-white/30 backdrop-blur-sm px-2.5 py-0.5 rounded-full pointer-events-none drop-shadow-sm">
-        ลากเมาส์ / ปัดหน้าจอ เพื่อหมุนดูรอบตัว 360°
       </div>
     </div>
   );

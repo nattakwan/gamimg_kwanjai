@@ -1866,35 +1866,42 @@ export class Racing3DRenderer {
           const model = gltf.scene;
           const box = new THREE.Box3().setFromObject(model);
           const size = box.getSize(new THREE.Vector3());
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 1.25 / Math.max(maxDim, 0.001);
+
+          // Realistic Scale: Total length 1.82m matching 26" fat tire e-bike wheelbase
+          const targetLength = 1.82;
+          const scale = targetLength / Math.max(size.x, 0.001);
           model.scale.setScalar(scale);
 
-          // If modeled lengthways along X, align with forward +Z race track vector
+          // If modeled lengthways along X, align with forward +Z race track tangent vector
           if (size.x > size.z) {
             model.rotation.y = -Math.PI / 2;
           }
+          model.updateMatrixWorld(true);
 
           const recomputedBox = new THREE.Box3().setFromObject(model);
           const center = recomputedBox.getCenter(new THREE.Vector3());
-          model.position.sub(center);
-          model.position.y += 0.35; // align bottom bracket with cyclist pelvis & crank
+
+          // Center X and Z (offset Z slightly so bottom bracket aligns with cyclist crank)
+          model.position.x = -center.x;
+          model.position.z = -center.z + 0.04;
+
+          // LAW OF NATURE: Lowest contact point of tires touches road surface at Y = 0 exactly!
+          model.position.y = -recomputedBox.min.y;
 
           model.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
+              const mesh = child as THREE.Mesh;
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
             }
           });
 
           this.customBikeModel = model;
 
-          // If player is already on the track, equip custom frame
-          const playerCyclist = this.cyclists.get('player');
-          if (playerCyclist) {
-            playerCyclist.frame.clear();
-            playerCyclist.frame.add(model.clone());
-          }
+          // Equip realistic custom e-bike on ALL racers across all race tracks
+          this.cyclists.forEach((cyclist, id) => {
+            this.equipCustomBike(cyclist, id === 'player');
+          });
         },
         undefined,
         () => tryLoad(idx + 1)
@@ -1902,6 +1909,38 @@ export class Racing3DRenderer {
     };
 
     tryLoad(0);
+  }
+
+  // ─── Cyclist Custom Bike Equipping (Player & Competitors) ─────────────────
+
+  private equipCustomBike(cyclist: CyclistParts, isPlayer: boolean, bikeColor?: string) {
+    if (!this.customBikeModel) return;
+
+    // Clear procedural frame tubes and replace with high-fidelity GLB e-bike model
+    cyclist.frame.clear();
+    const bikeClone = this.customBikeModel.clone();
+
+    // Hide procedural duplicate wheels since GLB contains full detailed wheels & disc brakes
+    cyclist.frontWheel.visible = false;
+    cyclist.rearWheel.visible = false;
+
+    // Tint frame details for AI competitors so each team has distinct racing livery
+    if (!isPlayer && bikeColor) {
+      bikeClone.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+          if (mesh.material && (mesh.name.includes('frame') || mesh.name.includes('det'))) {
+            const mat = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material).clone();
+            if ('color' in mat) {
+              (mat as THREE.MeshStandardMaterial).color.set(bikeColor);
+              mesh.material = mat;
+            }
+          }
+        }
+      });
+    }
+
+    cyclist.frame.add(bikeClone);
   }
 
   // ─── Cyclist Management ───────────────────────────────────────────────────
@@ -1918,10 +1957,9 @@ export class Racing3DRenderer {
 
     const cyclist = createCyclist(name, jerseyColor, bikeColor, isPlayer, character);
 
-    // If custom Blender model is available, attach to player bicycle frame
-    if (isPlayer && this.customBikeModel) {
-      cyclist.frame.clear();
-      cyclist.frame.add(this.customBikeModel.clone());
+    // If custom 3D model is loaded, equip on every racer entering the track
+    if (this.customBikeModel) {
+      this.equipCustomBike(cyclist, isPlayer, bikeColor);
     }
 
     this.scene.add(cyclist.group);

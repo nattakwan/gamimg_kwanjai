@@ -471,44 +471,25 @@ export const Bike3DViewer: React.FC<Bike3DViewerProps> = ({
 
   return (
     <div className={`relative w-full h-full min-h-[320px] flex flex-col justify-end select-none ${className}`}>
-      {/* 3D Canvas Container */}
+      {/* 3D Canvas Container — 100% Clear View of Bicycle (No blocking badges or text) */}
       <div
         ref={containerRef}
         className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing rounded-2xl overflow-hidden"
       />
 
-      {/* Top Overlay Badge: Model Status */}
-      <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
-        {isCustomModelLoaded ? (
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-emerald-300 text-emerald-800 text-[11px] font-mono font-bold backdrop-blur-md shadow-md">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>โมเดล 3D: {modelFileName}</span>
-          </span>
-        ) : (
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-sky-300 text-sky-800 text-[11px] font-mono font-bold backdrop-blur-md shadow-md">
-            <Box className="w-3.5 h-3.5 text-sky-600" />
-            <span>โมเดล 3D จำลอง (พร้อมรับ GLB)</span>
-          </span>
-        )}
-      </div>
-
-      {/* Bottom Floating Controls: 360 Rotation Hint & Rotate Buttons */}
-      <div className="relative z-10 p-3 flex items-center justify-between pointer-events-none">
-        <span className="text-[10px] font-mono text-slate-600 bg-white/95 px-3 py-1 rounded-full border border-slate-200 shadow-sm backdrop-blur-md">
-          🖱️ ลากเมาส์ / สัมผัสเพื่อหมุนดู 360°
-        </span>
-
+      {/* Discrete Rotate Buttons at Bottom Right (Never obstructing bike body or wheels) */}
+      <div className="relative z-10 p-2.5 flex items-center justify-end pointer-events-none">
         <div className="flex items-center gap-1.5 pointer-events-auto">
           <button
             onClick={() => handleRotate(-Math.PI / 4)}
-            className="p-1.5 rounded-lg bg-white/95 hover:bg-slate-100 border border-slate-300 text-slate-700 shadow-sm transition active:scale-95"
+            className="w-7 h-7 rounded-lg bg-white/80 hover:bg-white border border-slate-200 text-slate-700 shadow-sm transition active:scale-90 flex items-center justify-center backdrop-blur-md"
             title="หมุนซ้าย 45°"
           >
             <RotateCw className="w-3.5 h-3.5 -scale-x-100" />
           </button>
           <button
             onClick={() => handleRotate(Math.PI / 4)}
-            className="p-1.5 rounded-lg bg-white/95 hover:bg-slate-100 border border-slate-300 text-slate-700 shadow-sm transition active:scale-95"
+            className="w-7 h-7 rounded-lg bg-white/80 hover:bg-white border border-slate-200 text-slate-700 shadow-sm transition active:scale-90 flex items-center justify-center backdrop-blur-md"
             title="หมุนขวา 45°"
           >
             <RotateCw className="w-3.5 h-3.5" />

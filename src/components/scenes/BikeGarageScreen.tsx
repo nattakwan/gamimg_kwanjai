@@ -5,39 +5,33 @@
  * BikeGarageScreen — Electric-Assist Bike Garage & Assembly Bay (Scene 11).
  * Redesigned with:
  * 1. Bright modern workshop/laboratory showroom aesthetic (Light Theme).
- * 2. Visual infographics and icons, minimal wall-of-text.
+ * 2. Visual infographics and icons, zero redundant stacked headers.
  * 3. Side-by-side 3D Showroom:
  *    - Left: Player's customized character from Character Creator (Character3DViewer).
- *    - Right: Enlarged 3D Electric Bicycle (Bike3DViewer) with exact wheel-ground contact.
- * 4. 8-Cell Battery quota infographic and motor rating selection cards.
+ *    - Right: Enlarged 3D Electric Bicycle (Bike3DViewer) with exact wheel-ground contact and zero overlay obstruction.
+ * 4. 8-Cell Battery quota infographic with instant 1-click installation on pack selection.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Wrench,
   Zap,
   Gauge,
   ArrowRight,
-  ArrowLeft,
   CheckCircle2,
   XCircle,
   Sparkles,
   Save,
   ShieldCheck,
   ShieldAlert,
-  Flame,
   BatteryCharging,
   Play,
-  RotateCw,
   AlertTriangle,
   Cpu,
-  Mountain,
   Timer,
   Compass,
   Battery,
   Check,
-  ChevronRight,
-  Layers,
 } from 'lucide-react';
 import { useGameState } from '../../context/GameStateContext';
 import { Character3DViewer } from '../character/Character3DViewer';
@@ -166,7 +160,7 @@ export const BikeGarageScreen: React.FC = () => {
     state.bikeSetup?.tireType || 'slick_street'
   );
 
-  // Battery Selection & Installation
+  // Battery Selection (Instant 1-Click Installation)
   const [selectedPackId, setSelectedPackId] = useState<string>(() => {
     if (selectedMotor.ratedVoltage === 24) return 'pack_8s1p_24v';
     if (selectedMotor.ratedVoltage === 6) return 'pack_2s4p_6v';
@@ -174,7 +168,6 @@ export const BikeGarageScreen: React.FC = () => {
   });
 
   const [isBatteryInstalled, setIsBatteryInstalled] = useState<boolean>(true);
-  const [isInstalling, setIsInstalling] = useState<boolean>(false);
   const [installationError, setInstallationError] = useState<string | null>(null);
 
   // Bench Test Run Simulation
@@ -223,7 +216,7 @@ export const BikeGarageScreen: React.FC = () => {
     rangeKm = Number(((selectedPack.capacityMah / 1000) * 5.0).toFixed(1));
   }
 
-  // Handle Motor Selection
+  // Handle Motor Selection (Auto-matches recommended pack & installs immediately)
   const handleSelectMotor = (motorId: string) => {
     playTone(520, 'sine', 0.1);
     setSelectedMotorId(motorId);
@@ -233,47 +226,33 @@ export const BikeGarageScreen: React.FC = () => {
       else if (motor.ratedVoltage === 12) setSelectedPackId('pack_4s2p_12v');
       else setSelectedPackId('pack_2s4p_6v');
     }
-    setIsBatteryInstalled(false);
+    setIsBatteryInstalled(true);
     setInstallationError(null);
   };
 
-  // Handle Battery Selection
+  // Handle Battery Selection (Instant 1-Click Installation into Bicycle Frame)
   const handleSelectPack = (pack: GaragePack) => {
-    playTone(500, 'sine', 0.08);
     setSelectedPackId(pack.id);
-    setIsBatteryInstalled(false);
-    setInstallationError(null);
-  };
-
-  // Handle Animated Battery Installation Action
-  const handleInstallBattery = () => {
-    if (isOverVoltage) {
+    if (pack.nominalVoltage > selectedMotor.ratedVoltage) {
       playTone(180, 'sawtooth', 0.35);
-      setInstallationError(
-        `อันตราย! แรงดันแบตเตอรี่ (${selectedPack.nominalVoltage}V) เกินพิกัดมอเตอร์ (${selectedMotor.ratedVoltage}V) ขดลวดมอเตอร์จะไหม้เสียหาย ระบบตัดการติดตั้ง!`
-      );
       setIsBatteryInstalled(false);
-      return;
-    }
-
-    setInstallationError(null);
-    setIsInstalling(true);
-    playTone(450, 'sine', 0.1);
-
-    setTimeout(() => {
-      playTone(880, 'triangle', 0.2);
-      setIsInstalling(false);
+      setInstallationError(
+        `อันตราย! แรงดันแบตเตอรี่ (${pack.nominalVoltage}V) เกินพิกัดมอเตอร์ (${selectedMotor.ratedVoltage}V) ขดลวดมอเตอร์จะไหม้เสียหาย ระบบตัดการติดตั้งอัตโนมัติ!`
+      );
+    } else {
+      playTone(550, 'sine', 0.1);
       setIsBatteryInstalled(true);
-      setSaveToast(`ติดตั้ง ${selectedPack.code} (${selectedPack.nominalVoltage}V) กับมอเตอร์ ${selectedMotor.ratedVoltage}V เรียบร้อย!`);
-      setTimeout(() => setSaveToast(null), 3000);
-    }, 450);
+      setInstallationError(null);
+      setSaveToast(`ติดตั้ง ${pack.code} (${pack.nominalVoltage}V) เข้ากับมอเตอร์ ${selectedMotor.ratedVoltage}V เรียบร้อย!`);
+      setTimeout(() => setSaveToast(null), 2500);
+    }
   };
 
   // Handle Test Setup Run
   const handleTestSetup = () => {
     if (!isBatteryInstalled) {
       playTone(280, 'square', 0.2);
-      setSaveToast('กรุณากดติดตั้งแบตเตอรี่ลงในโครงจักรยานก่อนทดสอบ!');
+      setSaveToast('กรุณาเลือกชุดแบตเตอรี่ที่เข้ากันได้ก่อนทดสอบ!');
       setTimeout(() => setSaveToast(null), 3000);
       return;
     }
@@ -282,7 +261,7 @@ export const BikeGarageScreen: React.FC = () => {
     setIsTestSpinning(true);
     setSaveToast(
       isVoltageMatch
-        ? `ทดสอบมอเตอร์ ${selectedMotor.ratedVoltage}V: ความเร็วสูงสุด ${topSpeedKmh} กม./ชม. ระบบสมบูรณ์!`
+        ? `ทดสอบมอเตอร์ ${selectedMotor.ratedVoltage}V: ความเร็วสูงสุด ${topSpeedKmh} กม./ชม. ระบบสมบูรณ์พร้อมแข่ง!`
         : `คำเตือน: แรงดัน ${selectedPack.nominalVoltage}V จ่ายไฟให้มอเตอร์ ${selectedMotor.ratedVoltage}V ได้เพียง ${Math.round(Math.pow(voltageRatio, 2) * 100)}%`
     );
 
@@ -296,7 +275,7 @@ export const BikeGarageScreen: React.FC = () => {
   const handleSaveAll = () => {
     if (!isBatteryInstalled) {
       playTone(280, 'square', 0.2);
-      setSaveToast('กรุณาติดตั้งแบตเตอรี่ให้เรียบร้อยก่อนบันทึก');
+      setSaveToast('กรุณาเลือกชุดแบตเตอรี่ที่เข้ากันได้ก่อนบันทึก');
       setTimeout(() => setSaveToast(null), 3000);
       return;
     }
@@ -346,68 +325,59 @@ export const BikeGarageScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/40 text-slate-800 flex flex-col font-sans select-none">
-      {/* ─── Top Header (Light Studio Navbar) ───────────────────────────── */}
-      <header className="bg-white/90 border-b border-slate-200/90 backdrop-blur-md px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 shadow-sm">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => goToScene('motor_test')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 transition active:scale-95 min-h-[42px]"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-600" />
-            <span>ย้อนกลับไปแล็บ</span>
-          </button>
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-sky-500/20">
-              <Wrench className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm md:text-base font-black text-slate-900 tracking-tight">
-                  โรงเก็บจักรยานพาวเวอร์ไบค์ (E-Bike Garage)
-                </h1>
-                <span className="text-[10px] font-bold bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full border border-sky-200">
-                  ห้องแล็บประกอบยานยนต์
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                ปรับจูนมอเตอร์ไฟฟ้าและบริหารชุดแบตเตอรี่โควตา 8 ก้อน
-              </p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/40 text-slate-800 flex flex-col font-sans select-none pb-8">
+      {/* ─── Sleek Workshop Toolbar (Integrated, No Duplicate Header Bar) ──── */}
+      <div className="max-w-7xl mx-auto w-full px-4 pt-4 pb-2 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-sm">
+            <Wrench className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <span>อู่ประกอบและปรับจูนจักรยานไฟฟ้า (E-Bike Assembly & Tuning)</span>
+              <span className="text-[10px] font-bold bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full border border-sky-200">
+                ฉากที่ 11
+              </span>
+            </h2>
+            <p className="text-[11px] text-slate-500">
+              แมตช์พิกัดแรงดันมอเตอร์คู่กับโควตาเซลล์แบตเตอรี่ 8 ก้อนเพื่อเตรียมลงสนามแข่ง
+            </p>
           </div>
         </div>
 
-        {/* Action Controls */}
+        {/* Action Controls Toolbar */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleTestSetup}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold border border-sky-300 transition min-h-[42px] shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-sky-50 text-sky-700 text-xs font-bold border border-sky-200 transition min-h-[38px] shadow-sm active:scale-95 cursor-pointer"
+            title="ทดสอบหมุนล้อจำลองรอบมอเตอร์"
           >
-            <Play className={`w-4 h-4 text-sky-600 ${isTestSpinning ? 'animate-spin' : ''}`} />
+            <Play className={`w-3.5 h-3.5 text-sky-600 ${isTestSpinning ? 'animate-spin' : ''}`} />
             <span>ทดสอบระบบ (Test Bench)</span>
           </button>
 
           <button
             onClick={handleSaveAll}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition min-h-[42px] shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200 transition min-h-[38px] shadow-sm active:scale-95 cursor-pointer"
+            title="บันทึกการตั้งค่าลงเกม"
           >
-            <Save className="w-4 h-4 text-emerald-600" />
+            <Save className="w-3.5 h-3.5 text-emerald-600" />
             <span>บันทึกการแต่งรถ</span>
           </button>
 
           <button
             onClick={handleContinue}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-105 text-white text-xs font-black shadow-md shadow-emerald-500/25 active:scale-95 transition min-h-[42px]"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-105 text-white text-xs font-black shadow-md shadow-emerald-500/25 active:scale-95 transition min-h-[38px] cursor-pointer"
+            title="ไปต่อยังหน้าเตรียมตัวเข้าสู่สนามแข่ง"
           >
             <span>ต่อไปสนามแข่ง (Continue)</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
-      </header>
+      </div>
 
       {/* ─── Main Content Grid ─────────────────────────────────────────── */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 p-4 md:p-6 max-w-7xl mx-auto w-full">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 p-4 max-w-7xl mx-auto w-full">
         {/* Left Column: Motor Selection + 3D Showroom Stage (7 Cols) */}
         <div className="lg:col-span-7 flex flex-col gap-5">
           {/* 1. Motor Selector Infographic Cards */}
@@ -433,7 +403,7 @@ export const BikeGarageScreen: React.FC = () => {
                   <button
                     key={motor.id}
                     onClick={() => handleSelectMotor(motor.id)}
-                    className={`p-3.5 rounded-xl border text-left transition relative flex flex-col justify-between ${
+                    className={`p-3.5 rounded-xl border text-left transition relative flex flex-col justify-between cursor-pointer ${
                       isSelected
                         ? 'bg-gradient-to-b from-sky-50 to-white border-sky-500 ring-2 ring-sky-400/30 shadow-md'
                         : 'bg-slate-50/70 border-slate-200 text-slate-600 hover:bg-slate-100/80 hover:border-slate-300'
@@ -508,7 +478,7 @@ export const BikeGarageScreen: React.FC = () => {
             </div>
 
             {/* Split Stage: Character (Scene 2) & Bicycle (Scene 11) */}
-            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-12 gap-3 my-auto py-3 items-stretch">
+            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-12 gap-3 my-auto py-2 items-stretch">
               {/* Left Stage (4 Cols): Customized 3D Character from Character Creator */}
               <div className="sm:col-span-4 flex flex-col items-center justify-between bg-gradient-to-b from-sky-50/70 via-emerald-50/40 to-slate-50/80 rounded-2xl border border-slate-200/80 p-2 shadow-inner relative overflow-hidden min-h-[300px]">
                 {/* Character Name & Role Badge */}
@@ -521,20 +491,15 @@ export const BikeGarageScreen: React.FC = () => {
                   </span>
                 </div>
 
-                {/* 3D Character Viewer (Same model as CharacterCreatorScreen) */}
+                {/* 3D Character Viewer (Same model as CharacterCreatorScreen, No obscuring text) */}
                 <div className="w-full flex-1 flex items-center justify-center my-1 relative">
-                  <Character3DViewer character={state.character} className="w-full h-[250px]" />
+                  <Character3DViewer character={state.character} className="w-full h-[255px]" />
                 </div>
-
-                {/* Character Footnote */}
-                <span className="text-[10px] font-mono text-slate-500 bg-white/80 px-2.5 py-0.5 rounded-full border border-slate-200 shadow-sm z-10">
-                  🖱️ ลากหมุนดู 360°
-                </span>
               </div>
 
-              {/* Right Stage (8 Cols): 3D Bicycle Viewer (Enlarged GLB on Podium) */}
+              {/* Right Stage (8 Cols): 3D Bicycle Viewer (100% Unobstructed Full Bike View) */}
               <div className="sm:col-span-8 flex flex-col items-center justify-between bg-gradient-to-b from-white via-slate-50/50 to-sky-50/30 rounded-2xl border border-slate-200/80 p-2 shadow-inner relative overflow-hidden min-h-[320px]">
-                {/* 3D E-Bike Canvas */}
+                {/* 3D E-Bike Canvas (Clear view from handlebar to tires) */}
                 <div className="w-full flex-1 flex items-center justify-center relative">
                   <Bike3DViewer
                     frameColor={frameColor}
@@ -543,11 +508,11 @@ export const BikeGarageScreen: React.FC = () => {
                   />
                 </div>
 
-                {/* Mounted Battery Indicator Badge */}
+                {/* Mounted Battery Status Indicator Pill */}
                 <div className="w-full flex items-center justify-between px-3 py-1.5 bg-white/90 border-t border-slate-100 rounded-b-xl z-10">
                   <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
                     <Battery className="w-3.5 h-3.5 text-sky-600" />
-                    สถานะแบตเตอรี่:
+                    สถานะการติดตั้ง:
                   </span>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold flex items-center gap-1 ${
@@ -555,16 +520,16 @@ export const BikeGarageScreen: React.FC = () => {
                         ? isVoltageMatch
                           ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                           : 'bg-amber-100 text-amber-800 border border-amber-300'
-                        : 'bg-slate-100 text-slate-500 border border-slate-300'
+                        : 'bg-rose-100 text-rose-700 border border-rose-300'
                     }`}
                   >
                     {isBatteryInstalled ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                        ติดตั้งแล้ว: {selectedPack.code} ({selectedPack.nominalVoltage.toFixed(1)}V {selectedPack.capacityMah}mAh)
+                        พร้อมแข่ง: {selectedPack.code} ({selectedPack.nominalVoltage.toFixed(1)}V {selectedPack.capacityMah}mAh)
                       </>
                     ) : (
-                      'ยังไม่ได้ติดตั้งแบตเตอรี่'
+                      'ตัดการทำงาน (แรงดันไม่เข้ากัน)'
                     )}
                   </span>
                 </div>
@@ -638,7 +603,7 @@ export const BikeGarageScreen: React.FC = () => {
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div className="flex items-center justify-between text-[10px] text-slate-600 font-bold mb-2">
                 <span>แผนผังช่องใส่เซลล์แบตเตอรี่ (Cell Slots):</span>
-                <span className="font-mono text-sky-700">{selectedPack.circuitTag}</span>
+                <span className="font-mono text-sky-700 font-bold">{selectedPack.circuitTag}</span>
               </div>
               <div className="grid grid-cols-8 gap-1.5">
                 {Array.from({ length: 8 }).map((_, idx) => {
@@ -662,7 +627,7 @@ export const BikeGarageScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Pack Options List (Visual Cards) */}
+            {/* Pack Options List (Visual Cards with Instant 1-Click Installation) */}
             <div className="space-y-2.5">
               {GARAGE_PACKS.map((pack) => {
                 const isSelected = selectedPackId === pack.id;
@@ -673,13 +638,13 @@ export const BikeGarageScreen: React.FC = () => {
                   <button
                     key={pack.id}
                     onClick={() => handleSelectPack(pack)}
-                    className={`w-full p-3 rounded-xl border text-left transition flex items-center justify-between gap-3 ${
+                    className={`w-full p-3 rounded-xl border text-left transition flex items-center justify-between gap-3 cursor-pointer ${
                       isSelected
                         ? matchesCurrentMotor
-                          ? 'bg-emerald-50/80 border-emerald-500 ring-2 ring-emerald-400/30 shadow-md'
+                          ? 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-400/40 shadow-md'
                           : isPackOver
-                          ? 'bg-rose-50/80 border-rose-500 shadow-md'
-                          : 'bg-amber-50/80 border-amber-500 shadow-md'
+                          ? 'bg-rose-50/90 border-rose-500 ring-2 ring-rose-400/40 shadow-md'
+                          : 'bg-amber-50/90 border-amber-500 ring-2 ring-amber-400/40 shadow-md'
                         : 'bg-slate-50/70 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
                     }`}
                   >
@@ -689,9 +654,10 @@ export const BikeGarageScreen: React.FC = () => {
                         <span className="text-[10px] font-mono font-bold bg-white text-slate-700 px-2 py-0.5 rounded border border-slate-200">
                           {pack.code}
                         </span>
-                        {matchesCurrentMotor && (
-                          <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                            คู่มอเตอร์ {pack.recommendedForMotorVoltage}V
+                        {isSelected && matchesCurrentMotor && (
+                          <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                            ติดตั้งใช้งาน
                           </span>
                         )}
                         {isPackOver && (
@@ -752,37 +718,7 @@ export const BikeGarageScreen: React.FC = () => {
               </p>
             </div>
 
-            {/* Installation Action Button */}
-            <div>
-              <button
-                onClick={handleInstallBattery}
-                disabled={isInstalling}
-                className={`w-full py-3 rounded-xl font-black text-xs shadow-md flex items-center justify-center gap-2 transition active:scale-95 ${
-                  isBatteryInstalled
-                    ? 'bg-slate-100 hover:bg-slate-200 text-emerald-800 border border-emerald-300'
-                    : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-105 text-white shadow-emerald-500/25'
-                }`}
-              >
-                {isInstalling ? (
-                  <>
-                    <RotateCw className="w-4 h-4 animate-spin" />
-                    <span>กำลังติดตั้งและเชื่อมต่อระบบสายไฟ...</span>
-                  </>
-                ) : isBatteryInstalled ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>ติดตั้งในโครงรถแล้ว (คลิกเพื่อสลับแพ็ก)</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 fill-current" />
-                    <span>คลิกเพื่อติดตั้งชุดแบตเตอรี่ลงในโครงจักรยาน</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Incompatibility Alert */}
+            {/* Incompatibility Alert if Selected Pack is Overvoltage */}
             {installationError && (
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in">
                 <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
