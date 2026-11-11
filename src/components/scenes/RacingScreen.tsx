@@ -607,23 +607,25 @@ export const RacingScreen: React.FC = () => {
             if (ai.strategy === 'sprint_burst') {
               // Speedy Sam (2S1P): Very fast aggressive start (~32-34 km/h), but fades as battery sags
               if (ai.z < totalTrackLength * 0.32) {
-                aiTotalForwardWatts = 330; // Early explosive burst
+                aiTotalForwardWatts = 340; // Early explosive burst
               } else if (ai.z < totalTrackLength * 0.65) {
-                aiTotalForwardWatts = 210; // Fading
+                aiTotalForwardWatts = 230; // Fading
               } else {
-                aiTotalForwardWatts = 175; // Heavy voltage sag
+                aiTotalForwardWatts = 195; // Heavy voltage sag
               }
-              if (aiSlope > 4) aiTotalForwardWatts *= 0.72; // Greatly penalized on steep slopes
+              if (aiSlope > 4) aiTotalForwardWatts = Math.max(210, aiTotalForwardWatts); // Grinds up hill in low gear
             } else if (ai.strategy === 'steady_pacing') {
               // Turbo Tina (2S2P): Benchmark competitor - steady solid 30-32 km/h
-              aiTotalForwardWatts = 260;
-              if (aiSlope > 4) aiTotalForwardWatts = 280; // Handles hill climb well
+              aiTotalForwardWatts = aiSlope > 4 ? 310 : 270; // Handles hill climb well
             } else if (ai.strategy === 'hill_power') {
-              // Captain Big-Block: Heavy bike, 26-28 km/h on flat, pulls strong 29-30 km/h on hills
-              aiTotalForwardWatts = aiSlope > 4 ? 295 : 210;
+              // Captain Big-Block: Heavy bike, 26-28 km/h on flat, pulls strong 30-32 km/h on hills
+              aiTotalForwardWatts = aiSlope > 4 ? 350 : 230;
             }
 
-            const aiThrustForce = Math.min(78, aiTotalForwardWatts / Math.max(ai.speedMps, 2.4));
+            // Low-gear torque multiplication on hills (provides up to 185N thrust against steep slopes)
+            const cap = aiSlope > 4 ? 185 : 95;
+            const minSpeedForThrust = aiSlope > 4 ? 1.0 : 2.4;
+            const aiThrustForce = Math.min(cap, aiTotalForwardWatts / Math.max(ai.speedMps, minSpeedForThrust));
             const aiNetForce = aiThrustForce - aiDrag - aiRoll - aiSlopeForce;
             const aiAccel = aiNetForce / 82;
             const newAiSpeed = Math.max(0, ai.speedMps + aiAccel * dt);
@@ -765,7 +767,7 @@ export const RacingScreen: React.FC = () => {
             isPlayer: false,
             jerseyColor: ai.color,
             bikeColor: ai.color,
-            character: ai.id === 'ai_speedy' ? {
+            character: (ai.id === 'racer_sam' || ai.id === 'ai_speedy') ? {
               name: 'Speedy Sam',
               gender: 'cadet_boy' as const,
               bodyType: 'boy' as const,
@@ -780,7 +782,7 @@ export const RacingScreen: React.FC = () => {
               gogglesStyle: 'cyber_visor' as const,
               helmetStyle: 'speedster' as const,
               title: 'Speed Specialist',
-            } : ai.id === 'ai_tina' ? {
+            } : (ai.id === 'racer_tina' || ai.id === 'ai_tina') ? {
               name: 'Turbo Tina',
               gender: 'cadet_girl' as const,
               bodyType: 'girl' as const,
