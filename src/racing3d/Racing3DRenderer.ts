@@ -19,9 +19,9 @@ import { CharacterState } from '../types/game';
 
 // ─── Track Geometry Constants ───────────────────────────────────────────────
 
-const ROAD_HALF_WIDTH = 5.5;      // 11 m wide asphalt highway
-const KERB_WIDTH = 0.8;           // Red/white kerbs
-const SHOULDER_WIDTH = 1.4;       // Outer shoulder
+const ROAD_HALF_WIDTH = 3.2;      // 6.4 m wide track (realistic 2-lane racing circuit / downhill trail)
+const KERB_WIDTH = 0.6;           // Red/white kerbs
+const SHOULDER_WIDTH = 0.9;       // Outer shoulder
 const DECK_LIFT = 0.85;           // Elevates roadbed above terrain (eliminates clipping & horizon gaps)
 const DECK_THICKNESS = 0.50;      // 3D concrete slab thickness
 const RAIL_HEIGHT = 0.85;         // Guardrail height above deck
@@ -30,6 +30,15 @@ const RAIL_OFFSET = 0.15;         // Guardrail lateral offset on shoulder
 const TRACK_SAMPLES = 800;        // Arc-length samples for continuous smooth curves
 const FOG_NEAR = 120;
 const FOG_FAR = 650;              // Visible distance for highway horizon
+
+// Camera Constants (DeepSeek V4 Pro Optical Flow Tuned)
+const CAM_DIST = 3.6;             // Bike fills 25-30% screen, strong sense of scale
+const CAM_HEIGHT = 1.6;           // Near rider eye level (not a distant drone)
+const CAM_LOOKAHEAD = 9.0;        // Looking down the trail for readable approach motion
+const CAM_LOOK_UP = 0.55;         // Lower aim, keeping road surface in high-flow view
+const BASE_FOV = 68;              // Wide action perspective
+const MAX_FOV_KICK = 14;          // Expands dynamically up to 82° at top speed
+const TOP_SPEED = 12.5;           // m/s (~45 km/h)
 
 function hexColor(hex: string): THREE.Color {
   return new THREE.Color(hex);
@@ -1077,7 +1086,7 @@ export class Racing3DRenderer {
   private smoothCamTarget = new THREE.Vector3(0, 2, 0);
   private smoothCamLateral: number = 0;
   private smoothCamRoll: number = 0;
-  private smoothFov: number = 54;
+  private smoothFov: number = BASE_FOV;
 
   // Time & animations
   private elapsedTime = 0;
@@ -1107,7 +1116,7 @@ export class Racing3DRenderer {
     // ── 2. Camera ──
     const w = container.clientWidth || 800;
     const h = container.clientHeight || 600;
-    this.camera = new THREE.PerspectiveCamera(54, w / h, 0.1, 2500);
+    this.camera = new THREE.PerspectiveCamera(BASE_FOV, w / h, 0.1, 2500);
     this.camera.position.set(0, 5, 12);
 
     // ── 3. WebGL Renderer ──
@@ -1370,21 +1379,31 @@ export class Racing3DRenderer {
     roadMesh.receiveShadow = true;
     this.scene.add(roadMesh);
 
-    // Center Dashed White Lines
-    this.buildCenterLine();
+    // Road Lane Markings & Optical Flow Features
+    this.buildLaneMarkings();
   }
 
-  // ─── Center Dashed Lane Lines ─────────────────────────────────────────────
+  // ─── High-Contrast Road Lane Markings (DeepSeek Optical Flow) ─────────────
 
-  private buildCenterLine() {
-    if (this.trackId === 'offroad_downhill') return; // Offroad mountain trails do not have paved center lane markings
+  private buildLaneMarkings() {
+    const isOffroad = this.trackId === 'offroad_downhill';
+    if (isOffroad) {
+      this.buildOffroadTracksAndDashes();
+    } else {
+      this.buildPavedMarkings();
+    }
+  }
 
+  private buildPavedMarkings() {
+    // 1. Bright Golden-Yellow Dashed Center Line (3 samples dash / 3 samples gap ~ 3m/3m)
+    // High contrast optical flow at 40+ km/h
     const dashPositions: number[] = [];
     const dashIndices: number[] = [];
-    let vertIdx = 0;
+    let dVertIdx = 0;
+    const hw = 0.09; // 0.18m wide stripe
 
     for (let i = 0; i < TRACK_SAMPLES; i++) {
-      const isDash = Math.floor(i / 8) % 2 === 0;
+      const isDash = Math.floor(i / 3) % 2 === 0;
       if (!isDash) continue;
 
       const nextI = (i + 1) >= TRACK_SAMPLES ? (this.isClosedTrack ? 0 : TRACK_SAMPLES) : (i + 1);
@@ -1395,27 +1414,170 @@ export class Racing3DRenderer {
       const normal1 = this.sampledNormals[i];
       const normal2 = this.sampledNormals[nextI];
 
-      const hw = 0.10;
       dashPositions.push(
-        pos1.x + normal1.x * hw, pos1.y + 0.03, pos1.z + normal1.z * hw,
-        pos1.x - normal1.x * hw, pos1.y + 0.03, pos1.z - normal1.z * hw,
-        pos2.x + normal2.x * hw, pos2.y + 0.03, pos2.z + normal2.z * hw,
-        pos2.x - normal2.x * hw, pos2.y + 0.03, pos2.z - normal2.z * hw
+        pos1.x + normal1.x * hw, pos1.y + 0.035, pos1.z + normal1.z * hw,
+        pos1.x - normal1.x * hw, pos1.y + 0.035, pos1.z - normal1.z * hw,
+        pos2.x + normal2.x * hw, pos2.y + 0.035, pos2.z + normal2.z * hw,
+        pos2.x - normal2.x * hw, pos2.y + 0.035, pos2.z - normal2.z * hw
       );
       dashIndices.push(
-        vertIdx, vertIdx + 1, vertIdx + 2,
-        vertIdx + 1, vertIdx + 3, vertIdx + 2
+        dVertIdx, dVertIdx + 1, dVertIdx + 2,
+        dVertIdx + 1, dVertIdx + 3, dVertIdx + 2
       );
-      vertIdx += 4;
+      dVertIdx += 4;
     }
 
     const dashGeo = new THREE.BufferGeometry();
     dashGeo.setAttribute('position', new THREE.Float32BufferAttribute(dashPositions, 3));
     dashGeo.setIndex(dashIndices);
     dashGeo.computeVertexNormals();
-
-    const dashMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    const dashMat = new THREE.MeshBasicMaterial({
+      color: 0xffe066,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
     this.scene.add(new THREE.Mesh(dashGeo, dashMat));
+
+    // 2. Continuous Solid White Outer Lane Lines along both edges of asphalt deck
+    const edgePositions: number[] = [];
+    const edgeIndices: number[] = [];
+    let eVertIdx = 0;
+    const edgeLineWidth = 0.08;
+    const edgeOffset = ROAD_HALF_WIDTH - 0.15; // Placed right along asphalt edge inside kerbs
+
+    [-1, 1].forEach((side) => {
+      for (let i = 0; i < TRACK_SAMPLES; i++) {
+        const nextI = (i + 1) >= TRACK_SAMPLES ? (this.isClosedTrack ? 0 : TRACK_SAMPLES) : (i + 1);
+        if (nextI >= this.sampledPositions.length) continue;
+
+        const pos1 = this.sampledPositions[i];
+        const pos2 = this.sampledPositions[nextI];
+        const norm1 = this.sampledNormals[i];
+        const norm2 = this.sampledNormals[nextI];
+
+        const center1 = pos1.clone().addScaledVector(norm1, side * edgeOffset);
+        const center2 = pos2.clone().addScaledVector(norm2, side * edgeOffset);
+
+        edgePositions.push(
+          center1.x + norm1.x * edgeLineWidth, center1.y + 0.03, center1.z + norm1.z * edgeLineWidth,
+          center1.x - norm1.x * edgeLineWidth, center1.y + 0.03, center1.z - norm1.z * edgeLineWidth,
+          center2.x + norm2.x * edgeLineWidth, center2.y + 0.03, center2.z + norm2.z * edgeLineWidth,
+          center2.x - norm2.x * edgeLineWidth, center2.y + 0.03, center2.z - norm2.z * edgeLineWidth
+        );
+        edgeIndices.push(
+          eVertIdx, eVertIdx + 1, eVertIdx + 2,
+          eVertIdx + 1, eVertIdx + 3, eVertIdx + 2
+        );
+        eVertIdx += 4;
+      }
+    });
+
+    const edgeGeo = new THREE.BufferGeometry();
+    edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
+    edgeGeo.setIndex(edgeIndices);
+    edgeGeo.computeVertexNormals();
+    const edgeMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1.5,
+      polygonOffsetUnits: -1.5,
+    });
+    this.scene.add(new THREE.Mesh(edgeGeo, edgeMat));
+  }
+
+  private buildOffroadTracksAndDashes() {
+    // 1. Dual Compacted Dirt Tire Grooves (creates prominent visual stream of texture)
+    const groovePositions: number[] = [];
+    const grooveIndices: number[] = [];
+    let gVertIdx = 0;
+    const grooveWidth = 0.28;
+
+    [-1.1, 1.1].forEach((wheelOffset) => {
+      for (let i = 0; i < TRACK_SAMPLES; i++) {
+        const nextI = (i + 1) >= TRACK_SAMPLES ? (this.isClosedTrack ? 0 : TRACK_SAMPLES) : (i + 1);
+        if (nextI >= this.sampledPositions.length) continue;
+
+        const pos1 = this.sampledPositions[i];
+        const pos2 = this.sampledPositions[nextI];
+        const norm1 = this.sampledNormals[i];
+        const norm2 = this.sampledNormals[nextI];
+
+        const center1 = pos1.clone().addScaledVector(norm1, wheelOffset);
+        const center2 = pos2.clone().addScaledVector(norm2, wheelOffset);
+
+        groovePositions.push(
+          center1.x + norm1.x * grooveWidth, center1.y + 0.025, center1.z + norm1.z * grooveWidth,
+          center1.x - norm1.x * grooveWidth, center1.y + 0.025, center1.z - norm1.z * grooveWidth,
+          center2.x + norm2.x * grooveWidth, center2.y + 0.025, center2.z + norm2.z * grooveWidth,
+          center2.x - norm2.x * grooveWidth, center2.y + 0.025, center2.z - norm2.z * grooveWidth
+        );
+        grooveIndices.push(
+          gVertIdx, gVertIdx + 1, gVertIdx + 2,
+          gVertIdx + 1, gVertIdx + 3, gVertIdx + 2
+        );
+        gVertIdx += 4;
+      }
+    });
+
+    const grooveGeo = new THREE.BufferGeometry();
+    grooveGeo.setAttribute('position', new THREE.Float32BufferAttribute(groovePositions, 3));
+    grooveGeo.setIndex(grooveIndices);
+    grooveGeo.computeVertexNormals();
+    const grooveMat = new THREE.MeshPhongMaterial({
+      color: 0x22130a, // Dark compacted damp canyon dirt
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1.5,
+      polygonOffsetUnits: -1.5,
+    });
+    this.scene.add(new THREE.Mesh(grooveGeo, grooveMat));
+
+    // 2. Offroad Trail Center Limestone / Chalk Navigation Markers (every 3m)
+    const markerPositions: number[] = [];
+    const markerIndices: number[] = [];
+    let mVertIdx = 0;
+    const mw = 0.10;
+
+    for (let i = 0; i < TRACK_SAMPLES; i++) {
+      const isMark = Math.floor(i / 3) % 2 === 0;
+      if (!isMark) continue;
+
+      const nextI = (i + 1) >= TRACK_SAMPLES ? (this.isClosedTrack ? 0 : TRACK_SAMPLES) : (i + 1);
+      if (nextI >= this.sampledPositions.length) continue;
+
+      const pos1 = this.sampledPositions[i];
+      const pos2 = this.sampledPositions[nextI];
+      const norm1 = this.sampledNormals[i];
+      const norm2 = this.sampledNormals[nextI];
+
+      markerPositions.push(
+        pos1.x + norm1.x * mw, pos1.y + 0.03, pos1.z + norm1.z * mw,
+        pos1.x - norm1.x * mw, pos1.y + 0.03, pos1.z - norm1.z * mw,
+        pos2.x + norm2.x * mw, pos2.y + 0.03, pos2.z + norm2.z * mw,
+        pos2.x - norm2.x * mw, pos2.y + 0.03, pos2.z - norm2.z * mw
+      );
+      markerIndices.push(
+        mVertIdx, mVertIdx + 1, mVertIdx + 2,
+        mVertIdx + 1, mVertIdx + 3, mVertIdx + 2
+      );
+      mVertIdx += 4;
+    }
+
+    const markerGeo = new THREE.BufferGeometry();
+    markerGeo.setAttribute('position', new THREE.Float32BufferAttribute(markerPositions, 3));
+    markerGeo.setIndex(markerIndices);
+    markerGeo.computeVertexNormals();
+    const markerMat = new THREE.MeshBasicMaterial({
+      color: 0xecd9c6, // Weathered limestone trail marking
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
+    this.scene.add(new THREE.Mesh(markerGeo, markerMat));
   }
 
   // ─── Continuous 3D Guardrails with Reflector Posts ────────────────────────
@@ -1941,14 +2103,11 @@ export class Racing3DRenderer {
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    // 2. Mountains (Spaced naturally with guaranteed clearance >= 90m from road)
+    // 2. Mountains (Spaced naturally on the far scenic horizon >= 260m from track)
     this.addMountainRange();
 
     // 3. Roadside Vegetation (Pine & palm trees planted safely beside shoulders)
     this.addRoadsideVegetation();
-
-    // 4. Goodyear Blimp in Sky
-    this.addGoodyearBlimp();
 
     this.scene.add(this.envGroup);
   }
@@ -1990,14 +2149,14 @@ export class Racing3DRenderer {
     const numMountains = 24;
     for (let i = 0; i < numMountains; i++) {
       const angle = (i / numMountains) * Math.PI * 2;
-      const baseDistX = spanX + 180 + (i % 4) * 45;
-      const baseDistZ = spanZ + 180 + ((i * 3) % 4) * 45;
+      const baseDistX = spanX + 280 + (i % 4) * 60;
+      const baseDistZ = spanZ + 280 + ((i * 3) % 4) * 60;
       let mx = centerX + Math.cos(angle) * baseDistX;
       let mz = centerZ + Math.sin(angle) * baseDistZ;
-      const radius = 45 + ((i * 11) % 35);
-      const height = 55 + ((i * 17) % 65);
+      const radius = 60 + ((i * 11) % 45);
+      const height = 90 + ((i * 17) % 85);
 
-      // DeepSeek clearance verification: Mountain base must maintain clearance >= 90m from every track point
+      // DeepSeek clearance verification: Mountain base must maintain clearance >= 260m from every track station
       const getMinDistToTrack = () => {
         let minD = Infinity;
         for (const p of this.sampledPositions) {
@@ -2008,24 +2167,23 @@ export class Racing3DRenderer {
       };
 
       let minD = getMinDistToTrack();
-      while (minD - radius < 90) {
-        mx += Math.cos(angle) * 30;
-        mz += Math.sin(angle) * 30;
+      while (minD - radius < 260) {
+        mx += Math.cos(angle) * 40;
+        mz += Math.sin(angle) * 40;
         minD = getMinDistToTrack();
       }
 
       const mat = i % 2 === 0 ? mtnMat : secondaryMtnMat;
       const mtnGeo = new THREE.ConeGeometry(radius, height, 7);
       const mtn = new THREE.Mesh(mtnGeo, mat);
-      mtn.position.set(mx, height * 0.5 - 2, mz);
+      mtn.position.set(mx, -8 + height * 0.5, mz);
       mtn.receiveShadow = true;
       this.envGroup.add(mtn);
 
       // Summit peak cap (Snow cap on highway/alpine tracks, sunlit sandstone cap on offroad canyon)
       const capGeo = new THREE.ConeGeometry(radius * 0.32, height * 0.22, 7);
       const cap = new THREE.Mesh(capGeo, capMat);
-      cap.position.copy(mtn.position);
-      cap.position.y += height * 0.39;
+      cap.position.set(mx, -8 + height * 0.5 + height * 0.39, mz);
       this.envGroup.add(cap);
     }
   }
@@ -2061,25 +2219,6 @@ export class Racing3DRenderer {
       );
       this.envGroup.add(treeGroup);
     }
-  }
-
-  private addGoodyearBlimp() {
-    const blimpGroup = new THREE.Group();
-    blimpGroup.position.set(160, 95, -180);
-
-    const bodyMat = new THREE.MeshPhongMaterial({ color: 0xdbeafe, shininess: 80 });
-    const body = new THREE.Mesh(new THREE.SphereGeometry(18, 20, 16), bodyMat);
-    body.scale.set(1, 0.55, 2.6);
-    blimpGroup.add(body);
-
-    const finMat = new THREE.MeshPhongMaterial({ color: 0x1e3a8a });
-    [-1, 1].forEach((fSide) => {
-      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.5, 6, 5), finMat);
-      fin.position.set(fSide * 8, 0, -32);
-      blimpGroup.add(fin);
-    });
-
-    this.scene.add(blimpGroup);
   }
 
   // ─── Custom Blender/glTF GLB Bike Loader ─────────────────────────────────────────
@@ -2375,27 +2514,35 @@ export class Racing3DRenderer {
       }
     }
 
-    // ── Smooth Spring-Arm Chase Camera Follow with Horizon Banking & Apex Anticipation ──
+    // ── Smooth Spring-Arm Chase Camera Follow with Horizon Banking & Apex Anticipation (DeepSeek V4 Pro) ──
     if (playerPos && playerTangent && playerNormal) {
       const lastPlayer = racers.find((r) => r.isPlayer);
       const playerCyclist = lastPlayer ? this.cyclists.get(lastPlayer.id) : null;
       const playerSpeed = lastPlayer?.speedMps || 0;
       const isBoosting = !!(lastPlayer?.isMotorActive && lastPlayer.batteryPct > 1);
 
+      // Re-orthogonalize track vectors (fixes curvature drift and slope tilting)
+      const forward = playerTangent.clone().normalize();
+      const lateralRight = playerNormal.clone().normalize();
+      // Upward vector normal to the road deck
+      const surfaceUp = new THREE.Vector3().crossVectors(forward, lateralRight).normalize();
+
+      // Normalized speed 0..1
+      const speed01 = THREE.MathUtils.clamp(playerSpeed / TOP_SPEED, 0, 1);
+
       // 1. Independent lateral smoothing (prevents rigid snapping when turning left/right)
       const targetLateral = lastPlayer ? lastPlayer.x : 0;
-      const lateralAlpha = 1 - Math.exp(-2.5 * dt);
+      const lateralAlpha = 1 - Math.exp(-3.5 * dt);
       this.smoothCamLateral += (targetLateral - this.smoothCamLateral) * lateralAlpha;
 
-      // 2. Base camera offset: behind and above
-      const camDist = 8.2;
-      const camHeight = 3.6;
+      // 2. Base camera offset: closely behind (-forward) and above (+surfaceUp)
+      // Bike fills 25-30% screen, providing immediate 2.3x higher optical flow
       const targetCamPos = playerPos.clone()
-        .addScaledVector(playerTangent, -camDist)
-        .add(new THREE.Vector3(0, camHeight, 0))
-        .addScaledVector(playerNormal, this.smoothCamLateral * 1.35);
+        .addScaledVector(forward, -CAM_DIST)
+        .addScaledVector(surfaceUp, CAM_HEIGHT)
+        .addScaledVector(lateralRight, this.smoothCamLateral * 0.90);
 
-      // 3. Apex look-ahead: looks into the corner apex and smoothly anticipates player heading
+      // 3. Apex look-ahead: looks further down the trail (+forward) with corner apex anticipation
       const lapLen = this.gameTrackLength / this.laps;
       const trackFrac = this.isClosedTrack
         ? (((lastPlayer?.z || 0) % lapLen) / lapLen)
@@ -2405,39 +2552,41 @@ export class Racing3DRenderer {
         Math.max(0, Math.floor(trackFrac * TRACK_SAMPLES))
       );
       const kappaLat = this.sampledCurvatures[sampleIdx] || 0;
-      const apexOffset = THREE.MathUtils.clamp(kappaLat * 18.0, -2.4, 2.4);
+      const apexOffset = THREE.MathUtils.clamp(kappaLat * 16.0, -2.0, 2.0);
 
       const targetLookAt = playerPos.clone()
-        .addScaledVector(playerTangent, 6.5)
-        .add(new THREE.Vector3(0, 0.9, 0))
-        .addScaledVector(playerNormal, apexOffset + this.smoothCamLateral * 0.45);
+        .addScaledVector(forward, CAM_LOOKAHEAD)
+        .addScaledVector(surfaceUp, CAM_LOOK_UP)
+        .addScaledVector(lateralRight, apexOffset + this.smoothCamLateral * 0.35);
 
-      // 4. Exponential position and target damping
-      const posAlpha = 1 - Math.exp(-5.5 * dt);
-      const lookAlpha = 1 - Math.exp(-7.0 * dt);
+      // 4. Frame-rate independent exponential smoothing (snappy & solid)
+      const posAlpha = 1 - Math.exp(-9.0 * dt);
+      const lookAlpha = 1 - Math.exp(-12.0 * dt);
       this.smoothCamPos.lerp(targetCamPos, posAlpha);
       this.smoothCamTarget.lerp(targetLookAt, lookAlpha);
 
       this.camera.position.copy(this.smoothCamPos);
 
-      // 5. Dutch roll / horizon banking: camera up-vector subtly tilts with bicycle bank angle
-      const targetCamRoll = (playerCyclist?.currentLean || 0) * 0.18;
-      const rollAlpha = 1 - Math.exp(-4.0 * dt);
+      // 5. Subtle camera micro-shake at high speed (creates tactile speed vibration)
+      const shake = 0.012 * speed01 * speed01;
+      this.camera.position.x += (Math.random() - 0.5) * shake;
+      this.camera.position.y += (Math.random() - 0.5) * shake;
+
+      // 6. Dutch roll / horizon banking: camera tilts with bicycle bank angle
+      const targetCamRoll = (playerCyclist?.currentLean || 0) * 0.20;
+      const rollAlpha = 1 - Math.exp(-4.5 * dt);
       this.smoothCamRoll += (targetCamRoll - this.smoothCamRoll) * rollAlpha;
 
       const viewDir = new THREE.Vector3().subVectors(this.smoothCamTarget, this.smoothCamPos).normalize();
       if (viewDir.lengthSq() > 0.001) {
-        const camUp = new THREE.Vector3(0, 1, 0).applyAxisAngle(viewDir, this.smoothCamRoll);
+        const camUp = surfaceUp.clone().applyAxisAngle(viewDir, this.smoothCamRoll);
         this.camera.up.copy(camUp.normalize());
       }
       this.camera.lookAt(this.smoothCamTarget);
 
-      // 6. Dynamic FOV with speed and boost
-      const baseFov = 54;
-      const speedFov = THREE.MathUtils.clamp(playerSpeed / 12, 0, 1) * 6;
-      const boostFov = isBoosting ? 6 : 0;
-      const targetFov = baseFov + speedFov + boostFov;
-      const fovAlpha = 1 - Math.exp(-3.5 * dt);
+      // 7. Dynamic FOV kick: expands peripheral vision from 68° to 82° at top speed
+      const targetFov = BASE_FOV + (MAX_FOV_KICK * (speed01 * speed01)) + (isBoosting ? 4 : 0);
+      const fovAlpha = 1 - Math.exp(-4.0 * dt);
       this.smoothFov += (targetFov - this.smoothFov) * fovAlpha;
       this.camera.fov = this.smoothFov;
       this.camera.updateProjectionMatrix();

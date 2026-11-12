@@ -258,45 +258,94 @@ export const RacingScreen: React.FC = () => {
 
   const container3dRef = useRef<HTMLDivElement | null>(null);
   const renderer3dRef = useRef<Racing3DRenderer | null>(null);
-  const telemetryRef = useRef({
-    playerZ,
-    playerX,
-    playerSpeedMps,
-    isPedaling,
-    isMotorAssistActive,
-    isBraking,
-    isRegenActive,
-    batteryRemainingMah,
-    totalCapacityMah,
-    bikeColor,
-    aiRiders,
-    characterName: state.character.name,
-    outfitColor: state.character.outfitColor || '#0284c7',
-    character: state.character,
-  });
-
-  useEffect(() => {
-    telemetryRef.current = {
-      playerZ,
-      playerX,
-      playerSpeedMps,
-      isPedaling,
-      isMotorAssistActive,
-      isBraking,
-      isRegenActive,
-      batteryRemainingMah,
-      totalCapacityMah,
-      bikeColor,
-      aiRiders,
-      characterName: state.character.name,
-      outfitColor: state.character.outfitColor || '#0284c7',
-      character: state.character,
-    };
-  });
-
   const prevRankRef = useRef<number>(playerRank);
-  const animationFrameRef = useRef<number | null>(null);
-  const lastTickTimeRef = useRef<number>(performance.now());
+
+  // Authoritative simulation state stored in ref: never triggers React effect teardowns or dt crushing
+  const simRef = useRef({
+    playerZ: 0,
+    playerX: 0,
+    playerSpeedMps: 0,
+    batteryRemainingMah: totalCapacityMah,
+    raceTimeSeconds: 0,
+    topSpeedKmhRecorded: 0,
+    playerFinishTime: null as number | null,
+    raceFinished: false,
+    isPaused: false,
+    isStalledOnHill: false,
+    hasBatteryExhausted: false,
+    downhillSavedWh: 0,
+    totalRegeneratedMah: 0,
+    humanPowerW: 0,
+    pedalCadenceRpm: 0,
+    loadedVoltageV: nominalPackV,
+    motorCurrentA: 0,
+    motorPowerW: 0,
+    regenCurrentA: 0,
+    regenPowerW: 0,
+    isRegenActive: false,
+    isPedaling: false,
+    isBraking: false,
+    isSteeringLeft: false,
+    isSteeringRight: false,
+    isMotorAssistActive: false,
+    playerRank: 2,
+    aiRiders: [
+      {
+        id: 'racer_tina',
+        name: 'เทอร์โบ ทีน่า (Turbo Tina)',
+        shortName: 'ทีน่า',
+        icon: '🚀',
+        color: '#a855f7',
+        z: 0,
+        x: -0.6,
+        speedMps: 0,
+        batteryRemainingMah: 4000,
+        totalCapacityMah: 4000,
+        internalResistance: 0.15,
+        stamina: 100,
+        targetLaneX: -0.6,
+        strategy: 'steady_pacing' as const,
+        isFinished: false,
+        finishTimeSeconds: null as number | null,
+      },
+      {
+        id: 'racer_sam',
+        name: 'สปีดี้ แซม (Speedy Sam)',
+        shortName: 'แซม',
+        icon: '⚡',
+        color: '#ef4444',
+        z: 0,
+        x: 0.5,
+        speedMps: 0,
+        batteryRemainingMah: 2000,
+        totalCapacityMah: 2000,
+        internalResistance: 0.30,
+        stamina: 100,
+        targetLaneX: 0.5,
+        strategy: 'sprint_burst' as const,
+        isFinished: false,
+        finishTimeSeconds: null as number | null,
+      },
+      {
+        id: 'racer_captain',
+        name: 'กัปตัน บิ๊กบล็อก (Captain Big-Block)',
+        shortName: 'บิ๊กบล็อก',
+        icon: '🛡️',
+        color: '#f59e0b',
+        z: 0,
+        x: 0.85,
+        speedMps: 0,
+        batteryRemainingMah: 6000,
+        totalCapacityMah: 6000,
+        internalResistance: 0.12,
+        stamina: 100,
+        targetLaneX: 0.85,
+        strategy: 'hill_power' as const,
+        isFinished: false,
+        finishTimeSeconds: null as number | null,
+      },
+    ],
+  });
 
   // Track slope computation based on trackId and distance z
   const getTrackSlopePercent = useCallback(
@@ -319,7 +368,6 @@ export const RacingScreen: React.FC = () => {
         return -2;              // Crest to finish (-2%)
       }
       if (isEndurance) {
-        // sinusoidal rolling hills (+4% to -3%)
         return Math.sin((z / 90) * Math.PI) * 4.5;
       }
       return 0; // Flat sprint
@@ -327,66 +375,146 @@ export const RacingScreen: React.FC = () => {
     [isHillClimb, isEndurance, isOffroadDownhill]
   );
 
-  // Track curvature computation based on distance z
-  const getTrackCurvature = useCallback(
-    (z: number) => {
-      if (isOffroadDownhill) {
-        return Math.sin((z / 90) * Math.PI) * 0.95;
-      }
-      if (isEndurance) {
-        return Math.sin((z / 120) * Math.PI) * 0.8;
-      }
-      if (isHillClimb) {
-        return Math.cos((z / 150) * Math.PI) * 0.4;
-      }
-      return 0; // straight sprint
-    },
-    [isEndurance, isHillClimb, isOffroadDownhill]
-  );
+  // Control Actions (Synchronously updates simRef and sets React state for HUD / button highlights)
+  const handlePedalStart = useCallback(() => {
+    simRef.current.isPedaling = true;
+    setIsPedaling(true);
+    playRacingTone('pedal');
+  }, []);
 
-  // Keyboard controls listener
+  const handlePedalEnd = useCallback(() => {
+    simRef.current.isPedaling = false;
+    setIsPedaling(false);
+  }, []);
+
+  const handleBrakeStart = useCallback(() => {
+    simRef.current.isBraking = true;
+    setIsBraking(true);
+    playRacingTone(simRef.current.isRegenActive ? 'regen' : 'brake');
+  }, []);
+
+  const handleBrakeEnd = useCallback(() => {
+    simRef.current.isBraking = false;
+    setIsBraking(false);
+  }, []);
+
+  const handleSteerLeftStart = useCallback(() => {
+    simRef.current.isSteeringLeft = true;
+    setIsSteeringLeft(true);
+  }, []);
+
+  const handleSteerLeftEnd = useCallback(() => {
+    simRef.current.isSteeringLeft = false;
+    setIsSteeringLeft(false);
+  }, []);
+
+  const handleSteerRightStart = useCallback(() => {
+    simRef.current.isSteeringRight = true;
+    setIsSteeringRight(true);
+  }, []);
+
+  const handleSteerRightEnd = useCallback(() => {
+    simRef.current.isSteeringRight = false;
+    setIsSteeringRight(false);
+  }, []);
+
+  const handleToggleMotor = useCallback(() => {
+    if (simRef.current.batteryRemainingMah <= 5) return;
+    const next = !simRef.current.isMotorAssistActive;
+    simRef.current.isMotorAssistActive = next;
+    setIsMotorAssistActive(next);
+    if (next) playRacingTone('boost');
+  }, []);
+
+  const handleTogglePause = useCallback(() => {
+    const next = !simRef.current.isPaused;
+    simRef.current.isPaused = next;
+    setIsPaused(next);
+  }, []);
+
+  const handleRestartRace = useCallback(() => {
+    const sim = simRef.current;
+    sim.playerZ = 0;
+    sim.playerX = 0;
+    sim.playerSpeedMps = 0;
+    sim.raceTimeSeconds = 0;
+    sim.batteryRemainingMah = totalCapacityMah;
+    sim.topSpeedKmhRecorded = 0;
+    sim.playerFinishTime = null;
+    sim.raceFinished = false;
+    sim.isPaused = false;
+    sim.isStalledOnHill = false;
+    sim.hasBatteryExhausted = false;
+    sim.downhillSavedWh = 0;
+    sim.totalRegeneratedMah = 0;
+    sim.playerRank = 2;
+    sim.aiRiders = sim.aiRiders.map((ai) => ({
+      ...ai,
+      z: 0,
+      x: ai.targetLaneX,
+      speedMps: 0,
+      isFinished: false,
+      finishTimeSeconds: null,
+      batteryRemainingMah: ai.totalCapacityMah,
+    }));
+    setPlayerZ(0);
+    setPlayerSpeedMps(0);
+    setRaceTimeSeconds(0);
+    setBatteryRemainingMah(totalCapacityMah);
+    setPlayerRank(2);
+    setIsPaused(false);
+    setRaceFinished(false);
+    setIsStalledOnHill(false);
+    setHasBatteryExhausted(false);
+  }, [totalCapacityMah]);
+
+  // Keyboard controls listener (Registered once at mount; reads/writes directly to simRef)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
-        setIsPaused((prev) => !prev);
+        handleTogglePause();
         return;
       }
-      if (isPaused || raceFinished) return;
+      if (simRef.current.isPaused || simRef.current.raceFinished) return;
 
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        simRef.current.isPedaling = true;
         setIsPedaling(true);
       }
       if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        simRef.current.isBraking = true;
         setIsBraking(true);
       }
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        simRef.current.isSteeringLeft = true;
         setIsSteeringLeft(true);
       }
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        simRef.current.isSteeringRight = true;
         setIsSteeringRight(true);
       }
       if (e.key === ' ' || e.key === 'Shift') {
         if (!e.repeat) {
-          setIsMotorAssistActive((prev) => {
-            const next = !prev;
-            if (next) playRacingTone('boost');
-            return next;
-          });
+          handleToggleMotor();
         }
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        simRef.current.isPedaling = false;
         setIsPedaling(false);
       }
       if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        simRef.current.isBraking = false;
         setIsBraking(false);
       }
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        simRef.current.isSteeringLeft = false;
         setIsSteeringLeft(false);
       }
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        simRef.current.isSteeringRight = false;
         setIsSteeringRight(false);
       }
     };
@@ -397,320 +525,11 @@ export const RacingScreen: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isPaused, raceFinished]);
+  }, [handleTogglePause, handleToggleMotor]);
 
-  // Main Continuous Physics & AI Loop (60 FPS requestAnimationFrame)
-  useEffect(() => {
-    lastTickTimeRef.current = performance.now();
-
-    const loop = (currentTime: number) => {
-      const dt = Math.min(0.05, (currentTime - lastTickTimeRef.current) / 1000);
-      lastTickTimeRef.current = currentTime;
-
-      if (!isPaused && !raceFinished) {
-        // Advance race time
-        setRaceTimeSeconds((t) => Number((t + dt).toFixed(2)));
-
-        // ----------------- PLAYER PHYSICS -----------------
-        const totalMassKg = 82; // rider (70kg) + bicycle & battery (12kg)
-        const gravity = 9.81;
-        const currentSlope = getTrackSlopePercent(playerZ);
-        const slopeRadians = Math.atan(currentSlope / 100);
-
-        // 1. Forces resisting motion
-        // Rolling resistance: F_roll = Crr * m * g * cos(theta)
-        const rollingResistanceN = 0.004 * totalMassKg * gravity * Math.cos(slopeRadians);
-        // Aerodynamic drag: F_drag = 0.5 * rho * Cd * A * v^2 (Cd*A ~ 0.36)
-        const aeroDragN = 0.5 * 1.225 * 0.36 * Math.pow(playerSpeedMps, 2);
-        // Grade / slope resistance: F_slope = m * g * sin(theta)
-        const slopeForceN = totalMassKg * gravity * Math.sin(slopeRadians);
-        // Braking force
-        const brakeForceN = isBraking ? 200 : 0;
-
-        // 2. Human Pedaling Force
-        let humanPower = 0;
-        let humanForceN = 0;
-        if (isPedaling && !isBraking) {
-          // Sprint pedaling: full athletic burst (~240-270 Watts)
-          humanPower = 245 + Math.sin(currentTime * 0.008) * 25;
-          humanForceN = Math.min(130, humanPower / Math.max(playerSpeedMps, 2.0));
-        } else if (!isBraking) {
-          // Automatic baseline pedaling / cadence (~110-130 Watts) so player cruises naturally
-          humanPower = 115 + Math.sin(currentTime * 0.005) * 15;
-          humanForceN = Math.min(60, humanPower / Math.max(playerSpeedMps, 2.5));
-        }
-        setHumanPowerW(Math.round(humanPower));
-        setPedalCadenceRpm(
-          isPedaling
-            ? Math.round(75 + playerSpeedMps * 3.5)
-            : playerSpeedMps > 0.5
-            ? Math.round(45 + playerSpeedMps * 2.5)
-            : 0
-        );
-
-        // 3. Electric Motor Assist Force from Saved Battery Pack & Motor Selection
-        let motorThrustForceN = 0;
-        let motorCurrent = 0;
-        let loadedVoltage = nominalPackV;
-        let motorPower = 0;
-
-        const hasBatteryJuice = batteryRemainingMah > 5;
-        if (!hasBatteryJuice && !hasBatteryExhausted) {
-          setHasBatteryExhausted(true);
-        }
-
-        const maxMotorCurrentA = chosenMotorVoltage === 24 ? 6.8 : chosenMotorVoltage === 12 ? 4.2 : 3.5;
-        const voltageMatchRatio = Math.min(1.0, nominalPackV / chosenMotorVoltage);
-        const powerEfficiency = Math.pow(voltageMatchRatio, 2);
-
-        if (isMotorAssistActive && hasBatteryJuice && !isBraking) {
-          const openCircuitV = nominalPackV * (0.95 + 0.05 * (batteryRemainingMah / totalCapacityMah));
-          const motorBackEmfV = Math.min(openCircuitV * 0.85, playerSpeedMps * (chosenMotorVoltage * 0.035));
-          const motorWindingR = chosenMotorVoltage === 24 ? 0.45 : chosenMotorVoltage === 12 ? 0.65 : 0.85;
-
-          const effectiveCurrent = Math.max(
-            0.6,
-            (openCircuitV - motorBackEmfV) / (motorWindingR + internalResistance)
-          );
-          motorCurrent = Math.min(maxMotorCurrentA, effectiveCurrent);
-          loadedVoltage = Math.max(1.2, openCircuitV - motorCurrent * internalResistance);
-
-          // Real mechanical motor power output scaled by powerEfficiency
-          const elecPower = loadedVoltage * motorCurrent;
-          motorPower = Math.round(
-            elecPower * (chosenMotorVoltage === 24 ? 5.8 : chosenMotorVoltage === 12 ? 9.5 : 18) * powerEfficiency
-          );
-
-          // Motor Thrust Force: Strong starting torque, scaled by motor voltage & matching
-          const speedFactor = Math.max(playerSpeedMps, 2.0);
-          const maxThrust = chosenMotorVoltage === 24 ? 125 : chosenMotorVoltage === 12 ? 85 : 55;
-          motorThrustForceN = Math.min(maxThrust, (motorPower * 0.88) / speedFactor) * voltageMatchRatio;
-
-          // Scaled battery drain for arcade race pacing (24V 8S1P drains rapidly under full throttle!)
-          const drainMultiplier = chosenMotorVoltage === 24 ? 4.8 : 4.2;
-          const drainMah = (motorCurrent * 1000 * dt * drainMultiplier) / 3600;
-          setBatteryRemainingMah((prev) => Math.max(0, prev - drainMah));
-        } else if (isMotorAssistActive && !hasBatteryJuice) {
-          setIsMotorAssistActive(false);
-        }
-
-        // Downhill energy saving tracking (Gravity assist saves Wh when coasting)
-        if (currentSlope < 0 && !isMotorAssistActive && playerSpeedMps > 2.5) {
-          setDownhillSavedWh((prev) => prev + (chosenMotorVoltage * 3.5 * dt) / 3600);
-        }
-
-        // 3.1 Regenerative Braking (KERS) & Battery Energy Recovery
-        // Triggered when braking at speed (playerSpeedMps > 1.8) or steep downhill coasting (slope < -8% & playerSpeedMps > 4.5)
-        let regenCurrent = 0;
-        let regenPower = 0;
-        let regenBrakingForceN = 0;
-        const isRegenCandidate =
-          (isBraking && playerSpeedMps > 1.8) ||
-          (currentSlope < -8 && playerSpeedMps > 4.5 && !isMotorAssistActive);
-
-        if (isRegenCandidate && batteryRemainingMah < totalCapacityMah) {
-          // Generator Induced Back-EMF based on motor rating & speed
-          const genKvFactor = chosenMotorVoltage * 0.052;
-          const inducedGenV = playerSpeedMps * genKvFactor;
-
-          if (inducedGenV > nominalPackV * 0.55 || isBraking) {
-            const rawRegenA = Math.max(
-              0,
-              (inducedGenV - nominalPackV * 0.5) / (0.55 + internalResistance)
-            );
-            regenCurrent = Math.min(5.2, rawRegenA * (isBraking ? 1.0 : 0.65));
-
-            if (regenCurrent > 0.15) {
-              regenPower = Math.round(nominalPackV * regenCurrent);
-              // Electromagnetic back-torque braking resistance (smooth magnetic deceleration)
-              regenBrakingForceN = Math.min(130, (regenPower * 0.95) / Math.max(playerSpeedMps, 1.5));
-
-              // Real chemical recharge with 75% coulombic efficiency
-              const rechargeMah = (regenCurrent * 1000 * dt * 0.75) / 3600;
-              setBatteryRemainingMah((prev) => Math.min(totalCapacityMah, prev + rechargeMah));
-              setTotalRegeneratedMah((prev) => prev + rechargeMah);
-              setIsRegenActive(true);
-            } else {
-              setIsRegenActive(false);
-            }
-          } else {
-            setIsRegenActive(false);
-          }
-        } else {
-          setIsRegenActive(false);
-        }
-
-        setRegenCurrentA(Number(regenCurrent.toFixed(2)));
-        setRegenPowerW(regenPower);
-
-        setMotorCurrentA(Number(motorCurrent.toFixed(2)));
-        setLoadedVoltageV(Number(loadedVoltage.toFixed(2)));
-        setMotorPowerW(Math.round(motorPower));
-
-        // 4. Net Acceleration: F_net = F_pedal + F_motor - F_drag - F_roll - F_slope - F_brake - F_regen
-        const netForceN =
-          humanForceN +
-          motorThrustForceN -
-          aeroDragN -
-          rollingResistanceN -
-          slopeForceN -
-          brakeForceN -
-          regenBrakingForceN;
-        const accelerationMps2 = netForceN / totalMassKg;
-
-        // 5. Update Speed with friction clamp
-        const newSpeedMps = Math.max(0, playerSpeedMps + accelerationMps2 * dt);
-        setPlayerSpeedMps(newSpeedMps);
-        const speedKmh = newSpeedMps * 3.6;
-        setTopSpeedKmhRecorded((prev) => Math.max(prev, Math.round(speedKmh)));
-
-        // Detect Stall on uphill slope (Insufficient torque or depleted battery)
-        if (isHillClimb && currentSlope >= 10 && newSpeedMps <= 0.25 && playerZ > 50 && !isStalledOnHill) {
-          if (!hasBatteryJuice || voltageMatchRatio < 0.6) {
-            setIsStalledOnHill(true);
-            playRacingTone('brake');
-          }
-        }
-
-        // 6. Update Distance
-        let updatedPlayerZ = playerZ + newSpeedMps * dt;
-        if (updatedPlayerZ >= totalTrackLength) {
-          updatedPlayerZ = totalTrackLength;
-          if (!raceFinished) {
-            setPlayerFinishTime(raceTimeSeconds);
-            setRaceFinished(true);
-            playRacingTone('finish');
-          }
-        }
-        setPlayerZ(updatedPlayerZ);
-
-        // 7. Update Steering (Lateral Position X within -1.0 to +1.0)
-        let lateralVelocity = 0;
-        if (isSteeringLeft) lateralVelocity -= 1.6;
-        if (isSteeringRight) lateralVelocity += 1.6;
-        setPlayerX((prevX) => Math.max(-1.0, Math.min(1.0, prevX + lateralVelocity * dt)));
-
-        // ----------------- AI OPPONENTS PHYSICS -----------------
-        setAiRiders((prevRiders) =>
-          prevRiders.map((ai) => {
-            if (ai.isFinished) return ai;
-
-            const aiSlope = getTrackSlopePercent(ai.z);
-            const aiSlopeRad = Math.atan(aiSlope / 100);
-            const aiSlopeForce = 82 * gravity * Math.sin(aiSlopeRad);
-            const aiDrag = 0.5 * 1.225 * 0.36 * Math.pow(ai.speedMps, 2);
-            const aiRoll = 0.004 * 82 * gravity;
-
-            let aiTotalForwardWatts = 220;
-
-            // Strategy behaviors
-            if (ai.strategy === 'sprint_burst') {
-              // Speedy Sam (2S1P): Very fast aggressive start (~32-34 km/h), but fades as battery sags
-              if (ai.z < totalTrackLength * 0.32) {
-                aiTotalForwardWatts = 340; // Early explosive burst
-              } else if (ai.z < totalTrackLength * 0.65) {
-                aiTotalForwardWatts = 230; // Fading
-              } else {
-                aiTotalForwardWatts = 195; // Heavy voltage sag
-              }
-              if (aiSlope > 4) aiTotalForwardWatts = Math.max(210, aiTotalForwardWatts); // Grinds up hill in low gear
-            } else if (ai.strategy === 'steady_pacing') {
-              // Turbo Tina (2S2P): Benchmark competitor - steady solid 30-32 km/h
-              aiTotalForwardWatts = aiSlope > 4 ? 310 : 270; // Handles hill climb well
-            } else if (ai.strategy === 'hill_power') {
-              // Captain Big-Block: Heavy bike, 26-28 km/h on flat, pulls strong 30-32 km/h on hills
-              aiTotalForwardWatts = aiSlope > 4 ? 350 : 230;
-            }
-
-            // Low-gear torque multiplication on hills (provides up to 185N thrust against steep slopes)
-            const cap = aiSlope > 4 ? 185 : 95;
-            const minSpeedForThrust = aiSlope > 4 ? 1.0 : 2.4;
-            const aiThrustForce = Math.min(cap, aiTotalForwardWatts / Math.max(ai.speedMps, minSpeedForThrust));
-            const aiNetForce = aiThrustForce - aiDrag - aiRoll - aiSlopeForce;
-            const aiAccel = aiNetForce / 82;
-            const newAiSpeed = Math.max(0, ai.speedMps + aiAccel * dt);
-
-            let newAiZ = ai.z + newAiSpeed * dt;
-            let isAiDone: boolean = ai.isFinished;
-            let aiDoneTime: number | null = ai.finishTimeSeconds;
-
-            if (newAiZ >= totalTrackLength) {
-              newAiZ = totalTrackLength;
-              isAiDone = true;
-              aiDoneTime = aiDoneTime ?? raceTimeSeconds;
-            }
-
-            // AI Lane adjustment: gentle sway to keep track natural
-            const laneSway = Math.sin(currentTime * 0.002 + ai.z * 0.05) * 0.15;
-            const targetX = Math.max(-0.9, Math.min(0.9, ai.targetLaneX + laneSway));
-
-            // Drain AI battery
-            const aiDrain = (1.5 * dt * 4.2 * 1000) / 3600;
-
-            return {
-              ...ai,
-              z: newAiZ,
-              x: targetX,
-              speedMps: newAiSpeed,
-              batteryRemainingMah: Math.max(0, ai.batteryRemainingMah - aiDrain),
-              isFinished: isAiDone,
-              finishTimeSeconds: aiDoneTime,
-            };
-          })
-        );
-      }
-
-      animationFrameRef.current = requestAnimationFrame(loop);
-    };
-
-    animationFrameRef.current = requestAnimationFrame(loop);
-    return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    };
-  }, [
-    isPaused,
-    raceFinished,
-    playerZ,
-    playerSpeedMps,
-    isPedaling,
-    isBraking,
-    isSteeringLeft,
-    isSteeringRight,
-    isMotorAssistActive,
-    batteryRemainingMah,
-    totalCapacityMah,
-    nominalPackV,
-    internalResistance,
-    totalTrackLength,
-    raceTimeSeconds,
-    getTrackSlopePercent,
-  ]);
-
-  // Compute live ranking across all 4 racers
-  useEffect(() => {
-    let rank = 1;
-    aiRiders.forEach((ai) => {
-      if (ai.isFinished && !playerFinishTime) {
-        rank++;
-      } else if (ai.isFinished && playerFinishTime) {
-        if (ai.finishTimeSeconds! < playerFinishTime) rank++;
-      } else if (ai.z > playerZ) {
-        rank++;
-      }
-    });
-
-    if (rank !== prevRankRef.current) {
-      if (rank < prevRankRef.current) {
-        playRacingTone('rank_change', 650);
-      } else {
-        playRacingTone('rank_change', 320);
-      }
-      prevRankRef.current = rank;
-    }
-    setPlayerRank(rank);
-  }, [playerZ, aiRiders, playerFinishTime]);
-
-  // ----------------- THREE.JS 3D RACING RENDERER -----------------
+  // ----------------- AUTHORITATIVE GAME & RENDER LOOP (DeepSeek V4 Pro) -----------------
+  // Single requestAnimationFrame loop: integrates physics + AI at 60 FPS, updates 3D scene directly,
+  // and throttles React HUD state pushes to 20 Hz (50ms). Never remounts or resets dt during race!
   useEffect(() => {
     if (!container3dRef.current) return;
     const renderer = new Racing3DRenderer(
@@ -722,36 +541,288 @@ export const RacingScreen: React.FC = () => {
     renderer3dRef.current = renderer;
 
     let animId: number;
-    let lastRenderTime = performance.now();
+    let lastTick = performance.now();
+    let lastHud = performance.now();
 
-    const renderLoop = (time: number) => {
-      const dt = Math.min(0.05, (time - lastRenderTime) / 1000);
-      lastRenderTime = time;
+    const gameLoop = (now: number) => {
+      let dt = (now - lastTick) / 1000;
+      lastTick = now;
 
+      // DeepSeek clamp: never simulate more than 50ms in one step (guards against tab-switch & GC pauses)
+      if (dt > 0.05) dt = 0.05;
+      if (dt < 0.001) dt = 0.001;
+
+      const sim = simRef.current;
+
+      if (!sim.isPaused && !sim.raceFinished) {
+        sim.raceTimeSeconds += dt;
+
+        // ----------------- PLAYER PHYSICS -----------------
+        const totalMassKg = 82; // rider (70kg) + bicycle & battery (12kg)
+        const gravity = 9.81;
+        const currentSlope = getTrackSlopePercent(sim.playerZ);
+        const slopeRadians = Math.atan(currentSlope / 100);
+
+        // 1. Forces resisting motion
+        const rollingResistanceN = 0.004 * totalMassKg * gravity * Math.cos(slopeRadians);
+        const aeroDragN = 0.5 * 1.225 * 0.36 * Math.pow(sim.playerSpeedMps, 2);
+        const slopeForceN = totalMassKg * gravity * Math.sin(slopeRadians);
+        const brakeForceN = sim.isBraking ? 200 : 0;
+
+        // 2. Human Pedaling Force
+        let humanPower = 0;
+        let humanForceN = 0;
+        if (sim.isPedaling && !sim.isBraking) {
+          humanPower = 245 + Math.sin(now * 0.008) * 25;
+          humanForceN = Math.min(130, humanPower / Math.max(sim.playerSpeedMps, 2.0));
+        } else if (!sim.isBraking) {
+          humanPower = 115 + Math.sin(now * 0.005) * 15;
+          humanForceN = Math.min(60, humanPower / Math.max(sim.playerSpeedMps, 2.5));
+        }
+        sim.humanPowerW = Math.round(humanPower);
+        sim.pedalCadenceRpm = sim.isPedaling
+          ? Math.round(75 + sim.playerSpeedMps * 3.5)
+          : sim.playerSpeedMps > 0.5
+          ? Math.round(45 + sim.playerSpeedMps * 2.5)
+          : 0;
+
+        // 3. Electric Motor Assist Force
+        let motorThrustForceN = 0;
+        let motorCurrent = 0;
+        let loadedVoltage = nominalPackV;
+        let motorPower = 0;
+
+        const hasBatteryJuice = sim.batteryRemainingMah > 5;
+        if (!hasBatteryJuice && !sim.hasBatteryExhausted) {
+          sim.hasBatteryExhausted = true;
+        }
+
+        const maxMotorCurrentA = chosenMotorVoltage === 24 ? 6.8 : chosenMotorVoltage === 12 ? 4.2 : 3.5;
+        const voltageMatchRatio = Math.min(1.0, nominalPackV / chosenMotorVoltage);
+        const powerEfficiency = Math.pow(voltageMatchRatio, 2);
+
+        if (sim.isMotorAssistActive && hasBatteryJuice && !sim.isBraking) {
+          const openCircuitV = nominalPackV * (0.95 + 0.05 * (sim.batteryRemainingMah / totalCapacityMah));
+          const motorBackEmfV = Math.min(openCircuitV * 0.85, sim.playerSpeedMps * (chosenMotorVoltage * 0.035));
+          const motorWindingR = chosenMotorVoltage === 24 ? 0.45 : chosenMotorVoltage === 12 ? 0.65 : 0.85;
+
+          const effectiveCurrent = Math.max(
+            0.6,
+            (openCircuitV - motorBackEmfV) / (motorWindingR + internalResistance)
+          );
+          motorCurrent = Math.min(maxMotorCurrentA, effectiveCurrent);
+          loadedVoltage = Math.max(1.2, openCircuitV - motorCurrent * internalResistance);
+
+          const elecPower = loadedVoltage * motorCurrent;
+          motorPower = Math.round(
+            elecPower * (chosenMotorVoltage === 24 ? 5.8 : chosenMotorVoltage === 12 ? 9.5 : 18) * powerEfficiency
+          );
+
+          const speedFactor = Math.max(sim.playerSpeedMps, 2.0);
+          const maxThrust = chosenMotorVoltage === 24 ? 125 : chosenMotorVoltage === 12 ? 85 : 55;
+          motorThrustForceN = Math.min(maxThrust, (motorPower * 0.88) / speedFactor) * voltageMatchRatio;
+
+          const drainMultiplier = chosenMotorVoltage === 24 ? 4.8 : 4.2;
+          const drainMah = (motorCurrent * 1000 * dt * drainMultiplier) / 3600;
+          sim.batteryRemainingMah = Math.max(0, sim.batteryRemainingMah - drainMah);
+        } else if (sim.isMotorAssistActive && !hasBatteryJuice) {
+          sim.isMotorAssistActive = false;
+          setIsMotorAssistActive(false);
+        }
+
+        if (currentSlope < 0 && !sim.isMotorAssistActive && sim.playerSpeedMps > 2.5) {
+          sim.downhillSavedWh += (chosenMotorVoltage * 3.5 * dt) / 3600;
+        }
+
+        // 3.1 Regenerative Braking (KERS)
+        let regenCurrent = 0;
+        let regenPower = 0;
+        let regenBrakingForceN = 0;
+        const isRegenCandidate =
+          (sim.isBraking && sim.playerSpeedMps > 1.8) ||
+          (currentSlope < -8 && sim.playerSpeedMps > 4.5 && !sim.isMotorAssistActive);
+
+        if (isRegenCandidate && sim.batteryRemainingMah < totalCapacityMah) {
+          const genKvFactor = chosenMotorVoltage * 0.052;
+          const inducedGenV = sim.playerSpeedMps * genKvFactor;
+
+          if (inducedGenV > nominalPackV * 0.55 || sim.isBraking) {
+            const rawRegenA = Math.max(
+              0,
+              (inducedGenV - nominalPackV * 0.5) / (0.55 + internalResistance)
+            );
+            regenCurrent = Math.min(5.2, rawRegenA * (sim.isBraking ? 1.0 : 0.65));
+
+            if (regenCurrent > 0.15) {
+              regenPower = Math.round(nominalPackV * regenCurrent);
+              regenBrakingForceN = Math.min(130, (regenPower * 0.95) / Math.max(sim.playerSpeedMps, 1.5));
+              const rechargeMah = (regenCurrent * 1000 * dt * 0.75) / 3600;
+              sim.batteryRemainingMah = Math.min(totalCapacityMah, sim.batteryRemainingMah + rechargeMah);
+              sim.totalRegeneratedMah += rechargeMah;
+              sim.isRegenActive = true;
+            } else {
+              sim.isRegenActive = false;
+            }
+          } else {
+            sim.isRegenActive = false;
+          }
+        } else {
+          sim.isRegenActive = false;
+        }
+
+        sim.regenCurrentA = Number(regenCurrent.toFixed(2));
+        sim.regenPowerW = regenPower;
+        sim.motorCurrentA = Number(motorCurrent.toFixed(2));
+        sim.loadedVoltageV = Number(loadedVoltage.toFixed(2));
+        sim.motorPowerW = Math.round(motorPower);
+
+        // 4. Net acceleration
+        const netForceN =
+          humanForceN +
+          motorThrustForceN -
+          aeroDragN -
+          rollingResistanceN -
+          slopeForceN -
+          brakeForceN -
+          regenBrakingForceN;
+        const accelerationMps2 = netForceN / totalMassKg;
+
+        // 5. Update speed
+        sim.playerSpeedMps = Math.max(0, sim.playerSpeedMps + accelerationMps2 * dt);
+        const speedKmh = sim.playerSpeedMps * 3.6;
+        sim.topSpeedKmhRecorded = Math.max(sim.topSpeedKmhRecorded, Math.round(speedKmh));
+
+        // Stall detection on steep uphill
+        if (isHillClimb && currentSlope >= 10 && sim.playerSpeedMps <= 0.25 && sim.playerZ > 50 && !sim.isStalledOnHill) {
+          if (!hasBatteryJuice || voltageMatchRatio < 0.6) {
+            sim.isStalledOnHill = true;
+            playRacingTone('brake');
+          }
+        }
+
+        // 6. Update distance
+        sim.playerZ += sim.playerSpeedMps * dt;
+        if (sim.playerZ >= totalTrackLength) {
+          sim.playerZ = totalTrackLength;
+          if (!sim.raceFinished) {
+            sim.playerFinishTime = sim.raceTimeSeconds;
+            sim.raceFinished = true;
+            setRaceFinished(true);
+            setPlayerFinishTime(sim.raceTimeSeconds);
+            playRacingTone('finish');
+          }
+        }
+
+        // 7. Update Steering (Lateral Position X: -1.0 to +1.0)
+        let lateralVelocity = 0;
+        if (sim.isSteeringLeft) lateralVelocity -= 2.0;
+        if (sim.isSteeringRight) lateralVelocity += 2.0;
+        sim.playerX = Math.max(-1.0, Math.min(1.0, sim.playerX + lateralVelocity * dt));
+
+        // ----------------- AI OPPONENTS PHYSICS -----------------
+        sim.aiRiders = sim.aiRiders.map((ai) => {
+          if (ai.isFinished) return ai;
+
+          const aiSlope = getTrackSlopePercent(ai.z);
+          const aiSlopeRad = Math.atan(aiSlope / 100);
+          const aiSlopeForce = 82 * gravity * Math.sin(aiSlopeRad);
+          const aiDrag = 0.5 * 1.225 * 0.36 * Math.pow(ai.speedMps, 2);
+          const aiRoll = 0.004 * 82 * gravity;
+
+          let aiTotalForwardWatts = 220;
+          if (ai.strategy === 'sprint_burst') {
+            if (ai.z < totalTrackLength * 0.32) {
+              aiTotalForwardWatts = 340;
+            } else if (ai.z < totalTrackLength * 0.65) {
+              aiTotalForwardWatts = 230;
+            } else {
+              aiTotalForwardWatts = 195;
+            }
+            if (aiSlope > 4) aiTotalForwardWatts = Math.max(210, aiTotalForwardWatts);
+          } else if (ai.strategy === 'steady_pacing') {
+            aiTotalForwardWatts = aiSlope > 4 ? 310 : 270;
+          } else if (ai.strategy === 'hill_power') {
+            aiTotalForwardWatts = aiSlope > 4 ? 350 : 230;
+          }
+
+          const cap = aiSlope > 4 ? 185 : 95;
+          const minSpeedForThrust = aiSlope > 4 ? 1.0 : 2.4;
+          const aiThrustForce = Math.min(cap, aiTotalForwardWatts / Math.max(ai.speedMps, minSpeedForThrust));
+          const aiNetForce = aiThrustForce - aiDrag - aiRoll - aiSlopeForce;
+          const aiAccel = aiNetForce / 82;
+          const newAiSpeed = Math.max(0, ai.speedMps + aiAccel * dt);
+
+          let newAiZ = ai.z + newAiSpeed * dt;
+          let isAiDone: boolean = ai.isFinished;
+          let aiDoneTime: number | null = ai.finishTimeSeconds;
+
+          if (newAiZ >= totalTrackLength) {
+            newAiZ = totalTrackLength;
+            isAiDone = true;
+            aiDoneTime = aiDoneTime ?? sim.raceTimeSeconds;
+          }
+
+          const laneSway = Math.sin(now * 0.002 + ai.z * 0.05) * 0.15;
+          const targetX = Math.max(-0.9, Math.min(0.9, ai.targetLaneX + laneSway));
+          const aiDrain = (1.5 * dt * 4.2 * 1000) / 3600;
+
+          return {
+            ...ai,
+            z: newAiZ,
+            x: targetX,
+            speedMps: newAiSpeed,
+            batteryRemainingMah: Math.max(0, ai.batteryRemainingMah - aiDrain),
+            isFinished: isAiDone,
+            finishTimeSeconds: aiDoneTime,
+          };
+        });
+
+        // Compute Live Ranking
+        let rank = 1;
+        sim.aiRiders.forEach((ai) => {
+          if (ai.isFinished && !sim.playerFinishTime) {
+            rank++;
+          } else if (ai.isFinished && sim.playerFinishTime) {
+            if (ai.finishTimeSeconds! < sim.playerFinishTime) rank++;
+          } else if (ai.z > sim.playerZ) {
+            rank++;
+          }
+        });
+
+        if (rank !== prevRankRef.current) {
+          if (rank < prevRankRef.current) {
+            playRacingTone('rank_change', 650);
+          } else {
+            playRacingTone('rank_change', 320);
+          }
+          prevRankRef.current = rank;
+        }
+        sim.playerRank = rank;
+      }
+
+      // ─── Direct Synchronous 3D Rendering Update (No React delay) ───
       if (renderer3dRef.current) {
-        const tel = telemetryRef.current;
-        const playerBattPct = Math.round((tel.batteryRemainingMah / tel.totalCapacityMah) * 100);
-
+        const playerBattPct = Math.round((sim.batteryRemainingMah / totalCapacityMah) * 100);
         const racerUpdates: RacerUpdate[] = [
           {
             id: 'player',
-            name: `${tel.characterName} (คุณ)`,
-            z: tel.playerZ,
-            x: tel.playerX,
-            speedMps: tel.playerSpeedMps,
-            isPedaling: tel.isPedaling,
-            isMotorActive: tel.isMotorAssistActive && tel.batteryRemainingMah > 5 && !tel.isBraking,
-            isBraking: tel.isBraking,
+            name: `${state.character.name} (คุณ)`,
+            z: sim.playerZ,
+            x: sim.playerX,
+            speedMps: sim.playerSpeedMps,
+            isPedaling: sim.isPedaling,
+            isMotorActive: sim.isMotorAssistActive && sim.batteryRemainingMah > 5 && !sim.isBraking,
+            isBraking: sim.isBraking,
             batteryPct: playerBattPct,
-            color: tel.bikeColor,
+            color: bikeColor,
             isPlayer: true,
-            jerseyColor: tel.outfitColor,
-            bikeColor: tel.bikeColor,
-            character: tel.character,
-            slopePercent: getTrackSlopePercent(tel.playerZ),
-            isRegenActive: tel.isRegenActive,
+            jerseyColor: state.character.outfitColor || '#0284c7',
+            bikeColor: bikeColor,
+            character: state.character,
+            slopePercent: getTrackSlopePercent(sim.playerZ),
+            isRegenActive: sim.isRegenActive,
           },
-          ...tel.aiRiders.map((ai) => ({
+          ...sim.aiRiders.map((ai) => ({
             id: ai.id,
             name: ai.name,
             z: ai.z,
@@ -816,28 +887,52 @@ export const RacingScreen: React.FC = () => {
             },
           })),
         ];
-
         renderer3dRef.current.update(racerUpdates, dt);
       }
 
-      animId = requestAnimationFrame(renderLoop);
+      // ─── Throttled React HUD State Push (~20 Hz / 50ms) ───
+      if (now - lastHud >= 50) {
+        lastHud = now;
+        setPlayerZ(sim.playerZ);
+        setPlayerSpeedMps(sim.playerSpeedMps);
+        setRaceTimeSeconds(Number(sim.raceTimeSeconds.toFixed(1)));
+        setBatteryRemainingMah(sim.batteryRemainingMah);
+        setPlayerRank(sim.playerRank);
+        setHumanPowerW(sim.humanPowerW);
+        setPedalCadenceRpm(sim.pedalCadenceRpm);
+        setMotorPowerW(sim.motorPowerW);
+        setMotorCurrentA(sim.motorCurrentA);
+        setLoadedVoltageV(sim.loadedVoltageV);
+        setTopSpeedKmhRecorded(sim.topSpeedKmhRecorded);
+        setRegenCurrentA(sim.regenCurrentA);
+        setRegenPowerW(sim.regenPowerW);
+        setIsRegenActive(sim.isRegenActive);
+        setIsStalledOnHill(sim.isStalledOnHill);
+        setHasBatteryExhausted(sim.hasBatteryExhausted);
+        setDownhillSavedWh(sim.downhillSavedWh);
+        setTotalRegeneratedMah(sim.totalRegeneratedMah);
+        setAiRiders(sim.aiRiders);
+      }
+
+      animId = requestAnimationFrame(gameLoop);
     };
 
-    animId = requestAnimationFrame(renderLoop);
+    animId = requestAnimationFrame(gameLoop);
 
     return () => {
       cancelAnimationFrame(animId);
       renderer.dispose();
       renderer3dRef.current = null;
     };
-  }, [trackId, totalTrackLength, totalLaps]);
+  }, [trackId, totalTrackLength, totalLaps, nominalPackV, chosenMotorVoltage, totalCapacityMah, internalResistance, isHillClimb, getTrackSlopePercent, bikeColor, state.character]);
 
   // Complete and transition to Race Results with real 4-racer finish order
   const handleProceedToResults = () => {
-    const finalPlayerTime = Number((playerFinishTime || raceTimeSeconds).toFixed(1));
-    const avgSpeed = Math.round((totalTrackLength / finalPlayerTime) * 3.6);
-    const energyUsed = Math.round(totalCapacityMah - batteryRemainingMah);
-    const remainingEnergy = Math.max(0, Math.round(batteryRemainingMah));
+    const sim = simRef.current;
+    const finalPlayerTime = Number((sim.playerFinishTime || sim.raceTimeSeconds || 1).toFixed(1));
+    const avgSpeed = Math.round((totalTrackLength / Math.max(1, finalPlayerTime)) * 3.6);
+    const energyUsed = Math.round(totalCapacityMah - sim.batteryRemainingMah);
+    const remainingEnergy = Math.max(0, Math.round(sim.batteryRemainingMah));
     const remainingPct = Math.round((remainingEnergy / totalCapacityMah) * 100);
 
     // Build list of all 4 racers with actual finish timestamps
@@ -851,15 +946,15 @@ export const RacingScreen: React.FC = () => {
         bikeDesc: state.batteryPack.name || `แบตเตอรี่ ${nominalPackV.toFixed(1)}V (${totalCapacityMah}mAh)`,
         finishTimeSeconds: finalPlayerTime,
         averageSpeedKmh: avgSpeed,
-        topSpeedKmh: topSpeedKmhRecorded,
+        topSpeedKmh: sim.topSpeedKmhRecorded,
       },
-      ...aiRiders.map((ai) => {
+      ...sim.aiRiders.map((ai) => {
         let aiTime = ai.finishTimeSeconds;
         if (!aiTime) {
           // If race stopped right when player finished, extrapolate remaining distance with ai speed
           const distRemaining = Math.max(0, totalTrackLength - ai.z);
           const timeRemaining = ai.speedMps > 1 ? distRemaining / ai.speedMps : 4;
-          aiTime = Number((raceTimeSeconds + timeRemaining).toFixed(1));
+          aiTime = Number((sim.raceTimeSeconds + timeRemaining).toFixed(1));
         } else {
           aiTime = Number(aiTime.toFixed(1));
         }
@@ -890,7 +985,7 @@ export const RacingScreen: React.FC = () => {
     }));
 
     const playerEntry = finalCompetitorResults.find((c) => c.isPlayer);
-    const finalRank = isStalledOnHill ? 4 : (playerEntry ? playerEntry.rank : playerRank);
+    const finalRank = sim.isStalledOnHill ? 4 : (playerEntry ? playerEntry.rank : sim.playerRank);
 
     // Documented Scoring Rule out of 30:
     // 1. Rank Points (Max 12): 1st = 12, 2nd = 9, 3rd = 6, 4th = 3
@@ -899,7 +994,7 @@ export const RacingScreen: React.FC = () => {
     const speedPoints = avgSpeed >= 30 ? 10 : avgSpeed >= 26 ? 8 : avgSpeed >= 22 ? 6 : 4;
     // 3. Battery Efficiency Points (Max 8): remaining > 25%: 8, > 10%: 6, > 0%: 4, 0%: 2
     const batteryPoints = remainingPct > 25 ? 8 : remainingPct > 10 ? 6 : remainingPct > 0 ? 4 : 2;
-    const totalScore30 = isStalledOnHill ? 8 : (rankPoints + speedPoints + batteryPoints);
+    const totalScore30 = sim.isStalledOnHill ? 8 : (rankPoints + speedPoints + batteryPoints);
 
     const prevBestScore = state.raceData?.bestRaceScore || 0;
     const newBestScore = Math.max(prevBestScore, totalScore30);
@@ -909,7 +1004,7 @@ export const RacingScreen: React.FC = () => {
     updateRaceData({
       rank: finalRank,
       totalTimeSeconds: finalPlayerTime,
-      topSpeedKmh: topSpeedKmhRecorded,
+      topSpeedKmh: sim.topSpeedKmhRecorded,
       averageSpeedKmh: avgSpeed,
       energyUsedMah: energyUsed,
       remainingEnergyMah: remainingEnergy,
@@ -921,18 +1016,18 @@ export const RacingScreen: React.FC = () => {
       raceScoreOutOf30: totalScore30,
       bestRaceScore: newBestScore,
       scoringBreakdown: {
-        rankPoints: isStalledOnHill ? 3 : rankPoints,
-        speedPacingPoints: isStalledOnHill ? 3 : speedPoints,
-        batteryEfficiencyPoints: isStalledOnHill ? 2 : batteryPoints,
+        rankPoints: sim.isStalledOnHill ? 3 : rankPoints,
+        speedPacingPoints: sim.isStalledOnHill ? 3 : speedPoints,
+        batteryEfficiencyPoints: sim.isStalledOnHill ? 2 : batteryPoints,
         totalPoints: totalScore30,
       },
       // Vocational Physics & Battery Tradeoff Reflections
-      batteryExhaustedMidway: hasBatteryExhausted || remainingEnergy <= 5,
-      stalledOnHill: isStalledOnHill,
+      batteryExhaustedMidway: sim.hasBatteryExhausted || remainingEnergy <= 5,
+      stalledOnHill: sim.isStalledOnHill,
       motorVoltageMatchRatio: voltageMatchRatio,
       maxSlopeEncountered: isOffroadDownhill ? 22 : 16,
-      downhillEnergySavedWh: Math.round(downhillSavedWh * 10) / 10,
-      regeneratedEnergyMah: Math.round(totalRegeneratedMah * 10) / 10,
+      downhillEnergySavedWh: Math.round(sim.downhillSavedWh * 10) / 10,
+      regeneratedEnergyMah: Math.round(sim.totalRegeneratedMah * 10) / 10,
       maxRegenPowerW: Math.round(nominalPackV * 4.8),
       chosenMotorVoltage,
       chosenPackVoltage: nominalPackV,
@@ -959,7 +1054,7 @@ export const RacingScreen: React.FC = () => {
         <div className="flex items-center gap-2 md:gap-3">
           {/* Pause / Resume Button */}
           <button
-            onClick={() => setIsPaused((prev) => !prev)}
+            onClick={handleTogglePause}
             className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 flex items-center justify-center transition shadow-md"
             title={isPaused ? 'เล่นต่อ' : 'หยุดชั่วคราว'}
           >
@@ -1094,15 +1189,15 @@ export const RacingScreen: React.FC = () => {
           {/* Steering Controls (Left & Right Buttons - 4 Cols) */}
           <div className="col-span-4 flex items-center gap-2">
             <button
-              onMouseDown={() => setIsSteeringLeft(true)}
-              onMouseUp={() => setIsSteeringLeft(false)}
+              onMouseDown={handleSteerLeftStart}
+              onMouseUp={handleSteerLeftEnd}
               onTouchStart={(e) => {
                 e.preventDefault();
-                setIsSteeringLeft(true);
+                handleSteerLeftStart();
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
-                setIsSteeringLeft(false);
+                handleSteerLeftEnd();
               }}
               className={`flex-1 py-4 md:py-5 rounded-2xl font-black text-sm md:text-base flex flex-col items-center justify-center gap-0.5 transition active:scale-95 border min-h-[58px] ${
                 isSteeringLeft
@@ -1115,15 +1210,15 @@ export const RacingScreen: React.FC = () => {
             </button>
 
             <button
-              onMouseDown={() => setIsSteeringRight(true)}
-              onMouseUp={() => setIsSteeringRight(false)}
+              onMouseDown={handleSteerRightStart}
+              onMouseUp={handleSteerRightEnd}
               onTouchStart={(e) => {
                 e.preventDefault();
-                setIsSteeringRight(true);
+                handleSteerRightStart();
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
-                setIsSteeringRight(false);
+                handleSteerRightEnd();
               }}
               className={`flex-1 py-4 md:py-5 rounded-2xl font-black text-sm md:text-base flex flex-col items-center justify-center gap-0.5 transition active:scale-95 border min-h-[58px] ${
                 isSteeringRight
@@ -1139,19 +1234,15 @@ export const RacingScreen: React.FC = () => {
           {/* Brake / KERS Regen Button (2 Cols) */}
           <div className="col-span-2">
             <button
-              onMouseDown={() => {
-                setIsBraking(true);
-                playRacingTone(isRegenActive ? 'regen' : 'brake');
-              }}
-              onMouseUp={() => setIsBraking(false)}
+              onMouseDown={handleBrakeStart}
+              onMouseUp={handleBrakeEnd}
               onTouchStart={(e) => {
                 e.preventDefault();
-                setIsBraking(true);
-                playRacingTone(isRegenActive ? 'regen' : 'brake');
+                handleBrakeStart();
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
-                setIsBraking(false);
+                handleBrakeEnd();
               }}
               className={`w-full py-4 md:py-5 rounded-2xl font-black text-xs md:text-sm flex flex-col items-center justify-center gap-0.5 transition active:scale-95 border min-h-[58px] ${
                 isBraking
@@ -1171,14 +1262,7 @@ export const RacingScreen: React.FC = () => {
           {/* Motor Assist Button (3 Cols) */}
           <div className="col-span-3">
             <button
-              onClick={() => {
-                if (batteryRemainingMah <= 5) return;
-                setIsMotorAssistActive((prev) => {
-                  const next = !prev;
-                  if (next) playRacingTone('boost');
-                  return next;
-                });
-              }}
+              onClick={handleToggleMotor}
               disabled={batteryRemainingMah <= 5}
               className={`w-full py-4 md:py-5 rounded-2xl font-black text-xs md:text-sm flex flex-col items-center justify-center gap-0.5 transition active:scale-95 shadow-xl min-h-[58px] cursor-pointer ${
                 isMotorAssistActive
@@ -1196,24 +1280,19 @@ export const RacingScreen: React.FC = () => {
           {/* Hold to Pedal Button (3 Cols) */}
           <div className="col-span-3">
             <button
-              onMouseDown={() => {
-                setIsPedaling(true);
-                playRacingTone('pedal');
-              }}
-              onMouseUp={() => setIsPedaling(false)}
+              onMouseDown={handlePedalStart}
+              onMouseUp={handlePedalEnd}
               onTouchStart={(e) => {
                 e.preventDefault();
-                setIsPedaling(true);
-                playRacingTone('pedal');
+                handlePedalStart();
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
-                setIsPedaling(false);
+                handlePedalEnd();
               }}
               onClick={() => {
-                setIsPedaling(true);
-                playRacingTone('pedal');
-                setTimeout(() => setIsPedaling(false), 500);
+                handlePedalStart();
+                setTimeout(handlePedalEnd, 400);
               }}
               className={`w-full py-4 md:py-5 rounded-2xl font-black text-xs md:text-sm flex flex-col items-center justify-center gap-0.5 transition active:scale-95 shadow-xl min-h-[58px] cursor-pointer ${
                 isPedaling
@@ -1245,7 +1324,10 @@ export const RacingScreen: React.FC = () => {
 
             <div className="w-full flex flex-col gap-2 pt-2">
               <button
-                onClick={() => setIsPaused(false)}
+                onClick={() => {
+                  simRef.current.isPaused = false;
+                  setIsPaused(false);
+                }}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-2"
               >
                 <Play className="w-4 h-4 fill-current" />
@@ -1253,22 +1335,7 @@ export const RacingScreen: React.FC = () => {
               </button>
 
               <button
-                onClick={() => {
-                  setPlayerZ(0);
-                  setPlayerSpeedMps(0);
-                  setRaceTimeSeconds(0);
-                  setBatteryRemainingMah(totalCapacityMah);
-                  setAiRiders((prev) =>
-                    prev.map((ai) => ({
-                      ...ai,
-                      z: 0,
-                      speedMps: 0,
-                      isFinished: false,
-                      finishTimeSeconds: null,
-                    }))
-                  );
-                  setIsPaused(false);
-                }}
+                onClick={handleRestartRace}
                 className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-4 h-4 text-cyan-400" />
