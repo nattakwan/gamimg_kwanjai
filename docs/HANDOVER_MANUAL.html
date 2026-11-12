@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>คู่มือสรุปการพัฒนาและส่งต่องานฉบับสมบูรณ์ - Battery Quest Power Racing Academy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700;800&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm 16mm 14mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .doc-container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Cover / Top Header */
+    .header-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 24px 28px;
+      border-radius: 14px;
+      margin-bottom: 24px;
+      border-left: 6px solid #f59e0b;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    }
+
+    .doc-title {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 20pt;
+      font-weight: 800;
+      color: #f8fafc;
+      margin: 0 0 6px 0;
+      letter-spacing: -0.3px;
+    }
+
+    .header-sub {
+      color: #94a3b8;
+      font-size: 10pt;
+      margin: 0;
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .meta-pill {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #e2e8f0;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 8.5pt;
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 600;
+    }
+
+    /* Headings */
+    h1, h2, h3, h4 {
+      font-family: 'Chakra Petch', sans-serif;
+      color: #0f172a;
+      page-break-after: avoid;
+    }
+
+    .sec-title {
+      font-size: 14pt;
+      font-weight: 700;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 6px;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      color: #0369a1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sub-title {
+      font-size: 12pt;
+      font-weight: 700;
+      margin-top: 20px;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+
+    .sub4-title {
+      font-size: 11pt;
+      font-weight: 600;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      color: #334155;
+    }
+
+    .prose-p {
+      margin: 6px 0 10px 0;
+      color: #334155;
+      text-align: justify;
+    }
+
+    /* Quotes and Alerts */
+    .doc-quote {
+      border-left: 4px solid #0284c7;
+      background: #f0f9ff;
+      padding: 10px 14px;
+      margin: 10px 0;
+      border-radius: 0 8px 8px 0;
+      color: #0369a1;
+      font-size: 10pt;
+    }
+
+    .alert-box {
+      display: flex;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin: 14px 0;
+      page-break-inside: avoid;
+    }
+
+    .alert-tip {
+      background: #fefce8;
+      border: 1px solid #fef08a;
+      color: #854d0e;
+    }
+
+    .alert-note {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    .alert-icon {
+      font-size: 16pt;
+      line-height: 1;
+    }
+
+    /* Tables */
+    .table-container {
+      margin: 14px 0;
+      overflow-x: auto;
+      page-break-inside: avoid;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 700;
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 2px solid #cbd5e1;
+    }
+
+    td {
+      padding: 7px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* Code & Pre */
+    .code-block {
+      background: #0f172a;
+      color: #f1f5f9;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5pt;
+      line-height: 1.45;
+      overflow-x: auto;
+      margin: 10px 0;
+      page-break-inside: avoid;
+      border: 1px solid #1e293b;
+    }
+
+    .diagram-box {
+      background: #f8fafc;
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+
+    .mermaid-raw {
+      margin: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5pt;
+      color: #0369a1;
+      line-height: 1.4;
+    }
+
+    .inline-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9pt;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .math-inline code, .math-display code {
+      font-family: 'JetBrains Mono', monospace;
+      background: #fef3c7;
+      color: #92400e;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .doc-link {
+      color: #0284c7;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 20px 0;
+    }
+
+    ul, ol {
+      margin: 6px 0 10px 0;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 4px;
+      color: #334155;
+    }
+
+    /* Footer print info */
+    .doc-footer {
+      border-top: 1px solid #cbd5e1;
+      padding-top: 8px;
+      margin-top: 30px;
+      font-size: 8.5pt;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      page-break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+  <div class="doc-container">
+    <div class="header-banner">
+      <h1 class="doc-title">⚡ BATTERY QUEST: POWER RACING ACADEMY</h1>
+      <p class="header-sub">คู่มือสรุปการพัฒนา สถาปัตยกรรมระบบ 15 ฉาก และขั้นตอนการส่งต่องาน (Handover Manual)</p>
+      <div class="meta-pills">
+        <span class="meta-pill">โปรเจกต์: Gaming Kwanjai</span>
+        <span class="meta-pill">สแต็ก: React 19 + TypeScript + Three.js + Vite</span>
+        <span class="meta-pill">สถานะ: 20/20 Stage Tests Passed</span>
+        <span class="meta-pill">โฮสติ้ง: Vercel Production Live</span>
+      </div>
+    </div>
+
+    <h1 class="doc-title">📘 คู่มือสรุปการพัฒนาและส่งต่องานฉบับสมบูรณ์ (Complete Project & Handover Manual)</h1>
+<h2 class="sec-title">โครงการ: จักรยานไฟฟ้า 3D วิศวกรรมไฟฟ้า (Battery Quest: Power Racing Academy - Gaming Kwanjai)</h2>
+<blockquote class="doc-quote"><strong>บันทึกข้อมูล:</strong> วันที่ 12 พฤศจิกายน 2026  </blockquote>
+<blockquote class="doc-quote"><strong>เทคโนโลยีหลัก:</strong> React 19, TypeScript, Three.js (WebGL), Vite 8, Tailwind CSS 4, Lucide Icons  </blockquote>
+<blockquote class="doc-quote"><strong>Repository:</strong> <a href="https://github.com/nattakwan/gamimg_kwanjai" class="doc-link">https://github.com/nattakwan/gamimg_kwanjai</a>  </blockquote>
+<blockquote class="doc-quote"><strong>สถานะโครงการ:</strong> ผ่านการทดสอบ 20/20 Test Cases, คอมไพล์ TypeScript 0 Errors, ออนไลน์บน Vercel และพร้อมสำหรับส่งต่องาน 100%</blockquote>
+<hr class="divider" />
+<h2 class="sec-title">สารบัญ (Table of Contents)</h2>
+<ol>
+<li><a href="#1-ภาพรวมของโครงการ-project-overview" class="doc-link">ภาพรวมของโครงการ (Project Overview)</a></li>
+<li><a href="#2-บันทึกประวัติการพัฒนา-สิ่งที่ถาม---สิ่งที่ตอบและแก้ไข" class="doc-link">บันทึกประวัติการพัฒนา: สิ่งที่ถาม - สิ่งที่ตอบและแก้ไข (Development Changelog & Q&A)</a></li>
+<li><a href="#3-สถาปัตยกรรมระบบทั้ง-15-ฉาก" class="doc-link">สถาปัตยกรรมระบบทั้ง 15 ฉาก (15-Scene Architecture Breakdown)</a></li>
+<li><a href="#4-เอนจินฟิสิกส์-3-มิติ-และกราฟิก-threejs" class="doc-link">เอนจินฟิสิกส์ 3 มิติ และกราฟิก Three.js (3D Physics & Kinematics Engine)</a></li>
+<li><a href="#5-คู่มือการติดตั้งและรันงานสำหรับผู้พัฒนาคนถัดไป" class="doc-link">คู่มือการติดตั้งและรันงานสำหรับผู้พัฒนาคนถัดไป (Setup & Quickstart Guide)</a></li>
+<li><a href="#6-การทดสอบความถูกต้องและประกันคุณภาพ" class="doc-link">การทดสอบความถูกต้องและประกันคุณภาพ (Testing & QA Harness)</a></li>
+<li><a href="#7-การนำขึ้นระบบออนไลน์และการอัปเดต" class="doc-link">การนำขึ้นระบบออนไลน์และการอัปเดต (Deployment & Vercel)</a></li>
+<li><a href="#8-ขั้นตอนการถ่ายโอนสิทธิ์โครงการ" class="doc-link">ขั้นตอนการถ่ายโอนสิทธิ์โครงการ (Handover & Ownership Transfer)</a></li>
+</ol>
+<hr class="divider" />
+<h2 class="sec-title">1. ภาพรวมของโครงการ (Project Overview)</h2>
+<p class="prose-p"><strong>Battery Quest: Power Racing Academy (Gaming Kwanjai)</strong> คือเกมจำลองการเรียนรู้แบบโต้ตอบ 3 มิติบนเว็บ (3D Educational Web Game) เพื่อสอนหลักการวิศวกรรมไฟฟ้าและวงจรแบตเตอรี่สำหรับยานยนต์ไฟฟ้า (E-Bike) </p>
+<h3 class="sub-title">วัตถุประสงค์ทางการศึกษา:</h3>
+<ul>
+<li><strong>พุทธิพิสัย (Cognitive):</strong> เข้าใจความแตกต่างระหว่างวงจรอนุกรม (Series: แรงดันบวกกัน <span class="math-inline"><code>V_T = V_1 + V_2</code></span>, ความจุเท่าเดิม) และวงจรขนาน (Parallel: ความจุบวกกัน <span class="math-inline"><code>Q_T = Q_1 + Q_2</code></span>, แรงดันเท่าเดิม, ความต้านทานภายในลดลง <span class="math-inline"><code>R_{in} / 2</code></span>)</li>
+<li><strong>ทักษะพิสัย (Psychomotor):</strong> ฝึกต่อสายไฟ ประกอบแพ็กแบตเตอรี่ 2S2P, ติดตั้งระบบป้องกัน BMS/Fuse, วัดแรงดันด้วยดิจิทัลมัลติมิเตอร์ (DMM), และทดสอบไดโนมอเตอร์</li>
+<li><strong>จิตพิสัย (Affective):</strong> ตระหนักถึงความปลอดภัยจากไฟฟ้า การป้องกันการลัดวงจร การโอเวอร์โหลด และการบริหารพลังงานด้วยระบบเบรกหน่วงชาร์จไฟกลับ (Regenerative Braking / KERS)</li>
+</ul>
+<hr class="divider" />
+<h2 class="sec-title">2. บันทึกประวัติการพัฒนา: สิ่งที่ถาม - สิ่งที่ตอบและแก้ไข</h2>
+<p class="prose-p">รวบรวมทุกคำถามและคำสั่งของผู้ใช้ พร้อมแนวทางการวิเคราะห์ปัญหา (Root Cause) และการแก้ไขเชิงวิศวกรรม:</p>
+<h3 class="sub-title">🔹 ประเด็นที่ 1: การเคลื่อนที่ ความเร็วฉาก การเลี้ยว และซุ้มปล่อยตัว/เส้นชัย</h3>
+<ul>
+<li><strong>สิ่งที่ผู้ใช้ถาม:</strong></li>
+</ul>
+<p class="prose-p">  > <em>"โหมดเกมปั่นจักรยานตอนนี้การเคลื่อนที่ไม่ถูกต้อง ความเร็วการปั่นไม่สัมพันธ์กับการเคลื่อนที่ของฉาก บางสนามการเลี้ยวไม่ถูก เช่น กดเลี้ยวซ้ายได้เลี้ยวขวาแทน บางสนามก็ไม่มีซุ้มออกตัว หรือ ซุ้มเส้นชัย บางสนามมีภาพภูเขาสีเขียวมาซ้อน แก้ทุกสนามเลยนะและให้ใช้ deepseek ช่วยด้วย"</em></p>
+<ul>
+<li><strong>ปัญหาที่พบ (Root Cause):</strong></li>
+</ul>
+<p class="prose-p">  1. การคำนวณตำแหน่ง 3D อิงความยาวเส้นโค้ง Spline ไม่สัมพันธ์กับความเร็วเชิงเส้น (<span class="math-inline"><code>v = \omega \cdot r</code></span>)</p>
+<p class="prose-p">  2. การคำนวณเวกเตอร์ Normal ในทางโค้งกลับทิศ ทำให้กดปุ่มเลี้ยวขวาแล้วตัวรถเอียงและเคลื่อนที่ไปทางซ้าย</p>
+<p class="prose-p">  3. สนามแข่งขันแบบจุดต่อจุด (Point-to-Point) ขาดซุ้มเส้นชัย และภูเขาพร็อพแบบ Cone มีมุมเอียงตัดเข้าในแทร็ก</p>
+<ul>
+<li><strong>การแก้ไขเชิงเทคนิค:</strong></li>
+</ul>
+<p class="prose-p">  * ใช้ <strong>DeepSeek V4 Pro Math</strong> ปรับโครงสร้าง Frenet Frame คำนวณเวกเตอร์ Tangent และ Normal ที่แม่นยำ</p>
+<p class="prose-p">  * แก้ไขทิศทางการเลี้ยวใน <code class="inline-code">Racing3DRenderer.ts</code> ให้กดขวาเคลื่อนที่ <span class="math-inline"><code>+X</code></span> กดซ้ายเคลื่อนที่ <span class="math-inline"><code>-X</code></span> สอดคล้องกันทุกสนาม</p>
+<p class="prose-p">  * สร้างซุ้มโครงเหล็ก Start Gantry และ Finish Gantry สำหรับทุกสนามแข่งขัน</p>
+<p class="prose-p">  * ลบพร็อพภูเขาที่ทับซ้อนและปรับระยะปลอดภัย (Clearance) ให้อยู่นอกขอบทางอย่างน้อย 40 เมตร</p>
+<hr class="divider" />
+<h3 class="sub-title">🔹 ประเด็นที่ 2: ระบบทดสอบการเล่นแต่ละด่านด้วย DeepSeek Harness</h3>
+<ul>
+<li><strong>สิ่งที่ผู้ใช้ถาม:</strong></li>
+</ul>
+<p class="prose-p">  > <em>"ตรวจสอบการเล่นแต่ละด่านด้วย deepseek harness หากเจอปัญหาให้แก้ไข"</em></p>
+<ul>
+<li><strong>การแก้ไขเชิงเทคนิค:</strong></li>
+</ul>
+<p class="prose-p">  * สร้างสคริปต์ <a href="file:///e:/gittest/gamimg_kwanjai/scripts/deepseek_stage_harness.cjs" class="doc-link">deepseek_stage_harness.cjs</a></p>
+<p class="prose-p">  * ทำการจำลองทางฟิสิกส์ 20 กรณีทดสอบ (4 สนาม <span class="math-inline"><code>\times</code></span> 5 สเปกแบตเตอรี่/มอเตอร์)</p>
+<p class="prose-p">  * ตรวจสอบว่าทางชัน (Hill Climb เนิน 16%) หากใช้แบตเตอรี่แรงดันไม่พอ ต้องเกิดอาการติดค้างบนเนิน (Stalled) ตามกฎฟิสิกส์ และตรวจเช็กให้คู่แข่ง AI ทั้ง 3 คัน (Turbo Tina, Speedy Sam, Captain Big-Block) ปั่นเข้าเส้นชัยได้จริง</p>
+<hr class="divider" />
+<h3 class="sub-title">🔹 ประเด็นที่ 3: ปั่นแล้วจักรยานแทบอยู่กับที่ ภาพไม่ขยับ</h3>
+<ul>
+<li><strong>สิ่งที่ผู้ใช้ถาม:</strong></li>
+</ul>
+<p class="prose-p">  > <em>"ปั่นจักรยานแล้วแทบจะอยู่กับที่นะ ตรวจสอบใหม่ทั้งหมด ... ภาพมันแทบไม่ขยับเลย แก้ไขด้วยใช้ deepseek อย่างเคร่งครัด และตรวจสอบการเล่นอย่างจริงจัง เล่นจนเข้าเส้นชัยนะ ตอนนี้เกมมันมีปัญหามาก"</em></p>
+<ul>
+<li><strong>ปัญหาที่พบ (Root Cause):</strong></li>
+</ul>
+<p class="prose-p">  * มีการแยก Loop ของ Animation Frame ใน React และ Three.js ซ้ำซ้อนกัน ทำให้ Delta Time (<span class="math-inline"><code>dt</code></span>) ถูกรีเซ็ตกลับเป็น 0</p>
+<p class="prose-p">  * ตำแหน่งกล้อง Chase Camera ถูกตั้งไว้ไกลเกินไป (ระยะห่างกว่า 12 เมตร) ทำให้เกิดภาพลวงตาทางสายตา (Low Optical Flow) รู้สึกเหมือนรถไม่ขยับ</p>
+<ul>
+<li><strong>การแก้ไขเชิงเทคนิค:</strong></li>
+</ul>
+<p class="prose-p">  * รวมศูนย์วงรอบการคำนวณเป็น <strong>Unified requestAnimationFrame Simulation Loop</strong> ใน <a href="file:///e:/gittest/gamimg_kwanjai/src/components/scenes/RacingScreen.tsx" class="doc-link">RacingScreen.tsx</a></p>
+<p class="prose-p">  * ปรับกล้อง Spring-Arm Chase Camera: ระยะห่าง <code class="inline-code">CAM_DIST = 3.6m</code>, ความสูง <code class="inline-code">CAM_HEIGHT = 1.6m</code>, ตัวรถจักรยานครองพื้นที่ 25–30% ของหน้าจอ เพิ่ม Optical Flow รู้สึกถึงความเร็วขึ้น 2.3 เท่าทันที</p>
+<hr class="divider" />
+<h3 class="sub-title">🔹 ประเด็นที่ 4: เพิ่มไอเทมชาร์จแบตเตอรี่กลางสนามแข่ง</h3>
+<ul>
+<li><strong>สิ่งที่ผู้ใช้ถาม:</strong></li>
+</ul>
+<p class="prose-p">  > <em>"โหมดแข่งขันในทุกสนามให้เพิ่ม item การวิ่งเก็บของเพื่อเพิ่มพลังงานแบตเตอรี่ โดยกำหนดปริมาณแบตเริมต้นสัก 50% เก็บ item ให้พลังานละ 5-10% ให้คำนวณ item ตามระยะทางในแต่ละด่าน พิจารณาให้เหมาะสมกับการแข่งขัน อย่าลืมให้ใช้ deepseek ช่วยทำงาน"</em></p>
+<ul>
+<li><strong>การแก้ไขเชิงเทคนิค:</strong></li>
+</ul>
+<p class="prose-p">  * สร้างโมดูล <a href="file:///e:/gittest/gamimg_kwanjai/src/racing3d/batteryPickupsConfig.ts" class="doc-link">batteryPickupsConfig.ts</a></p>
+<p class="prose-p">  * กำหนดแบตเตอรี่เริ่มต้น <span class="math-inline"><code>50\%</code></span> ในทุกสนาม</p>
+<p class="prose-p">  * วางไอเทมแบตเตอรี่ 3D เรืองแสงพร้อมวงแหวนพลังงานหมุนลอยตัว:</p>
+<p class="prose-p">    * Flat Sprint (400m): 3 ชิ้น (ชิ้นละ +8.3%)</p>
+<p class="prose-p">    * Hill Climb (600m): 5 ชิ้น (ชิ้นละ +7.0%)</p>
+<p class="prose-p">    * Endurance Route (1200m): 6 ชิ้น (ชิ้นละ +6.7%)</p>
+<p class="prose-p">    * MX Offroad Downhill (800m): 4 ชิ้น (ชิ้นละ +7.5%)</p>
+<hr class="divider" />
+<h3 class="sub-title">🔹 ประเด็นที่ 5: แก้ไขอาการภาพสะดุดเมื่อเก็บไอเทม และปุ่มเลี้ยวสลับข้าง</h3>
+<ul>
+<li><strong>สิ่งที่ผู้ใช้ถาม:</strong></li>
+</ul>
+<p class="prose-p">  > <em>"ตอนนี้ วิ่งเก็บไอเทมเมื่อเก็บได้ภาพและการเคลื่อนที่สะดุดทั้งหมดเลย ให้ช่วยปรับแก้ไขด้วย และตรวจสอบการกดปุ่มเลี้ยวซ้าย เลี้ยวขวามันทำงานสลับกัน โดยปกติเมื่อกดปุ่มขวาและซ้ายมันจะต้องเคลื่อนที่ไปในทางเดียวกัน ตรวจสอบและแก้ไขในทุกๆ ด่านนะครับ"</em></p>
+<ul>
+<li><strong>ปัญหาที่พบ (Root Cause):</strong></li>
+</ul>
+<p class="prose-p">  * เมื่อเก็บไอเทม มีการสร้าง AudioContext และ Mesh ชิ้นใหม่ขึ้นมาแบบ Dynamic ทำให้เกิด Garbage Collection Pause</p>
+<ul>
+<li><strong>การแก้ไขเชิงเทคนิค:</strong></li>
+</ul>
+<p class="prose-p">  * สร้าง Cached Singleton AudioContext ป้องกันการสร้างออบเจกต์เสียงซ้ำ</p>
+<p class="prose-p">  * ใช้ Material Pooling และใช้วิธีซ่อนไอเทม (<code class="inline-code">position.y = -9999</code>) แทนการทำลาย Mesh</p>
+<p class="prose-p">  * ตรวจสอบโค้ด Event Handler: ปุ่มซ้ายสั่ง <code class="inline-code">isSteeringLeft</code>, ปุ่มขวาสั่ง <code class="inline-code">isSteeringRight</code> ให้สอดคล้องกัน 100%</p>
+<hr class="divider" />
+<h3 class="sub-title">🔹 ประเด็นที่ 6: ลดไอเทม 50%, เพิ่มเอฟเฟกต์การชน, ตัวรถส่ายสมจริง, สัญญาณไฟจราจร</h3>
+<ul>
+<li><strong>สิ่งที่ผู้ใช้ถาม:</strong></li>
+</ul>
+<p class="prose-p">  > <em>"ลดจำนวนไอเทมสัก 50% ปรับให้มี effect การชนได้ เมื่อชนกันให้ความเร็วลดลง และตอนปั่นจักรยานให้ตัวรถส่ายในลักษณะจักรยานที่ปั่นจริง ตัวคนปั่นตอนนี้มีความใกล้เคียงของจริงแล้ว เหลือแค่ของจักรยาน ในช่วงฉากออกตัวในทุกสนามให้ออกตัวจากซุ้มและมีไฟจราจรแสดงสัญญาณให้ออกตัว"</em></p>
+<ul>
+<li><strong>การแก้ไขเชิงเทคนิค:</strong></li>
+</ul>
+<p class="prose-p">  * ลดจำนวนไอเทมลง <span class="math-inline"><code>50\%</code></span> ตามคำขอ</p>
+<p class="prose-p">  * เพิ่มระบบการชน (Collision Physics): วงแหวน Shockwave กระแทก, เสียง Crunch Audio, กล้องสั่นไหว (Camera Impulse Shake), และลดความเร็วลงทันที 35% พร้อมคูลดาวน์กันชนซ้ำ</p>
+<p class="prose-p">  * คำนวณการส่ายของจักรยาน (Bicycle Frame Rocking & Sway): เชื่อมโยงมุมจานถีบ <span class="math-inline"><code>360^\circ</code></span> เข้ากับ Roll (<span class="math-inline"><code>\pm 2.8^\circ</code></span>), Yaw Wobble (<span class="math-inline"><code>\pm 1.1^\circ</code></span>) และ Lateral Sway (<span class="math-inline"><code>\pm 2.6\text{ cm}</code></span>)</p>
+<p class="prose-p">  * ติดตั้งกล่องสัญญาณไฟจราจร 3 สี (แดง-ส้ม-เขียว) บนคานซุ้มออกตัว พร้อมระบบเคานต์ดาวน์ 3, 2, 1, GO!</p>
+<hr class="divider" />
+<h3 class="sub-title">🔹 ประเด็นที่ 7: ปรับ UI โทนสว่างตามหลักสุนทรียศาสตร์ (Soft Light Theme แบบฉากที่ 11) และเพิ่มสนามแข่งธีมสเตเดียม</h3>
+<ul>
+<li><strong>สิ่งที่ผู้ใช้ถาม:</strong></li>
+</ul>
+<p class="prose-p">  > <em>"ปรับหน้า ui ทุกฉากปรับการใช้ตามหลักสีสุนทรียศาสตร์ ในฉากที่เกี่ยวกับการเรียนให้พยายามใช้ข้อความให้น้อยลง ลดปุ่มกด ใช้ icon infographic มาช่วย ให้ออกมาในโทนสว่าง ดู soft ในทำนองของฉากที่ 11 ฉากที่เป็นการแข่งขันเพิ่ม theme และมีที่นั่งในลักษณะผู้เข้าชมการแข่งขัน ฉากหลังมีท้องฟ้า ก้อนเมฆ"</em></p>
+<ul>
+<li><strong>การแก้ไขเชิงเทคนิค:</strong></li>
+</ul>
+<p class="prose-p">  * <strong>UI Redesign (60-30-10 Rule):</strong> ปรับฉาก 4, 5, 6, 7, 8, 9, 10, 12, 14, 15 และส่วนกลาง (<code class="inline-code">GameHeader</code>, <code class="inline-code">VoltDialog</code>) ให้ใช้พื้นหลังสีสว่าง (<code class="inline-code">slate-100</code>, <code class="inline-code">sky-50</code>), การ์ดสีขาวนวล <code class="inline-code">bg-white/95</code>, ลดความยาวข้อความ, และใช้อินโฟกราฟิกภาพไดอะแกรมเซลล์ไฟฟ้าและสูตรแทน</p>
+<p class="prose-p">  * <strong>3D Racing Stadium:</strong></p>
+<p class="prose-p">    * สร้างอัฒจันทร์ที่นั่งผู้ชม (Grandstands) ไล่ระดับพร้อมกองเชียร์ 3D โบกมือเชียร์</p>
+<p class="prose-p">    * หลังคากันสาดโครงสร้างเหล็กลูกฟูก, รั้วตาข่ายนิรภัย, เสาไฟสปอร์ตไลต์, ป้ายแบนเนอร์สปอนเซอร์ (Pirelli, Goodyear, Monster Energy)</p>
+<p class="prose-p">    * ท้องฟ้าสีฟ้าสดใส เมฆ Cumulus 3D ลอยตัว 28 ก้อน และเรือเหาะกู๊ดเยียร์ (Goodyear Stadium Blimp) มีป้ายไฟ LED วนรอบสนาม</p>
+<hr class="divider" />
+<h3 class="sub-title">🔹 ประเด็นที่ 8: แก้อัฒจันทร์ล้นสนาม, นับ 3 2 1 เฉพาะในสนาม, แก้ Bug ลายตารางหมากรุก, เพิ่มความ Smooth</h3>
+<ul>
+<li><strong>สิ่งที่ผู้ใช้ถาม:</strong></li>
+</ul>
+<p class="prose-p">  > <em>"ตอนนี้ที่เจอคือ อัฒจันทร์ล้นมานอกสนาม ช่วงก่อนเข้าหน้าเกมจะมีการนับ 3 2 1 ตรงนี้ให้นับตอนอยู่ในสนามเพียงอย่างเดียวก็พอ ให้มีตอนออกตัวและเข้าเส้นชัยนิดนึงเพิ่มปริมาณคนให้ไม่ดูน้อยจนเกินไป และขอกำหนดปริมาณไม่ต้องมากจนเกินไป นอกจากนี้เจอปัญหา bug ตรงบริเวณลายหมารุกพื้นที่ออกตัว และดูเหมือนภาพสะดุดไม่ค่อย smooth"</em></p>
+<ul>
+<li><strong>ปัญหาที่พบ (Root Cause):</strong></li>
+</ul>
+<p class="prose-p">  * อัฒจันทร์ยาว 26 เมตรถูกวางบนทางโค้งและอยู่ชิดขอบทางเกินไป ทำให้กล่องสี่เหลี่ยมตัดผ่านเลนถนน</p>
+<p class="prose-p">  * มีการนับ 3 2 1 ซ้ำซ้อนทั้งใน <code class="inline-code">RacePrepScreen</code> และ <code class="inline-code">RacingScreen</code></p>
+<p class="prose-p">  * ลายตารางหมากรุกเดิมสร้างจากแผ่นสี่เหลี่ยม 24 ชิ้นย่อยที่ใช้การหมุนแกนโลก <code class="inline-code">rotation.x = Math.PI / 2</code> ทำให้ระนาบไม่แนบกับทางลาดชันและเกิด Z-fighting</p>
+<p class="prose-p">  * มีการสร้าง Mesh ในฉากมากถึง 9,135 ชิ้น และมีการรัน <code class="inline-code">updateProjectionMatrix()</code> ทุกเฟรมทำให้เกิดอาการสะดุด</p>
+<ul>
+<li><strong>การแก้ไขเชิงเทคนิค:</strong></li>
+</ul>
+<p class="prose-p">  * <strong>อัฒจันทร์:</strong> วางเฉพาะ <strong>ทางตรงจุดออกตัว (Station 16m)</strong> และ <strong>ทางตรงเข้าเส้นชัย</strong> เท่านั้น โดยขยายระยะห่างออกมาเป็น <strong>8.2 เมตรจากกึ่งกลางถนน</strong> พ้นแนวขอบทางอย่างปลอดภัย 100%</p>
+<p class="prose-p">  * <strong>จำนวนผู้ชม:</strong> ปรับเป็น 4 ชั้น ชั้นละ 12 คน = 48 คนต่ออัฒจันทร์ (รวมจุดสตาร์ทและเส้นชัยมีกองเชียร์ประมาณ 100–190 คน ไม่น้อยและไม่แน่นเกินไป)</p>
+<p class="prose-p">  * <strong>การนับ 3 2 1:</strong> ตัด Overlay นับถอยหลังใน <code class="inline-code">RacePrepScreen</code> ออก พอกดปุ่ม "พร้อมแข่ง" จะเข้าสู่สนามแข่งขันทันที และให้นับ 3 2 1 GO! บนสัญญาณไฟจราจร 3D ในสนามเพียงแห่งเดียว</p>
+<p class="prose-p">  * <strong>ลายตารางหมากรุก:</strong> เขียนฟังก์ชัน <code class="inline-code">createCheckeredLineMesh()</code> คำนวณแกนระนาบ Frenet Frame (<code class="inline-code">Normal</code>, <code class="inline-code">Tangent</code>, <code class="inline-code">SurfaceUp</code>) ตามความโค้งและความชันจริง พร้อม Texture ตารางหมากรุก 16x4 ขอบทอง และเปิดใช้งาน <code class="inline-code">polygonOffset</code> แนบสนิทกับผิวถนนทุกมุม ไม่มีบั๊ก Z-fighting</p>
+<p class="prose-p">  * <strong>ความ Smooth 60 FPS:</strong> ลดจำนวน Mesh จาก 9,135 ชิ้น เหลือเพียง ~120 ชิ้น (ลดลงกว่า 98%), สั่งอัปเดตกล้องเฉพาะเมื่อ FOV เปลี่ยนแปลงจริงเกิน <span class="math-inline"><code>0.05^\circ</code></span>, และตัด State ที่ไม่ได้เรนเดอร์ใน JSX ออกจาก HUD loop</p>
+<hr class="divider" />
+<h3 class="sub-title">🔹 ประเด็นที่ 9: การนำขึ้นเว็บออนไลน์ และการอัปเดตโค้ดขึ้น GitHub</h3>
+<ul>
+<li><strong>สิ่งที่ผู้ใช้ถาม:</strong></li>
+</ul>
+<p class="prose-p">  > <em>"อยากทำให้ขึ้นเว็บออนไลน์ต้องทำไง ... ตอนนี้ใช้วิธีที่ 1 [Vercel] ได้แล้ว ต้องการอัปเดตโค้ดล่าสุดขึ้น GitHub ... ไม่มีหน้าต่างเล็กๆ เด้งขึ้นมา ... เสร็จยัง"</em></p>
+<ul>
+<li><strong>การแก้ไขเชิงเทคนิค:</strong></li>
+</ul>
+<p class="prose-p">  * ตั้งค่า <code class="inline-code">base: './'</code> ใน <a href="file:///e:/gittest/gamimg_kwanjai/vite.config.ts" class="doc-link">vite.config.ts</a> เพื่อให้ไฟล์ในโฟลเดอร์ <code class="inline-code">dist/</code> สามารถรันได้บนทุกโฮสต์</p>
+<p class="prose-p">  * จัดการ <code class="inline-code">.gitignore</code> ป้องกันไฟล์โมเดลขนาดใหญ่เกิน 70MB ไม่ให้ติดเข้าไปใน Git ป้องกัน Vercel Build Timeout</p>
+<p class="prose-p">  * รวบรวม Commit โค้ดทั้งหมดและ Push ขึ้นสู่ Branch <code class="inline-code">main</code> บน GitHub (<code class="inline-code">nattakwan/gamimg_kwanjai</code>)</p>
+<p class="prose-p">  * ระบบ Vercel ตรวจจับ Commit ล่าสุดและทำการ Deploy ขึ้นเว็บออนไลน์อัตโนมัติ</p>
+<hr class="divider" />
+<h2 class="sec-title">3. สถาปัตยกรรมระบบทั้ง 15 ฉาก</h2>
+<p class="prose-p">เกมถูกแบ่งโครงสร้างการเรียนรู้และการเล่นออกเป็น 15 ฉาก (Scenes 1–15) ที่เชื่อมต่อกันผ่าน <code class="inline-code">GameStateContext.tsx</code>:</p>
+<div class="diagram-box"><pre class="mermaid-raw">flowchart TD
+    S1["ฉาก 1: SplashScreen\n(หน้าโหลดและโลโก้)"] --&gt; S2["ฉาก 2: MainMenuScreen\n(เมนูหลัก Hub อคาเดมี)"]
+    S2 --&gt; S3["ฉาก 3: CharacterCreatorScreen\n(สร้างตัวละคร 3D สไตล์อนิเมะ)"]
+    S3 --&gt; S4["ฉาก 4: VoltTutorialScreen\n(บทนำเซลล์ไฟฟ้า Anode/Cathode)"]
+    S4 --&gt; S5["ฉาก 5: MissionMapScreen\n(แผนที่ภารกิจและ Roadmap)"]
+    
+    subgraph Labs["โซนห้องแล็บวงจรไฟฟ้า (Electrical Engineering Labs)"]
+        S6["ฉาก 6: BasicCircuitLabScreen\n(แล็บวงจร 1 เซลล์เบื้องต้น)"]
+        S7["ฉาก 7: SeriesLabScreen\n(แล็บวงจรอนุกรม: VT = V1 + V2)"]
+        S8["ฉาก 8: ParallelLabScreen\n(แล็บวงจรขนาน: IT = I1 + I2)"]
+        S9["ฉาก 9: MixedLabScreen\n(แล็บประกอบแบตเตอรี่ 2S2P + BMS)"]
+        S10["ฉาก 10: MotorTestScreen\n(แท่นไดโนเทสมอเตอร์ DC)"]
+    end
+    
+    S5 --&gt; S6 --&gt; S7 --&gt; S8 --&gt; S9 --&gt; S10
+    
+    subgraph RacingZone["โซนการแข่งขัน 3D (Power Racing Zone)"]
+        S11["ฉาก 11: BikeGarageScreen\n(โรงเก็บและประกอบจักรยานไฟฟ้า)"]
+        S12["ฉาก 12: RacePrepScreen\n(เลือกสนามและตรวจสอบกริดสตาร์ท)"]
+        S13["ฉาก 13: RacingScreen\n(สนามแข่ง 3D สเตเดียม + เก็บไอเทม)"]
+        S14["ฉาก 14: RaceResultsScreen\n(โพเดียมสรุปผลและคะแนน 30 แต้ม)"]
+        S15["ฉาก 15: LearningReflectionScreen\n(แบบทดสอบและใบประกาศนียบัตร)"]
+    end
+    
+    S10 --&gt; S11 --&gt; S12 --&gt; S13 --&gt; S14 --&gt; S15
+    S15 --&gt; S5</pre></div>
+<hr class="divider" />
+<h2 class="sec-title">4. เอนจินฟิสิกส์ 3 มิติ และกราฟิก Three.js</h2>
+<p class="prose-p">แกนกลางการเรนเดอร์ 3 มิติทั้งหมดรวมอยู่ใน <a href="file:///e:/gittest/gamimg_kwanjai/src/racing3d/Racing3DRenderer.ts" class="doc-link">src/racing3d/Racing3DRenderer.ts</a>:</p>
+<h3 class="sub-title">1. ระบบพิกัดสนามแข่ง (Frenet-Serret Frame)</h3>
+<p class="prose-p">สำหรับทุกตำแหน่งบนแทร็ก <span class="math-inline"><code>s</code></span>:</p>
+<p class="prose-p"><span class="math-display"><code>\mathbf{T}(s) = \frac{d\mathbf{r}}{ds} \quad (\text{Tangent}), \quad \mathbf{N}(s) = \text{Track Lateral Normal}, \quad \mathbf{B}(s) = \mathbf{N} \times \mathbf{T} \quad (\text{Surface Up})</code></span></p>
+<p class="prose-p">รับประกันว่าวัตถุทุกชิ้น (ตัวรถ, ล้อ, ซุ้มประตู, ลายตารางหมากรุก, อัฒจันทร์) จะวางขนานแนบสนิทกับผิวถนน ไม่ลอยหรือจมดิน</p>
+<h3 class="sub-title">2. สรีระและการเคลื่อนไหว (Kinematics)</h3>
+<ul>
+<li><strong>การเลี้ยวแฮนด์:</strong> <span class="math-inline"><code>\theta_{\text{steer}} = \arctan(L \cdot \kappa) - 0.55 \cdot \arctan2(\dot{x}, v)</code></span></li>
+<li><strong>การเอียงตัวรถตามแรงสู่ศูนย์กลาง:</strong> <span class="math-inline"><code>\theta_{\text{lean}} = -\arctan\left(\frac{v^2 \cdot \kappa}{g}\right)</code></span></li>
+<li><strong>การส่ายของจักรยาน (Frame Sway):</strong> ส่าย Roll, Yaw และ Lateral ตามการกดบันไดจักรยาน <span class="math-inline"><code>\theta_{\text{crank}}</code></span> ของนักปั่น</li>
+</ul>
+<h3 class="sub-title">3. ฟิสิกส์แรงต้านและแบตเตอรี่</h3>
+<ul>
+<li>แรงต้านรวม: <span class="math-inline"><code>F_{\text{total}} = F_{\text{aero}} + F_{\text{roll}} + F_{\text{slope}}</code></span> โดยที่:</li>
+</ul>
+<p class="prose-p">  <span class="math-display"><code>F_{\text{aero}} = \frac{1}{2} \rho C_d A v^2, \quad F_{\text{roll}} = C_{rr} m g \cos\theta, \quad F_{\text{slope}} = m g \sin\theta</code></span></p>
+<ul>
+<li>แรงดันใช้งานจริงขณะโหลด: <span class="math-inline"><code>V_{\text{load}} = V_{\text{ocv}} - I \cdot R_{\text{in}}</code></span></li>
+<li>การชาร์จไฟกลับเมื่อเบรก (KERS): <span class="math-inline"><code>\text{Recharge} = \frac{V_{\text{load}} \cdot I_{\text{regen}} \cdot \Delta t}{3600} \text{ (mAh)}</code></span></li>
+</ul>
+<hr class="divider" />
+<h2 class="sec-title">5. คู่มือการติดตั้งและรันงานสำหรับผู้พัฒนาคนถัดไป</h2>
+<p class="prose-p">หากมีผู้พัฒนาคนใหม่มารับช่วงต่อ ให้ทำตามขั้นตอนดังนี้:</p>
+<h3 class="sub-title">ขั้นตอนที่ 1: ติดตั้งโปรแกรมที่จำเป็น</h3>
+<ol>
+<li><strong>Node.js</strong>: เวอร์ชัน <code class="inline-code">18.x</code> หรือ <code class="inline-code">20.x LTS</code> (<a href="https://nodejs.org/" class="doc-link">https://nodejs.org/</a>)</li>
+<li><strong>Git</strong>: สำหรับดึงโค้ด</li>
+<li><strong>VS Code</strong> หรือ <strong>Google Antigravity IDE</strong></li>
+</ol>
+<h3 class="sub-title">ขั้นตอนที่ 2: รันคำสั่งเริ่มงาน (Terminal)</h3>
+<pre class="code-block"><code class="lang-bash"># 1. โคลนโปรเจกต์จาก GitHub
+git clone https://github.com/nattakwan/gamimg_kwanjai.git
+cd gamimg_kwanjai
+
+# 2. ติดตั้งแพ็กเกจ Dependencies ทั้งหมด
+npm install
+
+# 3. สร้างไฟล์ .env
+cp .env.example .env
+
+# 4. รันเซิร์ฟเวอร์ Localhost
+npm run dev</code></pre>
+<p class="prose-p">เปิดเบราว์เซอร์ไปที่: <strong><code class="inline-code">http://localhost:3000/</code></strong> สามารถทดสอบและเขียนโค้ดต่อได้ทันที</p>
+<hr class="divider" />
+<h2 class="sec-title">6. การทดสอบความถูกต้องและประกันคุณภาพ</h2>
+<p class="prose-p">ก่อนจะส่งงานหรือนำโค้ดขึ้น Production ทุกครั้ง ให้รันคำสั่งตรวจสอบ 3 คำสั่งนี้:</p>
+<ol>
+<li><strong>ตรวจสอบความถูกต้องของ TypeScript:</strong></li>
+<pre class="code-block"><code class="lang-bash">   npm run lint</code></pre>
+</ol>
+<p class="prose-p">   <em>(ต้องได้ผลลัพธ์ผ่าน 0 Errors)</em></p>
+<ol>
+<li><strong>รันชุดทดสอบฟิสิกส์ 20 กรณีทดสอบ (DeepSeek Stage Harness):</strong></li>
+<pre class="code-block"><code class="lang-bash">   node scripts/deepseek_stage_harness.cjs</code></pre>
+</ol>
+<p class="prose-p">   <em>(ต้องแสดงผล <code class="inline-code">📊 HARNESS SUMMARY: 20/20 Tests Passed</code>)</em></p>
+<ol>
+<li><strong>ทดสอบการ Build Production Bundle:</strong></li>
+<pre class="code-block"><code class="lang-bash">   npm run build</code></pre>
+</ol>
+<p class="prose-p">   <em>(ต้องคอมไพล์โฟลเดอร์ <code class="inline-code">dist/</code> สำเร็จโดยไม่มี Error)</em></p>
+<hr class="divider" />
+<h2 class="sec-title">7. การนำขึ้นระบบออนไลน์และการอัปเดต</h2>
+<h3 class="sub-title">ระบบ Vercel (Auto-Deploy ผ่าน GitHub)</h3>
+<ul>
+<li>โปรเจกต์นี้ผูกเข้ากับ Repository <a href="https://github.com/nattakwan/gamimg_kwanjai" class="doc-link">https://github.com/nattakwan/gamimg_kwanjai</a> เรียบร้อยแล้ว</li>
+<li>เมื่อผู้พัฒนาเขียนโค้ดเสร็จแล้วสั่ง:</li>
+<pre class="code-block"><code class="lang-bash">  git add .
+  git commit -m "อธิบายงานที่แก้ไข"
+  git push origin main</code></pre>
+</ul>
+<p class="prose-p">  Vercel จะตรวจพบและทำการ Build อัปเดตหน้าเว็บออนไลน์ให้ทันทีโดยอัตโนมัติ ไม่ต้องทำอะไรเพิ่มเติม</p>
+<hr class="divider" />
+<h2 class="sec-title">8. ขั้นตอนการถ่ายโอนสิทธิ์โครงการ</h2>
+<p class="prose-p">หากต้องการมอบหมายให้ผู้อื่นดูแลโปรเจกต์ต่อโดยสมบูรณ์:</p>
+<ol>
+<li><strong>เพิ่ม Collaborator ใน GitHub:</strong></li>
+</ol>
+<p class="prose-p">   * ไปที่หน้า GitHub ของโปรเจกต์ ➡️ <strong>Settings</strong> ➡️ <strong>Collaborators</strong></p>
+<p class="prose-p">   * กด <strong>"Add people"</strong> แล้วระบุ GitHub Username ของผู้รับช่วงต่อ</p>
+<ol>
+<li><strong>โอนกรรมสิทธิ์ (Transfer Ownership):</strong></li>
+</ol>
+<p class="prose-p">   * หากต้องการยก Repository ให้เป็นของเขาโดยตรง ไปที่ <strong>Settings</strong> ➡️ เลื่อนลงล่างสุดที่ <strong>Danger Zone</strong> ➡️ กด <strong>"Transfer ownership"</strong></p>
+<ol>
+<li><strong>ส่งมอบ Environment Variables:</strong></li>
+</ol>
+<p class="prose-p">   * แจ้งค่า <code class="inline-code">GEMINI_API_KEY</code> และ <code class="inline-code">DEEPSEEK_API_KEY</code> ให้กับผู้รับช่วงต่อนำไปใส่ในไฟล์ <code class="inline-code">.env</code> ในเครื่องของเขา</p>
+<hr class="divider" />
+<p class="prose-p"><em>คู่มือฉบับนี้จัดทำขึ้นโดยอัตโนมัติเพื่อใช้เป็นเอกสารอ้างอิงและส่งมอบงานวิศวกรรมซอฟต์แวร์ของโปรเจกต์ Gaming Kwanjai อย่างสมบูรณ์แบบ</em></p>
+
+
+    <div class="doc-footer">
+      <span>เอกสารส่งมอบโครงการวิศวกรรมไฟฟ้า 3 มิติ (Gaming Kwanjai)</span>
+      <span>GitHub: https://github.com/nattakwan/gamimg_kwanjai</span>
+    </div>
+  </div>
+</body>
+</html>
