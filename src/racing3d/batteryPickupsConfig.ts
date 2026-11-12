@@ -77,3 +77,4 @@ export function getStageBatteryItems(trackId: string): BatteryPickupConfig[] {
     { id: 'off_4', z: 700, x: 0.55, valuePct: 0.06, sectionName: 'ทางลาดลงแคนยอนสุดท้าย' },
   ];
 }
+

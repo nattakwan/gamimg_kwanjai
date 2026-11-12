@@ -31,6 +31,27 @@ import { AvatarRenderer } from '../common/AvatarRenderer';
 import { Racing3DRenderer, RacerUpdate } from '../../racing3d/Racing3DRenderer';
 import { getStageBatteryItems, BatteryPickupConfig } from '../../racing3d/batteryPickupsConfig';
 
+// Cached singleton AudioContext to prevent GC pauses and thread stalls
+let sharedAudioCtx: AudioContext | null = null;
+function getSharedAudioContext(): AudioContext | null {
+  try {
+    if (!sharedAudioCtx) {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextClass) {
+        sharedAudioCtx = new AudioContextClass();
+      }
+    }
+    if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().catch(() => {});
+    }
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
+}
+
 // Web Audio sound generator for racing immersion
 const playRacingTone = (
   type: 'pedal' | 'motor_hum' | 'brake' | 'boost' | 'rank_change' | 'finish' | 'regen' | 'pickup',
@@ -38,11 +59,8 @@ const playRacingTone = (
   duration: number = 0.12
 ) => {
   try {
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
+    const ctx = getSharedAudioContext();
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 

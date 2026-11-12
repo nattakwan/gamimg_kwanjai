@@ -25,7 +25,7 @@ export interface BatteryPickupVisual {
   core: THREE.Mesh;
   ring: THREE.Mesh;
   aura: THREE.Mesh;
-  light: THREE.PointLight;
+  groundGlow: THREE.Mesh;
   basePos: THREE.Vector3;
   surfaceUp: THREE.Vector3;
   phase: number;
@@ -1110,6 +1110,8 @@ export class Racing3DRenderer {
   private elapsedTime = 0;
   private resizeObserver: ResizeObserver;
   private customBikeModel: THREE.Group | null = null;
+  private currentWidth = 0;
+  private currentHeight = 0;
 
   constructor(
     container: HTMLDivElement,
@@ -1134,6 +1136,8 @@ export class Racing3DRenderer {
     // ── 2. Camera ──
     const w = container.clientWidth || 800;
     const h = container.clientHeight || 600;
+    this.currentWidth = w;
+    this.currentHeight = h;
     this.camera = new THREE.PerspectiveCamera(BASE_FOV, w / h, 0.1, 2500);
     this.camera.position.set(0, 5, 12);
 
@@ -1212,14 +1216,14 @@ export class Racing3DRenderer {
 
       const tan = this.trackCurve.getTangentAt(u).normalize();
       
-      // DeepSeek V4 Pro: Lateral Right Vector R = normalize(UP x Tangent)
-      // Intrinsically oriented to rider's right hand at every angle.
-      // Eliminates inverted steering and sudden 180-deg flip bugs on all loops & hairpins.
+      // DeepSeek V4 Pro: Lateral Right Vector R = normalize(Tangent x UP)
+      // Intrinsically oriented to rider's true right-hand side across all angles and track loops.
+      // Left button steers Left, Right button steers Right consistently on every track.
       let normal: THREE.Vector3;
       if (Math.abs(tan.dot(up)) > 0.999) {
-        normal = new THREE.Vector3().crossVectors(up, fallbackRef).normalize();
+        normal = new THREE.Vector3().crossVectors(fallbackRef, up).normalize();
       } else {
-        normal = new THREE.Vector3().crossVectors(up, tan).normalize();
+        normal = new THREE.Vector3().crossVectors(tan, up).normalize();
       }
 
       this.sampledPositions.push(pos);
@@ -2107,7 +2111,7 @@ export class Racing3DRenderer {
     const items = getStageBatteryItems(trackId);
     for (const item of items) {
       const { position, tangent, normal } = this.getTrackPosition(item.z, item.x);
-      const surfaceUp = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+      const surfaceUp = new THREE.Vector3().crossVectors(normal, tangent).normalize();
       // Elevate slightly above road deck (0.75m)
       const basePos = position.clone().addScaledVector(surfaceUp, 0.75);
 
@@ -2168,9 +2172,20 @@ export class Racing3DRenderer {
       const aura = new THREE.Mesh(auraGeo, auraMat);
       group.add(aura);
 
-      // Local road illumination point light
-      const light = new THREE.PointLight(0x10b981, 1.6, 5.0, 2.0);
-      group.add(light);
+      // Soft ground illumination glow disc (replaces PointLight to eliminate WebGL shader recompiles and frame drops)
+      const glowGeo = new THREE.CircleGeometry(0.70, 16);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: 0x10b981,
+        transparent: true,
+        opacity: 0.35,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const groundGlow = new THREE.Mesh(glowGeo, glowMat);
+      groundGlow.rotation.x = Math.PI / 2;
+      groundGlow.position.y = -0.73;
+      group.add(groundGlow);
 
       this.batteryPickupsGroup.add(group);
 
@@ -2181,7 +2196,7 @@ export class Racing3DRenderer {
         core,
         ring,
         aura,
-        light,
+        groundGlow,
         basePos,
         surfaceUp,
         phase: Math.random() * Math.PI * 2,
@@ -2203,12 +2218,12 @@ export class Racing3DRenderer {
     this.batteryPickups.forEach((visual) => {
       visual.collected = false;
       visual.collectT = 0;
-      visual.group.visible = true;
+      visual.group.position.copy(visual.basePos);
       visual.group.scale.set(1, 1, 1);
       (visual.ring.material as THREE.MeshBasicMaterial).opacity = 0.88;
       (visual.aura.material as THREE.MeshBasicMaterial).opacity = 0.16;
+      (visual.groundGlow.material as THREE.MeshBasicMaterial).opacity = 0.35;
       (visual.core.material as THREE.MeshStandardMaterial).emissiveIntensity = 2.2;
-      if (visual.light) visual.light.intensity = 1.6;
     });
   }
 
@@ -2569,7 +2584,9 @@ export class Racing3DRenderer {
       const v = Math.max(0.4, racer.speedMps);
       const wheelbase = 1.10;
       const kinematicSteer = Math.atan(wheelbase * kappaLat);
-      const lateralSteer = 0.55 * Math.atan2(dx, Math.max(2.0, v));
+      // In local bike coords (+Z forward, +X left, -X right):
+      // Moving right (dx > 0) steers handlebars toward -X (negative rotation angle)
+      const lateralSteer = -0.55 * Math.atan2(dx, Math.max(2.0, v));
       const maxSteer = THREE.MathUtils.degToRad(24);
       const targetSteer = THREE.MathUtils.clamp(kinematicSteer + lateralSteer, -maxSteer, maxSteer);
 
@@ -2582,8 +2599,9 @@ export class Racing3DRenderer {
       cyclist.steerPivot.quaternion.setFromAxisAngle(steerAxis, cyclist.currentSteer);
 
       // 2. Dynamic Centripetal + Lateral Banking Lean
+      // In local bike coords, rollPivot.rotation.z > 0 leans toward -X (right lean)
       const centripetalLean = -Math.atan((v * v * kappaLat) / 9.81);
-      const steeringLean = -0.12 * THREE.MathUtils.clamp(dx, -2.5, 2.5);
+      const steeringLean = 0.12 * THREE.MathUtils.clamp(dx, -2.5, 2.5);
       const maxLean = THREE.MathUtils.degToRad(24);
       const targetLean = THREE.MathUtils.clamp(centripetalLean + steeringLean, -maxLean, maxLean);
 
@@ -2656,14 +2674,14 @@ export class Racing3DRenderer {
         if (v.collectT < 1.0) {
           v.collectT += dt / 0.35;
           const k = Math.min(v.collectT, 1.0);
-          const scale = 1.0 + k * 1.8;
-          v.group.scale.setScalar(scale);
+          const scale = (1.0 + k * 1.8) * (1.0 - k);
+          v.group.scale.setScalar(Math.max(0.001, scale));
           (v.ring.material as THREE.MeshBasicMaterial).opacity = 0.88 * (1 - k);
           (v.aura.material as THREE.MeshBasicMaterial).opacity = 0.16 * (1 - k);
+          (v.groundGlow.material as THREE.MeshBasicMaterial).opacity = 0.35 * (1 - k);
           (v.core.material as THREE.MeshStandardMaterial).emissiveIntensity = 2.2 * (1 - k);
-          if (v.light) v.light.intensity = 1.6 * (1 - k);
           if (k >= 1.0) {
-            v.group.visible = false;
+            v.group.position.y = -9999;
           }
         }
         return;
@@ -2696,8 +2714,8 @@ export class Racing3DRenderer {
       // Re-orthogonalize track vectors (fixes curvature drift and slope tilting)
       const forward = playerTangent.clone().normalize();
       const lateralRight = playerNormal.clone().normalize();
-      // Upward vector normal to the road deck
-      const surfaceUp = new THREE.Vector3().crossVectors(forward, lateralRight).normalize();
+      // Upward vector normal to the road deck (Right x Forward = Up)
+      const surfaceUp = new THREE.Vector3().crossVectors(lateralRight, forward).normalize();
 
       // Normalized speed 0..1
       const speed01 = THREE.MathUtils.clamp(playerSpeed / TOP_SPEED, 0, 1);
@@ -2773,6 +2791,10 @@ export class Racing3DRenderer {
   private handleResize() {
     const w = this.container.clientWidth || 800;
     const h = this.container.clientHeight || 600;
+    // Guard against non-dimension changes: prevents costly WebGL framebuffer reallocation and frame stutter
+    if (Math.abs(this.currentWidth - w) < 2 && Math.abs(this.currentHeight - h) < 2) return;
+    this.currentWidth = w;
+    this.currentHeight = h;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
