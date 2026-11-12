@@ -171,10 +171,6 @@ export const RacePrepScreen: React.FC = () => {
   const [selectedTrackId, setSelectedTrackId] = useState<'flat_sprint' | 'hill_climb' | 'endurance_route' | 'offroad_downhill'>('flat_sprint');
   const selectedTrack = RACE_TRACKS.find((t) => t.id === selectedTrackId) || RACE_TRACKS[0];
 
-  // Countdown state
-  const [countdownValue, setCountdownValue] = useState<number | null>(null);
-  const [countdownText, setCountdownText] = useState<string>('');
-
   // Installed Pack & Bike Specs
   const packV = state.batteryPack.nominalVoltage || state.batteryPack.totalVoltage || 12.0;
   const packMah = state.batteryPack.nominalCapacityMah || state.batteryPack.totalCapacityMah || 4000;
@@ -186,65 +182,48 @@ export const RacePrepScreen: React.FC = () => {
   const isOverVoltage = packV > motorRatedV * 1.1;
   const isSetupValid = !isOverVoltage && packMah >= 1000;
 
-  // Countdown sequence loop
-  useEffect(() => {
-    if (countdownValue === null) return;
-
-    if (countdownValue > 0) {
-      playTone(440, 'triangle', 0.2);
-      setCountdownText(String(countdownValue));
-      const timer = setTimeout(() => {
-        setCountdownValue((v) => (v !== null ? v - 1 : null));
-      }, 900);
-      return () => clearTimeout(timer);
-    } else if (countdownValue === 0) {
-      playTone(880, 'sine', 0.4);
-      setCountdownText('ไปเลย! (GO!)');
-      const timer = setTimeout(() => {
-        // Save selected track info and transition to Racing screen
-        updateRaceData({
-          selectedTrackId,
-          trackName: selectedTrack.name,
-          trackDistanceMeters: selectedTrack.distanceMeters,
-          rank: 1,
-        });
-        goToScene('racing');
-      }, 700);
-      return () => clearTimeout(timer);
-    }
-  }, [countdownValue, selectedTrackId, selectedTrack, goToScene, updateRaceData]);
-
-  const handleStartCountdown = () => {
+  // Direct start race transition: Countdown 3-2-1 happens inside RacingScreen on the 3D starting grid only!
+  const handleStartRace = () => {
     if (!isSetupValid) {
       playTone(180, 'sawtooth', 0.3);
       return;
     }
-    setCountdownValue(3);
+    playTone(660, 'sine', 0.2);
+    updateRaceData({
+      selectedTrackId,
+      trackName: selectedTrack.name,
+      trackDistanceMeters: selectedTrack.distanceMeters,
+      rank: 1,
+    });
+    goToScene('racing');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white flex flex-col font-sans select-none">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/40 text-slate-800 flex flex-col font-sans select-none pb-12">
       {/* Top Header */}
-      <div className="bg-slate-900/90 border-b border-indigo-500/30 backdrop-blur-md px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
+      <div className="bg-white/95 border-b border-slate-200/90 shadow-sm px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <button
             onClick={() => goToScene('bike_garage')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition active:scale-95 min-h-[44px]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition active:scale-95 min-h-[40px] cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4 text-emerald-400" />
-            <span>กลับโรงเก็บจักรยาน (Back to Garage)</span>
+            <ArrowLeft className="w-4 h-4 text-emerald-600" />
+            <span>โรงเก็บจักรยาน</span>
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 via-orange-500 to-red-600 flex items-center justify-center font-bold text-sm shadow-md">
-              <Flag className="w-4 h-4 text-slate-950 fill-current" />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-bold text-sm text-white shadow-sm">
+              <Flag className="w-4 h-4 fill-white" />
             </div>
             <div>
-              <h1 className="text-sm md:text-base font-black text-amber-200">
-                จุดปล่อยตัว: เตรียมความพร้อมก่อนแข่ง (Race Preparation & Starting Grid)
+              <h1 className="text-sm md:text-base font-black text-slate-900 flex items-center gap-2">
+                <span>จุดปล่อยตัว: เตรียมความพร้อมก่อนแข่ง (Race Preparation)</span>
+                <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                  ฉากที่ 12
+                </span>
               </h1>
-              <p className="text-[11px] text-slate-400">
-                เลือกสนามแข่งขัน ตรวจสอบกริดสตาร์ท 4 คัน และเตรียมปล่อยตัวด้วยสัญญาณเคานต์ดาวน์ 3-2-1
+              <p className="text-[11px] text-slate-500">
+                เลือกสนามแข่งขัน ตรวจสอบกริดสตาร์ท 4 คัน และกดพร้อมแข่งเพื่อเข้าสู่สนาม
               </p>
             </div>
           </div>
@@ -253,16 +232,16 @@ export const RacePrepScreen: React.FC = () => {
         {/* Ready / Start Button */}
         <div className="flex items-center gap-2">
           <button
-            onClick={handleStartCountdown}
-            disabled={!isSetupValid || countdownValue !== null}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs md:text-sm shadow-xl transition active:scale-95 min-h-[44px] ${
+            onClick={handleStartRace}
+            disabled={!isSetupValid}
+            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-xs md:text-sm shadow-md transition active:scale-95 min-h-[40px] cursor-pointer ${
               isSetupValid
-                ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:brightness-110 text-slate-950 shadow-emerald-500/30'
-                : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-105 text-white shadow-emerald-500/20'
+                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
             }`}
           >
             <Play className="w-4 h-4 fill-current" />
-            <span>พร้อมแข่ง (Ready - Start Race)</span>
+            <span>พร้อมแข่ง (Enter Race)</span>
           </button>
         </div>
       </div>
@@ -272,13 +251,13 @@ export const RacePrepScreen: React.FC = () => {
         {/* Left Column: Track Selector & Profile Details (7 Cols) */}
         <div className="lg:col-span-7 flex flex-col gap-4">
           {/* Track Selector Tabs */}
-          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-amber-300 flex items-center gap-1.5 uppercase">
-                <MapPin className="w-4 h-4 text-amber-400" />
+          <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-amber-800 flex items-center gap-1.5 uppercase">
+                <MapPin className="w-4 h-4 text-amber-600" />
                 เลือกสนามแข่งขัน (Select Race Track)
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">4 สนามแข่งขัน (มีด่านวิบาก MX)</span>
+              <span className="text-[10px] text-slate-500 font-mono font-semibold">4 สนามแข่งขัน (มีด่านวิบาก MX)</span>
             </div>
 
             {/* 4 Track Option Buttons */}
@@ -292,19 +271,19 @@ export const RacePrepScreen: React.FC = () => {
                       playTone(550, 'sine', 0.08);
                       setSelectedTrackId(track.id);
                     }}
-                    className={`p-3 rounded-xl border text-left transition flex flex-col justify-between min-h-[85px] ${
+                    className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between min-h-[85px] cursor-pointer ${
                       isSelected
-                        ? 'bg-amber-950/70 border-amber-500 text-white shadow-lg ring-2 ring-amber-500/30'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                        ? 'bg-amber-50 border-amber-400 text-amber-950 font-bold shadow-sm ring-1 ring-amber-300'
+                        : 'bg-slate-50/80 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
                     <div>
                       <div className="font-bold text-xs line-clamp-1">{track.name.split('(')[0]}</div>
-                      <div className="text-[11px] font-mono text-emerald-400 font-bold mt-0.5">
+                      <div className="text-[11px] font-mono text-emerald-700 font-bold mt-0.5">
                         {track.distanceMeters} เมตร
                       </div>
                     </div>
-                    <span className="text-[10px] text-slate-400 mt-1 block">
+                    <span className="text-[10px] text-slate-500 mt-1 block">
                       {track.elevation}
                     </span>
                   </button>
@@ -313,27 +292,27 @@ export const RacePrepScreen: React.FC = () => {
             </div>
 
             {/* Active Track Profile Visualization */}
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 flex flex-col gap-3 mt-1">
+            <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200/90 flex flex-col gap-3 mt-1 shadow-inner">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-black text-white flex items-center gap-1.5">
-                    <Milestone className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                    <Milestone className="w-4 h-4 text-amber-600" />
                     {selectedTrack.name}
                   </h3>
-                  <p className="text-[11px] text-slate-400">{selectedTrack.slopeProfile}</p>
+                  <p className="text-[11px] text-slate-500">{selectedTrack.slopeProfile}</p>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${selectedTrack.gradientBadge}`}>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-white border-slate-200 text-slate-700 shadow-sm">
                   {selectedTrack.elevation}
                 </span>
               </div>
 
               {/* Graphical Elevation Profile SVG */}
-              <div className="h-28 bg-slate-900/80 rounded-xl border border-slate-800 p-2 relative flex items-center justify-center overflow-hidden">
+              <div className="h-28 bg-white rounded-xl border border-slate-200 p-2 relative flex items-center justify-center overflow-hidden shadow-sm">
                 <svg viewBox="0 0 400 100" className="w-full h-full">
                   {/* Grid Lines */}
-                  <line x1="0" y1="25" x2="400" y2="25" stroke="#1e293b" strokeDasharray="3 3" />
-                  <line x1="0" y1="50" x2="400" y2="50" stroke="#1e293b" strokeDasharray="3 3" />
-                  <line x1="0" y1="75" x2="400" y2="75" stroke="#1e293b" strokeDasharray="3 3" />
+                  <line x1="0" y1="25" x2="400" y2="25" stroke="#f1f5f9" strokeDasharray="3 3" />
+                  <line x1="0" y1="50" x2="400" y2="50" stroke="#f1f5f9" strokeDasharray="3 3" />
+                  <line x1="0" y1="75" x2="400" y2="75" stroke="#f1f5f9" strokeDasharray="3 3" />
 
                   {/* Profile Path */}
                   {selectedTrackId === 'flat_sprint' && (
@@ -358,30 +337,39 @@ export const RacePrepScreen: React.FC = () => {
                     <path
                       d="M 10 75 Q 80 30, 160 70 T 280 40 T 390 60"
                       fill="none"
-                      stroke="#a855f7"
+                      stroke="#8b5cf6"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                    />
+                  )}
+                  {selectedTrackId === 'offroad_downhill' && (
+                    <path
+                      d="M 10 20 Q 120 25, 200 80 T 390 70"
+                      fill="none"
+                      stroke="#f43f5e"
                       strokeWidth="5"
                       strokeLinecap="round"
                     />
                   )}
 
                   {/* Start & Finish Markers */}
-                  <circle cx="20" cy="75" r="5" fill="#38bdf8" />
-                  <text x="30" y="79" fill="#38bdf8" fontSize="9" fontWeight="bold">START</text>
-                  <circle cx="380" cy={selectedTrackId === 'hill_climb' ? 20 : selectedTrackId === 'endurance_route' ? 60 : 75} r="5" fill="#ef4444" />
-                  <text x="340" y={selectedTrackId === 'hill_climb' ? 17 : selectedTrackId === 'endurance_route' ? 57 : 72} fill="#ef4444" fontSize="9" fontWeight="bold">FINISH</text>
+                  <circle cx="20" cy={selectedTrackId === 'offroad_downhill' ? 22 : 75} r="5" fill="#0284c7" />
+                  <text x="30" y={selectedTrackId === 'offroad_downhill' ? 26 : 79} fill="#0284c7" fontSize="9" fontWeight="bold">START</text>
+                  <circle cx="380" cy={selectedTrackId === 'hill_climb' ? 20 : selectedTrackId === 'endurance_route' ? 60 : 70} r="5" fill="#e11d48" />
+                  <text x="340" y={selectedTrackId === 'hill_climb' ? 17 : selectedTrackId === 'endurance_route' ? 57 : 67} fill="#e11d48" fontSize="9" fontWeight="bold">FINISH</text>
                 </svg>
               </div>
 
               {/* Educational Learning Objective Box */}
-              <div className="bg-indigo-950/40 p-3 rounded-xl border border-indigo-500/30 flex flex-col gap-1">
-                <span className="text-[10px] font-black uppercase text-indigo-300 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <div className="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-200/80 flex flex-col gap-1">
+                <span className="text-[10px] font-black uppercase text-indigo-900 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                   เป้าหมายการเรียนรู้วิทยาศาสตร์ประจำสนามนี้ (Learning Objective)
                 </span>
-                <p className="text-xs text-slate-200 leading-relaxed">
+                <p className="text-xs text-indigo-950 leading-relaxed font-medium">
                   {selectedTrack.learningObjective}
                 </p>
-                <span className="text-[10px] text-emerald-400 font-mono mt-1">
+                <span className="text-[10px] text-emerald-800 font-mono mt-1 font-bold">
                   💡 กลยุทธ์แนะนำ: {selectedTrack.recommendedStrategy}
                 </span>
               </div>
@@ -392,36 +380,36 @@ export const RacePrepScreen: React.FC = () => {
         {/* Right Column: Starting Grid & Compatibility Check (5 Cols) */}
         <div className="lg:col-span-5 flex flex-col gap-4">
           {/* Starting Grid (4 Racers in Line) */}
-          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-cyan-300 flex items-center gap-1.5 uppercase">
-                <Users className="w-4 h-4 text-cyan-400" />
+          <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-cyan-800 flex items-center gap-1.5 uppercase">
+                <Users className="w-4 h-4 text-cyan-600" />
                 กริดสตาร์ท 4 คัน (Starting Grid Lineup)
               </span>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-mono font-bold text-cyan-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">
                 4 COMPETITORS
               </span>
             </div>
 
             <div className="space-y-2">
               {/* Grid Slot #1: Player (You) */}
-              <div className="bg-gradient-to-r from-cyan-950/80 to-slate-950 p-2.5 rounded-xl border-2 border-cyan-500 flex items-center gap-3 shadow-lg">
-                <div className="w-12 h-14 bg-slate-900 rounded-lg p-0.5 border border-cyan-400 shrink-0 overflow-hidden flex items-center justify-center">
+              <div className="bg-gradient-to-r from-cyan-50/90 to-white p-3 rounded-2xl border-2 border-cyan-400 flex items-center gap-3 shadow-sm">
+                <div className="w-12 h-14 bg-white rounded-xl p-0.5 border border-cyan-200 shrink-0 overflow-hidden flex items-center justify-center shadow-inner">
                   <AvatarRenderer avatar={state.character} size="sm" mode="2d" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black bg-cyan-500 text-slate-950 px-1.5 py-0.2 rounded font-mono">
+                    <span className="text-[10px] font-black bg-cyan-600 text-white px-1.5 py-0.2 rounded-md font-mono">
                       GRID #1
                     </span>
-                    <h4 className="text-xs font-black text-white truncate">
+                    <h4 className="text-xs font-black text-slate-900 truncate">
                       {state.character.name} (คุณ)
                     </h4>
                   </div>
-                  <div className="text-[11px] font-mono text-emerald-400 mt-0.5 font-bold">
+                  <div className="text-[11px] font-mono text-emerald-700 mt-0.5 font-bold">
                     {state.batteryPack.name || `แบตเตอรี่ 2S2P (${packV.toFixed(1)}V ${packMah}mAh)`}
                   </div>
-                  <span className="text-[10px] text-slate-400 block">
+                  <span className="text-[10px] text-slate-500 block">
                     ความเร็วสูงสุด: {bikeTopSpeed} กม./ชม. | มอเตอร์ {motorName}
                   </span>
                 </div>
@@ -431,25 +419,25 @@ export const RacePrepScreen: React.FC = () => {
               {AI_RACERS.map((racer, idx) => (
                 <div
                   key={racer.id}
-                  className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center gap-3"
+                  className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200 flex items-center gap-3"
                 >
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 shadow-md border"
-                    style={{ backgroundColor: `${racer.bikeColor}20`, borderColor: racer.bikeColor }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 shadow-sm border bg-white"
+                    style={{ borderColor: `${racer.bikeColor}60` }}
                   >
                     {racer.avatarIcon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-mono bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded">
+                      <span className="text-[9px] font-mono bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded-md font-bold">
                         GRID #{idx + 2}
                       </span>
-                      <h4 className="text-xs font-bold text-slate-200 truncate">{racer.name}</h4>
+                      <h4 className="text-xs font-bold text-slate-800 truncate">{racer.name}</h4>
                     </div>
-                    <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                    <div className="text-[10px] text-slate-500 truncate mt-0.5">
                       {racer.batteryInfo}
                     </div>
-                    <span className="text-[10px] text-amber-300 font-mono">
+                    <span className="text-[10px] text-amber-700 font-mono font-semibold">
                       ความเร็ว: ~{racer.maxSpeedKmh} กม./ชม.
                     </span>
                   </div>
@@ -459,44 +447,44 @@ export const RacePrepScreen: React.FC = () => {
           </div>
 
           {/* Installed Pack & Motor Compatibility Card */}
-          <div className="bg-slate-900/95 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-2.5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5 uppercase">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col gap-2.5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-emerald-800 flex items-center gap-1.5 uppercase">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 สถานะการจับคู่ทางวิศวกรรม (Compatibility Check)
               </span>
             </div>
 
             <div className="space-y-1.5 text-xs">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 flex items-center gap-1.5">
-                  <BatteryCharging className="w-3.5 h-3.5 text-cyan-400" />
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-slate-600 flex items-center gap-1.5 font-semibold">
+                  <BatteryCharging className="w-3.5 h-3.5 text-cyan-600" />
                   ชุดแบตเตอรี่ที่ติดตั้ง:
                 </span>
-                <span className="font-mono font-bold text-amber-300">
+                <span className="font-mono font-bold text-amber-800">
                   {packV.toFixed(1)}V / {packMah} mAh ({state.batteryPack.totalCells || 8} ก้อน)
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 flex items-center gap-1.5">
-                  <Gauge className="w-3.5 h-3.5 text-indigo-400" />
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-slate-600 flex items-center gap-1.5 font-semibold">
+                  <Gauge className="w-3.5 h-3.5 text-indigo-600" />
                   พิกัดมอเตอร์ไฟฟ้า:
                 </span>
-                <span className="font-mono font-bold text-indigo-300">
+                <span className="font-mono font-bold text-indigo-800">
                   DC {motorRatedV.toFixed(1)}V ({motorName})
                 </span>
               </div>
 
               <div
-                className={`p-2 rounded-lg flex items-center justify-between border ${
+                className={`p-2.5 rounded-xl flex items-center justify-between border ${
                   isSetupValid
-                    ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
-                    : 'bg-rose-950/60 border-rose-500/50 text-rose-300'
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                    : 'bg-rose-50 border-rose-300 text-rose-800'
                 }`}
               >
                 <span className="flex items-center gap-1.5 font-bold">
-                  {isSetupValid ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                  {isSetupValid ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <XCircle className="w-4 h-4 text-rose-600" />}
                   ความปลอดภัยระบบไฟฟ้า:
                 </span>
                 <span className="font-bold">
@@ -510,7 +498,7 @@ export const RacePrepScreen: React.FC = () => {
             </div>
 
             {!isSetupValid && (
-              <p className="text-[11px] text-rose-400 leading-relaxed bg-rose-950/40 p-2 rounded-lg border border-rose-800">
+              <p className="text-[11px] text-rose-700 leading-relaxed bg-rose-50 p-2.5 rounded-xl border border-rose-200 font-medium">
                 คำเตือน: แรงดันแบตเตอรี่ ({packV}V) เกินพิกัดมอเตอร์ ({motorRatedV}V) กรุณากดปุ่ม <strong>"กลับโรงเก็บจักรยาน"</strong> เพื่อเลือกชุดแบตเตอรี่ที่ไม่เกินพิกัด
               </p>
             )}
@@ -521,40 +509,12 @@ export const RacePrepScreen: React.FC = () => {
             mood={isSetupValid ? 'celebrate' : 'warning'}
             message={
               isSetupValid
-                ? `ทุกอย่างพร้อมแล้วครับคุณ ${state.character.name}! มอเตอร์ ${motorRatedV}V และแบตเตอรี่ ${packV}V (${packMah}mAh) บนสนาม ${selectedTrack.name} กดปุ่ม 'พร้อมแข่ง' เพื่อเริ่มนับถอยหลังได้เลยครับ!`
+                ? `ทุกอย่างพร้อมแล้วครับคุณ ${state.character.name}! มอเตอร์ ${motorRatedV}V และแบตเตอรี่ ${packV}V (${packMah}mAh) บนสนาม ${selectedTrack.name} กดปุ่ม 'พร้อมแข่ง' เพื่อเข้าสู่สนามแข่งขันได้เลยครับ!`
                 : 'ระบบความปลอดภัยตรวจพบว่าแรงดันแบตเตอรี่เกินพิกัดมอเตอร์ กรุณาย้อนกลับไปโรงเก็บจักรยานเพื่อปรับแต่งให้ถูกต้องก่อนครับ'
             }
           />
         </div>
       </div>
-
-      {/* Full-Screen 3-2-1 Countdown Animation Overlay */}
-      {countdownValue !== null && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="flex flex-col items-center gap-4 text-center">
-            <span className="text-xs font-mono uppercase tracking-widest text-slate-400">
-              {selectedTrack.name}
-            </span>
-
-            <div
-              key={countdownText}
-              className={`text-7xl md:text-9xl font-black font-mono tracking-wider animate-in zoom-in-75 duration-300 ${
-                countdownValue === 0
-                  ? 'text-emerald-400 drop-shadow-[0_0_50px_rgba(52,211,153,0.9)]'
-                  : 'text-amber-400 drop-shadow-[0_0_40px_rgba(251,191,36,0.8)]'
-              }`}
-            >
-              {countdownText}
-            </div>
-
-            <p className="text-sm font-bold text-slate-300 mt-2">
-              {countdownValue > 0
-                ? 'เตรียมคันเร่งและรักษาเสถียรภาพ...'
-                : 'เหยียบคันเร่งเต็มสูบ มุ่งสู่ชัยชนะ!'}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

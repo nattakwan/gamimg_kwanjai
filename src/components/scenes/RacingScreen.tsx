@@ -1090,8 +1090,8 @@ export const RacingScreen: React.FC = () => {
         renderer3dRef.current.update(racerUpdates, dt);
       }
 
-      // ─── Throttled React HUD State Push (~20 Hz / 50ms) ───
-      if (now - lastHud >= 50) {
+      // ─── Throttled React HUD State Push (~15 Hz / 66ms) ───
+      if (now - lastHud >= 66) {
         lastHud = now;
         setPlayerZ(sim.playerZ);
         setPlayerSpeedMps(sim.playerSpeedMps);
@@ -1103,15 +1103,11 @@ export const RacingScreen: React.FC = () => {
         setMotorPowerW(sim.motorPowerW);
         setMotorCurrentA(sim.motorCurrentA);
         setLoadedVoltageV(sim.loadedVoltageV);
-        setTopSpeedKmhRecorded(sim.topSpeedKmhRecorded);
         setRegenCurrentA(sim.regenCurrentA);
         setRegenPowerW(sim.regenPowerW);
         setIsRegenActive(sim.isRegenActive);
         setIsStalledOnHill(sim.isStalledOnHill);
         setHasBatteryExhausted(sim.hasBatteryExhausted);
-        setDownhillSavedWh(sim.downhillSavedWh);
-        setTotalRegeneratedMah(sim.totalRegeneratedMah);
-        setAiRiders(sim.aiRiders);
         setItemsCollectedCount(sim.itemsCollectedCount);
       }
 

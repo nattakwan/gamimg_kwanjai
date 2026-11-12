@@ -113,105 +113,147 @@ export const VoltTutorialScreen: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-      {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div className="flex items-center gap-2">
-          <Bot className="w-6 h-6 text-sky-400" />
-          <h1 className="text-lg sm:text-xl font-extrabold text-white">
-            บทเรียนหุ่นยนต์ VOLT: พื้นฐานวงจรไฟฟ้า
-          </h1>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/40 text-slate-800 p-4 sm:p-6 flex flex-col font-sans select-none pb-12">
+      <div className="max-w-4xl mx-auto w-full space-y-6">
+        {/* Top Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-sm">
+              <Bot className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                บทเรียนหุ่นยนต์ VOLT: พื้นฐานวงจรไฟฟ้า
+              </h1>
+              <p className="text-[11px] font-bold text-sky-700">ก้าวแรกสู่การเป็นวิศวกรไฟฟ้านักซิ่ง (ฉากที่ 4)</p>
+            </div>
+          </div>
 
-        <button
-          onClick={() => goToScene('mission_map')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700"
-        >
-          <span>ข้ามบทเรียน (Skip)</span>
-          <SkipForward className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Progress Pills */}
-      <div className="grid grid-cols-4 gap-2">
-        {TUTORIAL_STEPS.map((s, idx) => (
-          <div
-            key={s.id}
-            className={`h-2 rounded-full transition-all ${
-              idx < currentStepIdx
-                ? 'bg-emerald-400'
-                : idx === currentStepIdx
-                ? 'bg-sky-400 animate-pulse'
-                : 'bg-slate-800'
-            }`}
-          />
-        ))}
-      </div>
-
-      <VoltDialog
-        mood={isAnswered ? (isCorrect ? 'happy' : 'warning') : 'idea'}
-        title={`VOLT คำถามที่ ${step.id} จาก 4`}
-        message={isAnswered ? feedbackText : step.question}
-        hint={step.hint}
-      />
-
-      {/* Interactive Step Card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5">
-        <div className="space-y-1">
-          <span className="text-xs font-mono font-bold text-amber-400">{step.title}</span>
-          <h2 className="text-base sm:text-lg font-bold text-white">{step.question}</h2>
-        </div>
-
-        {/* Options */}
-        <div className="space-y-2.5">
-          {step.options.map((opt) => {
-            const isSelected = selectedOptionId === opt.id;
-            return (
-              <button
-                key={opt.id}
-                onClick={() => handleSelectOption(opt)}
-                className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between gap-3 transition-all cursor-pointer ${
-                  isSelected
-                    ? opt.isCorrect
-                      ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200 ring-2 ring-emerald-500/30'
-                      : 'bg-rose-950/70 border-rose-500 text-rose-200 ring-2 ring-rose-500/30'
-                    : 'bg-slate-950/70 hover:bg-slate-800/80 border-slate-800 text-slate-200'
-                }`}
-              >
-                <span className="text-xs sm:text-sm font-semibold">{opt.label}</span>
-                {isSelected && (
-                  <div>
-                    {opt.isCorrect ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                    ) : (
-                      <AlertCircle className="w-5 h-5 text-rose-400" />
-                    )}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-800">
           <button
-            onClick={handleReplay}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+            onClick={() => goToScene('mission_map')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 text-xs font-bold border border-slate-200 shadow-sm transition-all cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>เริ่มบทเรียนใหม่</span>
+            <span>ข้ามบทเรียน (Skip)</span>
+            <SkipForward className="w-3.5 h-3.5" />
           </button>
+        </div>
 
-          {isCorrect && (
+        {/* Progress Pills */}
+        <div className="grid grid-cols-4 gap-2">
+          {TUTORIAL_STEPS.map((s, idx) => (
+            <div
+              key={s.id}
+              className={`h-2.5 rounded-full transition-all ${
+                idx < currentStepIdx
+                  ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30'
+                  : idx === currentStepIdx
+                  ? 'bg-sky-500 animate-pulse ring-2 ring-sky-300'
+                  : 'bg-slate-200'
+              }`}
+            />
+          ))}
+        </div>
+
+        <VoltDialog
+          mood={isAnswered ? (isCorrect ? 'happy' : 'warning') : 'idea'}
+          title={`VOLT คำถามที่ ${step.id} จาก 4`}
+          message={isAnswered ? feedbackText : step.question}
+          hint={step.hint}
+        />
+
+        {/* Interactive Step Card with Visual Infographic */}
+        <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <span className="text-xs font-mono font-bold text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200">
+              {step.title}
+            </span>
+            <span className="text-xs text-slate-400 font-bold">เลือกคำตอบที่ถูกต้องเพื่อดำเนินการต่อ</span>
+          </div>
+
+          {/* Visual Battery / Circuit Schematics Infographic */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-sky-50/50 border border-slate-200/80 flex items-center justify-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-20 rounded-xl bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 border-2 border-amber-600 shadow-md relative flex flex-col items-center justify-between p-1">
+                {/* Positive Anode Nipple */}
+                <div className="w-4 h-2 bg-slate-200 rounded-t-sm -mt-2.5 border-t border-x border-slate-400 flex items-center justify-center">
+                  <span className="text-[7px] font-black text-rose-600 leading-none">+</span>
+                </div>
+                <span className="text-[9px] font-black text-slate-900 tracking-tighter">AA 1.5V</span>
+                {/* Negative Flat Cathode */}
+                <div className="w-full text-center">
+                  <span className="text-[8px] font-black text-blue-900 leading-none">-</span>
+                </div>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-rose-600">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span>ขั้วบวก (+) = หัวปุ่มนูน ศักย์ไฟฟ้าสูง</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-600">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span>ขั้วลบ (-) = ก้นแบนราบ กระแสไหลกลับ</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div className="space-y-2.5">
+            {step.options.map((opt) => {
+              const isSelected = selectedOptionId === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => handleSelectOption(opt)}
+                  className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between gap-3 transition-all cursor-pointer ${
+                    isSelected
+                      ? opt.isCorrect
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-900 ring-2 ring-emerald-400/40 shadow-sm'
+                        : 'bg-rose-50 border-rose-400 text-rose-900 ring-2 ring-rose-400/40 shadow-sm'
+                      : 'bg-white hover:bg-sky-50/50 border-slate-200 text-slate-800 shadow-sm hover:border-sky-300'
+                  }`}
+                >
+                  <span className="text-xs sm:text-sm font-bold flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-600 font-mono">
+                      {opt.id.charAt(0).toUpperCase()}
+                    </span>
+                    <span>{opt.label}</span>
+                  </span>
+                  {isSelected && (
+                    <div>
+                      {opt.isCorrect ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-rose-600" />
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Action Controls */}
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             <button
-              onClick={handleNextStep}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-amber-400/20 active:scale-95 transition-all cursor-pointer"
+              onClick={handleReplay}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all cursor-pointer"
             >
-              <span>{isLastStep ? 'เข้าสู่แผนที่ภารกิจ' : 'ขั้นตอนถัดไป'}</span>
-              <ArrowRight className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>เริ่มบทเรียนใหม่</span>
             </button>
-          )}
+
+            {isCorrect && (
+              <button
+                onClick={handleNextStep}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+              >
+                <span>{isLastStep ? 'เข้าสู่แผนที่ภารกิจ' : 'ขั้นตอนถัดไป'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

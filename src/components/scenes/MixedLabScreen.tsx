@@ -334,27 +334,30 @@ export const MixedLabScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white flex flex-col font-sans select-none">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/40 text-slate-800 flex flex-col font-sans select-none pb-12">
       {/* Top Header */}
-      <div className="bg-slate-900/90 border-b border-indigo-500/30 backdrop-blur-md px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
+      <div className="bg-white/95 border-b border-slate-200/90 shadow-sm px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <button
             onClick={() => goToScene('mission_map')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition active:scale-95 min-h-[44px]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition active:scale-95 min-h-[40px] cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4 text-emerald-400" />
+            <ArrowLeft className="w-4 h-4 text-emerald-600" />
             <span>แผนที่ภารกิจ</span>
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 via-orange-500 to-purple-600 flex items-center justify-center font-bold text-sm shadow-md">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-purple-600 flex items-center justify-center font-bold text-sm text-white shadow-sm">
               04
             </div>
             <div>
-              <h1 className="text-sm md:text-base font-black text-amber-200">
-                LAB-04: ห้องทดลองแบตเตอรี่ผสม (2S2P Mixed Circuit Lab)
+              <h1 className="text-sm md:text-base font-black text-slate-900 flex items-center gap-2">
+                <span>LAB-04: ห้องทดลองแบตเตอรี่ผสม (2S2P Mixed Circuit Lab)</span>
+                <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                  ฉากที่ 9
+                </span>
               </h1>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 สร้างชุดแบตเตอรี่ 2S2P จากถ่าน AA 4 ก้อน: 2 สตริงอนุกรม (3.0V) ขนานกันเพื่อรวมความจุเป็น 4,000 mAh
               </p>
             </div>
@@ -366,26 +369,26 @@ export const MixedLabScreen: React.FC = () => {
           <button
             onClick={handleUndo}
             disabled={history.length === 0}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 text-xs font-medium border border-slate-700 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 disabled:opacity-40 text-slate-700 text-xs font-semibold border border-slate-200 transition min-h-[38px] cursor-pointer"
             title="ย้อนกลับการกระทำล่าสุด"
           >
-            <Undo2 className="w-4 h-4 text-indigo-400" />
+            <Undo2 className="w-3.5 h-3.5 text-indigo-600" />
             <span className="hidden sm:inline">ย้อนกลับ</span>
           </button>
 
           <button
             onClick={handleReset}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 text-xs font-medium border border-slate-700 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-semibold border border-slate-200 hover:border-rose-300 transition min-h-[38px] cursor-pointer"
             title="ลบสายไฟทั้งหมด"
           >
-            <RotateCcw className="w-4 h-4 text-rose-400" />
+            <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
             <span className="hidden sm:inline">รีเซ็ต</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowMultimeter(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition min-h-[44px] cursor-pointer active:scale-95 shadow"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 transition min-h-[38px] cursor-pointer"
             title="เปิดมัลติมิเตอร์วัดแรงดัน"
           >
             <span>🎛️ มัลติมิเตอร์ (DMM)</span>
@@ -393,58 +396,58 @@ export const MixedLabScreen: React.FC = () => {
 
           <button
             onClick={() => setShowDiagramModal(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 text-xs font-semibold border border-indigo-700 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-bold border border-indigo-200 transition min-h-[38px] cursor-pointer"
           >
-            <Layers className="w-4 h-4 text-indigo-400" />
+            <Layers className="w-3.5 h-3.5 text-indigo-600" />
             <span>ผังวงจร 2S2P</span>
           </button>
 
           <button
             onClick={() => setShowCompareModal(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-900/50 hover:bg-purple-800/70 text-purple-300 text-xs font-semibold border border-purple-700 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200 transition min-h-[38px] cursor-pointer"
           >
-            <Scale className="w-4 h-4 text-amber-400" />
+            <Scale className="w-3.5 h-3.5 text-purple-600" />
             <span>เปรียบเทียบ S vs P vs 2S2P</span>
           </button>
 
           <button
             onClick={() => setShowHintModal(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-xs font-semibold border border-amber-700/60 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition min-h-[38px] cursor-pointer"
           >
-            <HelpCircle className="w-4 h-4 text-amber-400" />
+            <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
             <span>คำใบ้</span>
           </button>
 
           <button
             onClick={handleSavePack}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 text-xs font-semibold border border-emerald-700/60 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 transition min-h-[38px] cursor-pointer"
           >
-            <Save className="w-4 h-4 text-emerald-400" />
+            <Save className="w-3.5 h-3.5 text-emerald-600" />
             <span>บันทึกแพ็ก</span>
           </button>
 
           <button
             onClick={handleTestPack}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 hover:brightness-110 text-slate-950 text-xs font-black shadow-lg shadow-amber-500/20 active:scale-95 transition min-h-[44px]"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-600 hover:brightness-105 text-white text-xs font-black shadow-md shadow-amber-500/20 active:scale-95 transition min-h-[38px] cursor-pointer"
           >
-            <Play className="w-4 h-4 fill-current" />
+            <Play className="w-3.5 h-3.5 fill-current" />
             <span>ทดสอบชุดแบตเตอรี่</span>
           </button>
         </div>
       </div>
 
       {/* ── Vocational Engineering Configuration Bar (มาตรฐานช่าง ปวช.) ── */}
-      <div className="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="bg-white/80 border-b border-slate-200/90 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
         {/* Cell Chemistry Selector */}
         <div className="flex items-center gap-2">
-          <span className="font-bold text-amber-400 flex items-center gap-1 font-mono">
+          <span className="font-bold text-amber-800 flex items-center gap-1 font-mono">
             <span>🔬</span>
             <span>ชนิดเซลล์เคมี:</span>
           </span>
           <select
             value={selectedChemistry}
             onChange={(e) => setSelectedChemistry(e.target.value as CellType)}
-            className="bg-slate-950 text-white border border-amber-500/40 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
+            className="bg-slate-50 text-slate-800 border border-slate-300 rounded-xl px-2.5 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-sm"
           >
             {Object.values(BATTERY_CHEMISTRIES).map((c) => (
               <option key={c.type} value={c.type}>
@@ -452,7 +455,7 @@ export const MixedLabScreen: React.FC = () => {
               </option>
             ))}
           </select>
-          <span className="hidden xl:inline text-[11px] text-slate-400 font-mono">
+          <span className="hidden xl:inline text-[11px] text-slate-500 font-mono">
             {BATTERY_CHEMISTRIES[selectedChemistry].description}
           </span>
         </div>
@@ -463,24 +466,24 @@ export const MixedLabScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => setHasBms((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold border transition cursor-pointer text-xs ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-bold border transition cursor-pointer text-xs ${
               hasBms
-                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 shadow-sm'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-sm'
+                : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}
             title="ระบบจัดการและควบคุมสมดุลแรงดันแต่ละเซลล์ (Cell Balancing)"
           >
-            <span className={`w-2 h-2 rounded-full ${hasBms ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+            <span className={`w-2 h-2 rounded-full ${hasBms ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
             <span>วงจร BMS: {hasBms ? 'ติดตั้ง (Balancing ON)' : 'ไม่ติดตั้ง (เสี่ยง)'}</span>
           </button>
 
           {/* Fuse Rating Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-            <span className="text-slate-400 text-[11px]">ฟิวส์:</span>
+          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 font-mono shadow-sm">
+            <span className="text-slate-500 text-[11px] font-semibold">ฟิวส์:</span>
             <select
               value={fuseRating}
               onChange={(e) => setFuseRating(Number(e.target.value))}
-              className="bg-transparent text-amber-300 font-bold focus:outline-none cursor-pointer"
+              className="bg-transparent text-amber-700 font-bold focus:outline-none cursor-pointer"
             >
               <option value={5}>5A (กระแสต่ำ)</option>
               <option value={10}>10A (แนะนำ e-Bike)</option>
@@ -496,25 +499,25 @@ export const MixedLabScreen: React.FC = () => {
         <div className="lg:col-span-8 flex flex-col gap-4">
           <div
             ref={workbenchRef}
-            className="relative flex-1 min-h-[500px] rounded-2xl bg-gradient-to-b from-slate-900/95 to-slate-950 border border-amber-500/30 p-4 md:p-6 shadow-2xl flex flex-col justify-between overflow-hidden"
+            className="relative flex-1 min-h-[500px] rounded-3xl bg-white/95 border border-slate-200/90 p-4 md:p-6 shadow-sm flex flex-col justify-between overflow-hidden"
           >
             {/* Grid Pattern Background */}
             <div
-              className="absolute inset-0 opacity-10 pointer-events-none"
+              className="absolute inset-0 opacity-15 pointer-events-none"
               style={{
                 backgroundImage:
-                  'radial-gradient(circle at 10px 10px, #f59e0b 1.5px, transparent 0)',
+                  'radial-gradient(circle at 10px 10px, #d97706 1.5px, transparent 0)',
                 backgroundSize: '24px 24px',
               }}
             />
 
             {/* Instruction Banner */}
-            <div className="relative z-10 flex items-center justify-between bg-slate-950/85 border border-slate-800 rounded-xl px-4 py-2.5 backdrop-blur-md">
+            <div className="relative z-10 flex items-center justify-between bg-white/90 border border-slate-200/90 rounded-xl px-4 py-2.5 shadow-sm backdrop-blur-md">
               <div className="flex items-center gap-2 text-xs">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-slate-700">
                   {activeTerminalId ? (
-                    <span className="text-amber-300 font-bold">
+                    <span className="text-amber-800 font-bold">
                       เลือกขั้วปลายทาง (กำลังเชื่อมจาก: {terminalMeta[activeTerminalId]?.componentName} {terminalMeta[activeTerminalId]?.label})
                     </span>
                   ) : (
@@ -522,8 +525,8 @@ export const MixedLabScreen: React.FC = () => {
                   )}
                 </span>
               </div>
-              <span className="text-[11px] text-amber-400 font-mono">
-                สายไฟในวงจร: {wires.length} เส้น
+              <span className="text-[11px] text-amber-800 font-mono font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                สายไฟ: {wires.length} เส้น
               </span>
             </div>
 
@@ -539,29 +542,29 @@ export const MixedLabScreen: React.FC = () => {
             {/* Component Layout: 2 Separate Series Strings + Output Bus Bar */}
             <div className="relative z-10 flex flex-col gap-4 my-auto pt-2">
               {/* String A (Row 1): Cell 1 and Cell 2 in Series */}
-              <div className="bg-slate-950/85 border border-slate-800 rounded-2xl p-3 shadow-lg relative">
-                <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800/80">
+              <div className="bg-slate-50/90 border border-slate-200/90 rounded-2xl p-3 shadow-inner relative">
+                <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-200/80">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-black text-emerald-300 uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-black text-emerald-800 uppercase tracking-wider">
                       สตริง A (Series String A): เซลล์ #1 + เซลล์ #2 (3D)
                     </span>
                   </div>
-                  <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+                  <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                     แรงดันสตริง A: {liveValidation.stringAVoltage.toFixed(1)}V
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Cell 1 */}
-                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/80 flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-sm flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                       <span>เซลล์ #1 ({BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage.toFixed(1)}V)</span>
                       <button
                         onClick={() => setC1Rev((r) => !r)}
-                        className="text-[10px] text-amber-300 bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded font-bold transition flex items-center gap-1"
+                        className="text-[10px] text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
                       >
-                        <RotateCw className="w-3 h-3" />
+                        <RotateCw className="w-3 h-3 text-amber-600" />
                         <span>กลับขั้ว</span>
                       </button>
                     </div>
@@ -580,15 +583,15 @@ export const MixedLabScreen: React.FC = () => {
                         <button
                           id="mixed-term-cell_1_pos"
                           onClick={() => handleTerminalClick('cell_1_pos')}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all shadow-sm ${
                             activeTerminalId === 'cell_1_pos'
-                              ? 'ring-white scale-110'
-                              : 'ring-rose-500/30 hover:ring-rose-400/60'
+                              ? 'ring-amber-400 scale-110'
+                              : 'ring-rose-200 hover:ring-rose-300'
                           } ${c1Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
                         >
                           {c1Rev ? '-' : '+'}
                         </button>
-                        <span className="text-[9px] text-slate-400 font-mono">
+                        <span className="text-[9px] text-slate-500 font-mono font-semibold">
                           {c1Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
                         </span>
                       </div>
@@ -597,15 +600,15 @@ export const MixedLabScreen: React.FC = () => {
                         <button
                           id="mixed-term-cell_1_neg"
                           onClick={() => handleTerminalClick('cell_1_neg')}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all shadow-sm ${
                             activeTerminalId === 'cell_1_neg'
-                              ? 'ring-white scale-110'
-                              : 'ring-blue-500/30 hover:ring-blue-400/60'
+                              ? 'ring-amber-400 scale-110'
+                              : 'ring-blue-200 hover:ring-blue-300'
                           } ${c1Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
                         >
                           {c1Rev ? '+' : '-'}
                         </button>
-                        <span className="text-[9px] text-slate-400 font-mono">
+                        <span className="text-[9px] text-slate-500 font-mono font-semibold">
                           {c1Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
                         </span>
                       </div>
@@ -613,14 +616,14 @@ export const MixedLabScreen: React.FC = () => {
                   </div>
 
                   {/* Cell 2 */}
-                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/80 flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-sm flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                       <span>เซลล์ #2 ({BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage.toFixed(1)}V)</span>
                       <button
                         onClick={() => setC2Rev((r) => !r)}
-                        className="text-[10px] text-amber-300 bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded font-bold transition flex items-center gap-1"
+                        className="text-[10px] text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
                       >
-                        <RotateCw className="w-3 h-3" />
+                        <RotateCw className="w-3 h-3 text-amber-600" />
                         <span>กลับขั้ว</span>
                       </button>
                     </div>
@@ -639,15 +642,15 @@ export const MixedLabScreen: React.FC = () => {
                         <button
                           id="mixed-term-cell_2_pos"
                           onClick={() => handleTerminalClick('cell_2_pos')}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all shadow-sm ${
                             activeTerminalId === 'cell_2_pos'
-                              ? 'ring-white scale-110'
-                              : 'ring-rose-500/30 hover:ring-rose-400/60'
+                              ? 'ring-amber-400 scale-110'
+                              : 'ring-rose-200 hover:ring-rose-300'
                           } ${c2Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
                         >
                           {c2Rev ? '-' : '+'}
                         </button>
-                        <span className="text-[9px] text-slate-400 font-mono">
+                        <span className="text-[9px] text-slate-500 font-mono font-semibold">
                           {c2Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
                         </span>
                       </div>
@@ -656,15 +659,15 @@ export const MixedLabScreen: React.FC = () => {
                         <button
                           id="mixed-term-cell_2_neg"
                           onClick={() => handleTerminalClick('cell_2_neg')}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all shadow-sm ${
                             activeTerminalId === 'cell_2_neg'
-                              ? 'ring-white scale-110'
-                              : 'ring-blue-500/30 hover:ring-blue-400/60'
+                              ? 'ring-amber-400 scale-110'
+                              : 'ring-blue-200 hover:ring-blue-300'
                           } ${c2Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
                         >
                           {c2Rev ? '+' : '-'}
                         </button>
-                        <span className="text-[9px] text-slate-400 font-mono">
+                        <span className="text-[9px] text-slate-500 font-mono font-semibold">
                           {c2Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
                         </span>
                       </div>
@@ -674,29 +677,29 @@ export const MixedLabScreen: React.FC = () => {
               </div>
 
               {/* String B (Row 2): Cell 3 and Cell 4 in Series */}
-              <div className="bg-slate-950/85 border border-slate-800 rounded-2xl p-3 shadow-lg relative">
-                <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800/80">
+              <div className="bg-slate-50/90 border border-slate-200/90 rounded-2xl p-3 shadow-inner relative">
+                <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-200/80">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                    <span className="text-xs font-black text-cyan-300 uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                    <span className="text-xs font-black text-cyan-800 uppercase tracking-wider">
                       สตริง B (Series String B): เซลล์ #3 + เซลล์ #4 (3D)
                     </span>
                   </div>
-                  <span className="text-[11px] font-mono font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800">
+                  <span className="text-[11px] font-mono font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
                     แรงดันสตริง B: {liveValidation.stringBVoltage.toFixed(1)}V
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Cell 3 */}
-                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/80 flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-sm flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                       <span>เซลล์ #3 ({BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage.toFixed(1)}V)</span>
                       <button
                         onClick={() => setC3Rev((r) => !r)}
-                        className="text-[10px] text-teal-300 bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded font-bold transition flex items-center gap-1"
+                        className="text-[10px] text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-1.5 py-0.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
                       >
-                        <RotateCw className="w-3 h-3" />
+                        <RotateCw className="w-3 h-3 text-teal-600" />
                         <span>กลับขั้ว</span>
                       </button>
                     </div>
@@ -715,15 +718,15 @@ export const MixedLabScreen: React.FC = () => {
                         <button
                           id="mixed-term-cell_3_pos"
                           onClick={() => handleTerminalClick('cell_3_pos')}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all shadow-sm ${
                             activeTerminalId === 'cell_3_pos'
-                              ? 'ring-white scale-110'
-                              : 'ring-rose-500/30 hover:ring-rose-400/60'
+                              ? 'ring-amber-400 scale-110'
+                              : 'ring-rose-200 hover:ring-rose-300'
                           } ${c3Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
                         >
                           {c3Rev ? '-' : '+'}
                         </button>
-                        <span className="text-[9px] text-slate-400 font-mono">
+                        <span className="text-[9px] text-slate-500 font-mono font-semibold">
                           {c3Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
                         </span>
                       </div>
@@ -732,15 +735,15 @@ export const MixedLabScreen: React.FC = () => {
                         <button
                           id="mixed-term-cell_3_neg"
                           onClick={() => handleTerminalClick('cell_3_neg')}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all shadow-sm ${
                             activeTerminalId === 'cell_3_neg'
-                              ? 'ring-white scale-110'
-                              : 'ring-blue-500/30 hover:ring-blue-400/60'
+                              ? 'ring-amber-400 scale-110'
+                              : 'ring-blue-200 hover:ring-blue-300'
                           } ${c3Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
                         >
                           {c3Rev ? '+' : '-'}
                         </button>
-                        <span className="text-[9px] text-slate-400 font-mono">
+                        <span className="text-[9px] text-slate-500 font-mono font-semibold">
                           {c3Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
                         </span>
                       </div>
@@ -748,14 +751,14 @@ export const MixedLabScreen: React.FC = () => {
                   </div>
 
                   {/* Cell 4 */}
-                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/80 flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-sm flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                       <span>เซลล์ #4 ({BATTERY_CHEMISTRIES[selectedChemistry].nominalVoltage.toFixed(1)}V)</span>
                       <button
                         onClick={() => setC4Rev((r) => !r)}
-                        className="text-[10px] text-teal-300 bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded font-bold transition flex items-center gap-1"
+                        className="text-[10px] text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-1.5 py-0.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
                       >
-                        <RotateCw className="w-3 h-3" />
+                        <RotateCw className="w-3 h-3 text-teal-600" />
                         <span>กลับขั้ว</span>
                       </button>
                     </div>
@@ -774,15 +777,15 @@ export const MixedLabScreen: React.FC = () => {
                         <button
                           id="mixed-term-cell_4_pos"
                           onClick={() => handleTerminalClick('cell_4_pos')}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all shadow-sm ${
                             activeTerminalId === 'cell_4_pos'
-                              ? 'ring-white scale-110'
-                              : 'ring-rose-500/30 hover:ring-rose-400/60'
+                              ? 'ring-amber-400 scale-110'
+                              : 'ring-rose-200 hover:ring-rose-300'
                           } ${c4Rev ? 'bg-blue-600 text-white' : 'bg-rose-600 text-white'}`}
                         >
                           {c4Rev ? '-' : '+'}
                         </button>
-                        <span className="text-[9px] text-slate-400 font-mono">
+                        <span className="text-[9px] text-slate-500 font-mono font-semibold">
                           {c4Rev ? 'ขั้วลบ' : 'ขั้วบวก'}
                         </span>
                       </div>
@@ -791,15 +794,15 @@ export const MixedLabScreen: React.FC = () => {
                         <button
                           id="mixed-term-cell_4_neg"
                           onClick={() => handleTerminalClick('cell_4_neg')}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-4 transition-all shadow-sm ${
                             activeTerminalId === 'cell_4_neg'
-                              ? 'ring-white scale-110'
-                              : 'ring-blue-500/30 hover:ring-blue-400/60'
+                              ? 'ring-amber-400 scale-110'
+                              : 'ring-blue-200 hover:ring-blue-300'
                           } ${c4Rev ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'}`}
                         >
                           {c4Rev ? '+' : '-'}
                         </button>
-                        <span className="text-[9px] text-slate-400 font-mono">
+                        <span className="text-[9px] text-slate-500 font-mono font-semibold">
                           {c4Rev ? 'ขั้วบวก' : 'ขั้วลบ'}
                         </span>
                       </div>
@@ -809,14 +812,14 @@ export const MixedLabScreen: React.FC = () => {
               </div>
 
               {/* Main Pack Output Bus Bar with 3D BMS & 3D Fuse */}
-              <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-amber-500/40 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-4">
+              <div className="bg-gradient-to-r from-amber-50/80 via-white to-amber-50/80 border-2 border-amber-300 rounded-2xl p-3.5 shadow-sm flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-400 animate-ping" />
+                  <div className="w-3 h-3 rounded-full bg-amber-500 animate-ping" />
                   <div>
-                    <span className="text-xs font-black text-amber-300">
+                    <span className="text-xs font-black text-slate-800">
                       บัสบาร์จ่ายไฟหลัก & อุปกรณ์ความปลอดภัย 3 มิติ (Main Bus & Protection 3D)
                     </span>
-                    <span className="text-[10px] text-slate-400 block">
+                    <span className="text-[10px] text-slate-500 block">
                       ผสาน Smart BMS 4S และฟิวส์แก้วนิรภัยก่อนส่งพลังงานไปยังมอเตอร์
                     </span>
                   </div>
@@ -824,14 +827,14 @@ export const MixedLabScreen: React.FC = () => {
 
                 {/* 3D Hardware Modules Embedded */}
                 <div className="flex items-center gap-3">
-                  <div className="w-36 h-20 bg-slate-900/80 rounded-xl border border-slate-700/60 p-1 overflow-hidden shadow-inner">
+                  <div className="w-36 h-20 bg-slate-50 rounded-xl border border-slate-200/90 p-1 overflow-hidden shadow-inner">
                     <BMSBoard3D
                       isActive={hasBms}
                       hasFault={!liveValidation.isSuccess && (liveValidation.isShortCircuit || liveValidation.hasCirculatingCurrent)}
                       size="sm"
                     />
                   </div>
-                  <div className="w-32 h-20 bg-slate-900/80 rounded-xl border border-slate-700/60 p-1 overflow-hidden shadow-inner">
+                  <div className="w-32 h-20 bg-slate-50 rounded-xl border border-slate-200/90 p-1 overflow-hidden shadow-inner">
                     <Fuse3D
                       ratingAmps={fuseRating}
                       isBlown={liveValidation.isShortCircuit}
@@ -846,15 +849,15 @@ export const MixedLabScreen: React.FC = () => {
                     <button
                       id="mixed-term-bus_pos"
                       onClick={() => handleTerminalClick('bus_pos')}
-                      className={`w-11 h-11 rounded-full bg-rose-600 text-white font-black text-sm ring-4 transition-all ${
+                      className={`w-11 h-11 rounded-full bg-rose-600 text-white font-black text-sm ring-4 transition-all shadow-sm ${
                         activeTerminalId === 'bus_pos'
-                          ? 'ring-white scale-110'
-                          : 'ring-rose-500/40 hover:ring-rose-300'
+                          ? 'ring-amber-400 scale-110'
+                          : 'ring-rose-200 hover:ring-rose-300'
                       }`}
                     >
                       +
                     </button>
-                    <span className="text-[10px] text-rose-300 font-bold">BUS (+)</span>
+                    <span className="text-[10px] text-rose-700 font-bold">BUS (+)</span>
                   </div>
 
                   {/* Bus Negative */}
@@ -862,15 +865,15 @@ export const MixedLabScreen: React.FC = () => {
                     <button
                       id="mixed-term-bus_neg"
                       onClick={() => handleTerminalClick('bus_neg')}
-                      className={`w-11 h-11 rounded-full bg-blue-600 text-white font-black text-sm ring-4 transition-all ${
+                      className={`w-11 h-11 rounded-full bg-blue-600 text-white font-black text-sm ring-4 transition-all shadow-sm ${
                         activeTerminalId === 'bus_neg'
-                          ? 'ring-white scale-110'
-                          : 'ring-blue-500/40 hover:ring-blue-300'
+                          ? 'ring-amber-400 scale-110'
+                          : 'ring-blue-200 hover:ring-blue-300'
                       }`}
                     >
                       -
                     </button>
-                    <span className="text-[10px] text-blue-300 font-bold">BUS (-)</span>
+                    <span className="text-[10px] text-blue-700 font-bold">BUS (-)</span>
                   </div>
                 </div>
               </div>
@@ -878,24 +881,24 @@ export const MixedLabScreen: React.FC = () => {
 
             {/* Bottom Live Safety Feedback Bar */}
             <div
-              className={`relative z-10 mt-3 p-3 rounded-xl border flex items-center gap-3 transition-colors ${
+              className={`relative z-10 mt-3 p-3 rounded-2xl border flex items-center gap-3 transition-colors shadow-sm ${
                 liveValidation.alertType === 'danger'
-                  ? 'bg-rose-950/80 border-rose-600 text-rose-200'
+                  ? 'bg-rose-50 border-rose-200 text-rose-800'
                   : liveValidation.alertType === 'warning'
-                  ? 'bg-amber-950/80 border-amber-600 text-amber-200'
+                  ? 'bg-amber-50 border-amber-200 text-amber-800'
                   : liveValidation.alertType === 'success'
-                  ? 'bg-emerald-950/80 border-emerald-600 text-emerald-200'
-                  : 'bg-slate-900/80 border-slate-700 text-slate-300'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-white border-slate-200 text-slate-700'
               }`}
             >
               {liveValidation.alertType === 'danger' ? (
-                <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
+                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
               ) : liveValidation.alertType === 'warning' ? (
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
               ) : liveValidation.alertType === 'success' ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               ) : (
-                <Info className="w-5 h-5 text-indigo-400 shrink-0" />
+                <Info className="w-5 h-5 text-indigo-600 shrink-0" />
               )}
               <div className="text-xs">
                 <span className="font-bold mr-1">สถานะความปลอดภัย:</span>
@@ -908,37 +911,37 @@ export const MixedLabScreen: React.FC = () => {
         {/* Right Panel: Digital Telemetry, Chemistry Specs & VOLT (4 Cols) */}
         <div className="lg:col-span-4 flex flex-col gap-4">
           {/* Main 2S2P Multimeter Instrument */}
-          <div className="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-amber-300 flex items-center gap-1.5 uppercase">
-                <Gauge className="w-4 h-4 text-amber-400" />
+          <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-amber-800 flex items-center gap-1.5 uppercase">
+                <Gauge className="w-4 h-4 text-amber-600" />
                 มาตรวัดแพ็ก 2S2P (Pack Dyno Multimeter)
               </span>
-              <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">
                 2S 2P MATRIX
               </span>
             </div>
 
             {/* Voltage & Capacity Readouts */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
-                <span className="text-[10px] text-slate-400 block font-medium">แรงดันพิกัด (Pack Voltage)</span>
-                <div className="text-2xl font-black font-mono text-amber-400 tracking-wider">
+              <div className="bg-amber-50/70 rounded-2xl p-3 border border-amber-200/80">
+                <span className="text-[10px] text-amber-700 block font-semibold">แรงดันพิกัด (Pack Voltage)</span>
+                <div className="text-2xl font-black font-mono text-amber-900 tracking-wider">
                   {liveValidation.totalVoltage.toFixed(1)}{' '}
-                  <span className="text-sm font-normal text-slate-400">V</span>
+                  <span className="text-sm font-normal text-amber-600">V</span>
                 </div>
-                <span className="text-[10px] text-emerald-400 font-semibold">
+                <span className="text-[10px] text-amber-700 font-bold">
                   {liveValidation.isSuccess ? '2S Series Aided' : 'รอการต่อ'}
                 </span>
               </div>
 
-              <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
-                <span className="text-[10px] text-slate-400 block font-medium">ความจุพิกัด (Capacity)</span>
-                <div className="text-2xl font-black font-mono text-teal-400 tracking-wider">
+              <div className="bg-teal-50/70 rounded-2xl p-3 border border-teal-200/80">
+                <span className="text-[10px] text-teal-700 block font-semibold">ความจุพิกัด (Capacity)</span>
+                <div className="text-2xl font-black font-mono text-teal-900 tracking-wider">
                   {liveValidation.nominalCapacityMah}{' '}
-                  <span className="text-xs font-normal text-slate-400">mAh</span>
+                  <span className="text-xs font-normal text-teal-600">mAh</span>
                 </div>
-                <span className="text-[10px] text-cyan-400 font-semibold">
+                <span className="text-[10px] text-teal-700 font-bold">
                   {liveValidation.isParallelTied ? '2P Paralleled' : '2000 mAh'}
                 </span>
               </div>
@@ -946,26 +949,26 @@ export const MixedLabScreen: React.FC = () => {
 
             {/* Secondary Electrical Specs */}
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[10px]">พลังงานรวม (Energy)</span>
-                <span className="font-mono font-bold text-purple-300 text-sm">
+              <div className="bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/90">
+                <span className="text-slate-500 block text-[10px] font-semibold">พลังงานรวม (Energy)</span>
+                <span className="font-mono font-bold text-purple-700 text-sm">
                   {liveValidation.totalEnergyWh.toFixed(1)} Wh
                 </span>
-                <span className="text-[9px] text-slate-500 block">3.0V × 4.0Ah</span>
+                <span className="text-[9px] text-slate-400 block">3.0V × 4.0Ah</span>
               </div>
 
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[10px]">ความต้านทานภายใน (R_in)</span>
-                <span className="font-mono font-bold text-emerald-400 text-sm">
+              <div className="bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/90">
+                <span className="text-slate-500 block text-[10px] font-semibold">ความต้านทานภายใน (R_in)</span>
+                <span className="font-mono font-bold text-emerald-700 text-sm">
                   {liveValidation.internalResistance.toFixed(2)} Ω
                 </span>
-                <span className="text-[9px] text-slate-500 block">ลดลงเหลือครึ่งหนึ่ง</span>
+                <span className="text-[9px] text-slate-400 block">ลดลงเหลือครึ่งหนึ่ง</span>
               </div>
 
-              <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800 col-span-2 flex items-center justify-between">
+              <div className="bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/90 col-span-2 flex items-center justify-between">
                 <div>
-                  <span className="text-slate-400 block text-[10px]">ขีดจำกัดการจ่ายกระแสต่อเนื่อง</span>
-                  <span className="font-mono font-black text-amber-300 text-sm">
+                  <span className="text-slate-500 block text-[10px] font-semibold">ขีดจำกัดกระแสต่อเนื่อง</span>
+                  <span className="font-mono font-black text-amber-800 text-sm">
                     4.0 A (Max ~8.0A Pulse)
                   </span>
                 </div>
@@ -977,15 +980,15 @@ export const MixedLabScreen: React.FC = () => {
           </div>
 
           {/* Scientific Principle Card */}
-          <div className="bg-gradient-to-br from-amber-950/40 to-slate-900 border border-amber-500/20 rounded-2xl p-4 flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
-              <Cpu className="w-4 h-4 text-amber-400" />
+          <div className="bg-amber-50/50 border border-amber-200/80 rounded-3xl p-4 flex flex-col gap-2 shadow-sm">
+            <div className="flex items-center gap-2 text-amber-800 font-bold text-xs">
+              <Cpu className="w-4 h-4 text-amber-600" />
               <span>หลักการผสม (2S2P Series-Parallel Topology)</span>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               การต่ออนุกรม 2 เซลล์ในแต่ละสตริงทำให้ได้แรงดัน <strong>3.0V</strong> (1.5V + 1.5V) และการนำ 2 สตริงที่แรงดันเท่ากันมาขนานกัน จะทำให้ความจุรวมเพิ่มเป็น <strong>4,000 mAh</strong> (2,000 + 2,000 mAh)
             </p>
-            <div className="bg-slate-950/80 p-2 rounded-lg border border-slate-800 text-center font-mono text-xs text-emerald-400 font-bold">
+            <div className="bg-white p-2 rounded-xl border border-amber-200 text-center font-mono text-xs text-amber-900 font-bold shadow-sm">
               V = 2 × 1.5V = 3.0V | C = 2 × 2000mAh = 4000mAh
             </div>
           </div>
@@ -1012,47 +1015,47 @@ export const MixedLabScreen: React.FC = () => {
 
       {/* Schematic Diagram Modal */}
       {showDiagramModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Layers className="w-5 h-5 text-amber-400" />
-                <h3 className="font-black text-sm text-amber-200">
+                <Layers className="w-5 h-5 text-amber-600" />
+                <h3 className="font-black text-sm text-slate-800">
                   ผังวงจรเชื่อมต่อ 2S2P (Connection Diagram)
                 </h3>
               </div>
               <button
                 onClick={() => setShowDiagramModal(false)}
-                className="text-slate-400 hover:text-white text-xs px-2.5 py-1 rounded-lg bg-slate-800"
+                className="text-slate-500 hover:text-slate-800 text-xs px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 cursor-pointer"
               >
                 ปิด
               </button>
             </div>
 
             {/* Clear Visual Schematic Illustration */}
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 flex flex-col items-center gap-3">
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex flex-col items-center gap-3">
               <svg viewBox="0 0 360 200" className="w-full h-auto">
                 {/* String A */}
-                <rect x="20" y="30" width="80" height="35" rx="4" fill="#d97706" />
-                <text x="60" y="52" fill="#000" fontSize="10" fontWeight="bold" textAnchor="middle">
+                <rect x="20" y="30" width="80" height="35" rx="6" fill="#f59e0b" />
+                <text x="60" y="52" fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle">
                   เซลล์ #1 (1.5V)
                 </text>
                 <line x1="100" y1="47" x2="140" y2="47" stroke="#10b981" strokeWidth="4" />
 
-                <rect x="140" y="30" width="80" height="35" rx="4" fill="#d97706" />
-                <text x="180" y="52" fill="#000" fontSize="10" fontWeight="bold" textAnchor="middle">
+                <rect x="140" y="30" width="80" height="35" rx="6" fill="#f59e0b" />
+                <text x="180" y="52" fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle">
                   เซลล์ #2 (1.5V)
                 </text>
 
                 {/* String B */}
-                <rect x="20" y="110" width="80" height="35" rx="4" fill="#0d9488" />
-                <text x="60" y="132" fill="#000" fontSize="10" fontWeight="bold" textAnchor="middle">
+                <rect x="20" y="110" width="80" height="35" rx="6" fill="#0d9488" />
+                <text x="60" y="132" fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle">
                   เซลล์ #3 (1.5V)
                 </text>
                 <line x1="100" y1="127" x2="140" y2="127" stroke="#10b981" strokeWidth="4" />
 
-                <rect x="140" y="110" width="80" height="35" rx="4" fill="#0d9488" />
-                <text x="180" y="132" fill="#000" fontSize="10" fontWeight="bold" textAnchor="middle">
+                <rect x="140" y="110" width="80" height="35" rx="6" fill="#0d9488" />
+                <text x="180" y="132" fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle">
                   เซลล์ #4 (1.5V)
                 </text>
 
@@ -1061,7 +1064,7 @@ export const MixedLabScreen: React.FC = () => {
                 <line x1="20" y1="47" x2="20" y2="127" stroke="#3b82f6" strokeWidth="4" />
                 <line x1="20" y1="87" x2="5" y2="87" stroke="#3b82f6" strokeWidth="5" />
                 <circle cx="5" cy="87" r="5" fill="#3b82f6" />
-                <text x="15" y="99" fill="#60a5fa" fontSize="9" fontWeight="bold">
+                <text x="15" y="99" fill="#1d4ed8" fontSize="9" fontWeight="bold">
                   BUS (-)
                 </text>
 
@@ -1069,16 +1072,16 @@ export const MixedLabScreen: React.FC = () => {
                 <line x1="220" y1="47" x2="220" y2="127" stroke="#ef4444" strokeWidth="4" />
                 <line x1="220" y1="87" x2="280" y2="87" stroke="#ef4444" strokeWidth="5" />
                 <circle cx="280" cy="87" r="5" fill="#ef4444" />
-                <text x="290" y="91" fill="#f87171" fontSize="10" fontWeight="bold">
+                <text x="290" y="91" fill="#b91c1c" fontSize="10" fontWeight="bold">
                   BUS (+) 3.0V
                 </text>
-                <text x="290" y="104" fill="#34d399" fontSize="9" fontWeight="bold">
+                <text x="290" y="104" fill="#047857" fontSize="9" fontWeight="bold">
                   4000 mAh
                 </text>
               </svg>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               <strong>สรุปขั้นตอน:</strong><br />
               1. ต่อ <strong>ขั้วบวกเซลล์ 1 เข้าขั้วลบเซลล์ 2</strong> เพื่อทำสตริง A (3.0V)<br />
               2. ต่อ <strong>ขั้วบวกเซลล์ 3 เข้าขั้วลบเซลล์ 4</strong> เพื่อทำสตริง B (3.0V)<br />
@@ -1088,7 +1091,7 @@ export const MixedLabScreen: React.FC = () => {
 
             <button
               onClick={() => setShowDiagramModal(false)}
-              className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs transition"
+              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition cursor-pointer"
             >
               เข้าใจแล้ว เริ่มต่อวงจร
             </button>
@@ -1098,56 +1101,56 @@ export const MixedLabScreen: React.FC = () => {
 
       {/* Comparison Modal */}
       {showCompareModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-purple-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Scale className="w-5 h-5 text-purple-400" />
-                <h3 className="font-black text-sm text-purple-200">
+                <Scale className="w-5 h-5 text-purple-600" />
+                <h3 className="font-black text-sm text-slate-800">
                   เปรียบเทียบการจัดเรียง 4 รูปแบบ (1S1P, 2S1P, 1S2P, 2S2P)
                 </h3>
               </div>
               <button
                 onClick={() => setShowCompareModal(false)}
-                className="text-slate-400 hover:text-white text-xs px-2.5 py-1 rounded-lg bg-slate-800"
+                className="text-slate-500 hover:text-slate-800 text-xs px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 cursor-pointer"
               >
                 ปิด
               </button>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 text-xs">
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <span className="font-bold text-slate-300 block">1S 1P (เซลล์เดี่ยว 1 ก้อน)</span>
-                <span className="text-[10px] text-slate-400">แรงดัน 1.5V | ความจุ 2000mAh</span>
-                <span className="text-[10px] text-amber-400 block mt-1">พลังงาน: 3.0 Wh</span>
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                <span className="font-bold text-slate-700 block">1S 1P (เซลล์เดี่ยว 1 ก้อน)</span>
+                <span className="text-[10px] text-slate-500">แรงดัน 1.5V | ความจุ 2000mAh</span>
+                <span className="text-[10px] text-amber-700 block mt-1 font-semibold">พลังงาน: 3.0 Wh</span>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-indigo-800">
-                <span className="font-bold text-indigo-300 block">2S 1P (อนุกรม 2 ก้อน)</span>
-                <span className="text-[10px] text-slate-400">แรงดัน 3.0V | ความจุ 2000mAh</span>
-                <span className="text-[10px] text-indigo-400 block mt-1">พลังงาน: 6.0 Wh</span>
+              <div className="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-200">
+                <span className="font-bold text-indigo-900 block">2S 1P (อนุกรม 2 ก้อน)</span>
+                <span className="text-[10px] text-indigo-700">แรงดัน 3.0V | ความจุ 2000mAh</span>
+                <span className="text-[10px] text-indigo-800 block mt-1 font-semibold">พลังงาน: 6.0 Wh</span>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-teal-800">
-                <span className="font-bold text-teal-300 block">1S 2P (ขนาน 2 ก้อน)</span>
-                <span className="text-[10px] text-slate-400">แรงดัน 1.5V | ความจุ 4000mAh</span>
-                <span className="text-[10px] text-teal-400 block mt-1">พลังงาน: 6.0 Wh</span>
+              <div className="bg-teal-50/70 p-3 rounded-2xl border border-teal-200">
+                <span className="font-bold text-teal-900 block">1S 2P (ขนาน 2 ก้อน)</span>
+                <span className="text-[10px] text-teal-700">แรงดัน 1.5V | ความจุ 4000mAh</span>
+                <span className="text-[10px] text-teal-800 block mt-1 font-semibold">พลังงาน: 6.0 Wh</span>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-xl border-2 border-emerald-500">
-                <span className="font-bold text-emerald-300 block">2S 2P (ชุดผสม 4 ก้อน) 🔥</span>
-                <span className="text-[10px] text-slate-300">แรงดัน 3.0V | ความจุ 4000mAh</span>
-                <span className="text-[10px] text-emerald-400 block mt-1 font-bold">พลังงาน: 12.0 Wh (4 เท่า!)</span>
+              <div className="bg-emerald-50/90 p-3 rounded-2xl border-2 border-emerald-400">
+                <span className="font-bold text-emerald-900 block">2S 2P (ชุดผสม 4 ก้อน) 🔥</span>
+                <span className="text-[10px] text-emerald-700">แรงดัน 3.0V | ความจุ 4000mAh</span>
+                <span className="text-[10px] text-emerald-800 block mt-1 font-black">พลังงาน: 12.0 Wh (4 เท่า!)</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400 leading-relaxed">
+            <p className="text-[11px] text-slate-500 leading-relaxed">
               ชุดผสม 2S2P รวมข้อดีทั้งสองอย่างเข้าด้วยกัน: ได้ทั้งแรงดัน 3.0V สำหรับหมุนมอเตอร์เร็วขึ้น และได้ความจุ 4000mAh สำหรับขับขี่ระยะทางไกลขึ้น!
             </p>
 
             <button
               onClick={() => setShowCompareModal(false)}
-              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition"
+              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-sm transition cursor-pointer"
             >
               รับทราบ
             </button>
@@ -1157,13 +1160,13 @@ export const MixedLabScreen: React.FC = () => {
 
       {/* Hint Modal */}
       {showHintModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-2 text-amber-400 font-black text-sm">
-              <HelpCircle className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-2 text-amber-800 font-black text-sm">
+              <HelpCircle className="w-5 h-5 text-amber-600" />
               <span>คำใบ้จากหุ่นยนต์ VOLT</span>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               1. <strong>ทำสตริง A:</strong> เชื่อมขั้วบวก (+) ถ่าน 1 เข้าขั้วลบ (-) ถ่าน 2<br />
               2. <strong>ทำสตริง B:</strong> เชื่อมขั้วบวก (+) ถ่าน 3 เข้าขั้วลบ (-) ถ่าน 4<br />
               3. <strong>ขนานขั้วบวก:</strong> เชื่อมขั้วบวก (+) ถ่าน 2 เข้าขั้วบวก (+) ถ่าน 4 แล้วต่อเข้า BUS (+)<br />
@@ -1172,7 +1175,7 @@ export const MixedLabScreen: React.FC = () => {
             </p>
             <button
               onClick={() => setShowHintModal(false)}
-              className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs transition"
+              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition cursor-pointer"
             >
               รับทราบคำใบ้
             </button>
@@ -1182,20 +1185,20 @@ export const MixedLabScreen: React.FC = () => {
 
       {/* Celebration Modal */}
       {showCelebration && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-gradient-to-b from-slate-900 to-amber-950 border-2 border-emerald-400 rounded-3xl max-w-md w-full p-6 shadow-2xl text-center flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 shadow-xl shadow-emerald-500/30">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border-2 border-emerald-300 rounded-3xl max-w-md w-full p-6 shadow-2xl text-center flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 border-2 border-emerald-300 flex items-center justify-center text-emerald-600 shadow-sm">
               <Sparkles className="w-8 h-8" />
             </div>
 
             <div>
-              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200">
                 ภารกิจสำเร็จ! +100 EXP
               </span>
-              <h2 className="text-xl font-black text-white mt-2">
+              <h2 className="text-xl font-black text-slate-900 mt-2">
                 สร้างชุดแบตเตอรี่ 2S2P สำเร็จ!
               </h2>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                 คุณได้สร้างชุดแบตเตอรี่แบบ 2S2P พิกัด <strong>3.0V และความจุ 4,000 mAh</strong> ที่มีความสมดุลและปลอดภัยอย่างสมบูรณ์แบบ ข้อมูลชุดแบตเตอรี่นี้ถูกบันทึกเข้าสู่ยานยนต์แข่งขันแล้ว พร้อมปลดล็อกภารกิจถัดไป: <strong>แท่นทดสอบมอเตอร์ (DC Motor Test Dyno)</strong>!
               </p>
             </div>
@@ -1203,7 +1206,7 @@ export const MixedLabScreen: React.FC = () => {
             <div className="w-full flex flex-col gap-2 mt-2">
               <button
                 onClick={() => goToScene('motor_test')}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:brightness-110 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transition"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-105 text-white font-black text-xs shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 <span>ไปต่อที่ LAB-05: ทดสอบมอเตอร์ไฟฟ้า</span>
                 <ArrowRight className="w-4 h-4" />
@@ -1211,7 +1214,7 @@ export const MixedLabScreen: React.FC = () => {
 
               <button
                 onClick={() => setShowCelebration(false)}
-                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition"
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 transition cursor-pointer"
               >
                 ทดลองสำรวจต่อในห้องนี้
               </button>

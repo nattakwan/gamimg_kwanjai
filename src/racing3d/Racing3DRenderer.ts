@@ -1125,6 +1125,14 @@ export class Racing3DRenderer {
   private collisionShockwave: THREE.Mesh | null = null;
   private shockwaveLife: number = 0;
 
+  // Sky, stadium blimp & drifting clouds
+  private clouds: THREE.Group[] = [];
+  private stadiumBlimp: THREE.Group | null = null;
+  private trackCenterX: number = 0;
+  private trackCenterZ: number = 0;
+  private trackSpanX: number = 100;
+  private trackSpanZ: number = 100;
+
   constructor(
     container: HTMLDivElement,
     trackId: string,
@@ -1142,8 +1150,8 @@ export class Racing3DRenderer {
 
     // ── 1. Scene & Atmosphere ──
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87ceeb);
-    this.scene.fog = new THREE.Fog(0xc8e6f5, FOG_NEAR, FOG_FAR);
+    this.scene.background = new THREE.Color(0x38bdf8); // Radiant sunny sky blue (matching reference stadium image)
+    this.scene.fog = new THREE.Fog(0x38bdf8, 280, 1600); // Soft atmospheric horizon haze matching sky color
 
     // ── 2. Camera ──
     const w = container.clientWidth || 800;
@@ -1859,53 +1867,77 @@ export class Racing3DRenderer {
     this.scene.add(embMesh);
   }
 
-  // ─── Finish Line & Gantries ────────────────────────────────────────────────
+  // ─── Crisp Mathematically-Aligned Road Checkered Timing Line ───────────────
 
-  private buildFinishLine() {
-    const finishIdx = this.isClosedTrack ? 0 : TRACK_SAMPLES;
-    const pos = this.sampledPositions[finishIdx];
-    const normal = this.sampledNormals[finishIdx];
-    const tangent = this.sampledTangents[finishIdx];
+  private createCheckeredLineMesh(sampleIdx: number): THREE.Mesh {
+    const pos = this.sampledPositions[sampleIdx];
+    const normal = this.sampledNormals[sampleIdx];
+    const tangent = this.sampledTangents[sampleIdx];
+    const surfaceUp = new THREE.Vector3().crossVectors(normal, tangent).normalize();
 
-    const checkWidth = ROAD_HALF_WIDTH * 2;
-    const numCols = 12;
-    const cellW = checkWidth / numCols;
-    const cellH = 0.8;
+    const roadWidth = ROAD_HALF_WIDTH * 2;
+    const depthMeters = 1.4;
 
-    // Checkerboard floor grid across track width
-    for (let c = 0; c < numCols; c++) {
-      for (let r = 0; r < 2; r++) {
+    // High-resolution crisp canvas texture with 16 cols x 4 rows
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d')!;
+
+    const cols = 16;
+    const rows = 4;
+    const cw = canvas.width / cols;
+    const rh = canvas.height / rows;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
         const isWhite = (c + r) % 2 === 0;
-        const cell = new THREE.Mesh(
-          new THREE.PlaneGeometry(cellW, cellH),
-          new THREE.MeshBasicMaterial({ color: isWhite ? 0xffffff : 0x0f172a, side: THREE.DoubleSide })
-        );
-        const lateral = -ROAD_HALF_WIDTH + (c + 0.5) * cellW;
-        const forward = (r - 0.5) * cellH;
-
-        cell.position.copy(pos);
-        cell.position.addScaledVector(normal, lateral);
-        cell.position.addScaledVector(tangent, forward);
-        cell.position.y += 0.04;
-        cell.rotation.x = -Math.PI / 2;
-        this.scene.add(cell);
+        ctx.fillStyle = isWhite ? '#ffffff' : '#0f172a';
+        ctx.fillRect(c * cw, r * rh, cw, rh);
       }
     }
 
-    // Glowing finish timing line across the track
-    const lineMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(checkWidth, 0.18),
-      new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide })
-    );
-    lineMesh.position.copy(pos);
-    lineMesh.position.y += 0.045;
-    lineMesh.rotation.x = -Math.PI / 2;
-    lineMesh.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), normal.clone());
-    lineMesh.rotateX(-Math.PI / 2);
-    this.scene.add(lineMesh);
+    // Gold finish timing borders on leading & trailing edges
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(0, 0, canvas.width, 8);
+    ctx.fillRect(0, canvas.height - 8, canvas.width, 8);
 
-    // If point-to-point track (Hill Climb, MX Offroad Downhill), erect 3D Finish Arch at the finish summit/arena
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+
+    // DeepSeek V4 Pro: PlaneGeometry(width, height)
+    // Local +X = width (along normal across road)
+    // Local +Y = height (along tangent along road length)
+    // Local +Z = normal to plane (along surfaceUp out of road)
+    // Normal x Tangent = surfaceUp (right-handed, det = +1)
+    const geo = new THREE.PlaneGeometry(roadWidth, depthMeters);
+    const rotMat = new THREE.Matrix4().makeBasis(normal, tangent, surfaceUp);
+
+    const mat = new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -4,
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.quaternion.setFromRotationMatrix(rotMat);
+    mesh.position.copy(pos).addScaledVector(surfaceUp, 0.025);
+    return mesh;
+  }
+
+  // ─── Finish Line & Gantries ────────────────────────────────────────────────
+
+  private buildFinishLine() {
+    // If point-to-point track (Hill Climb, MX Offroad Downhill), erect 3D Finish Line & Arch at summit/arena
+    // (For closed circuit tracks, start gantry already acts as official start/finish timing gate)
     if (!this.isClosedTrack) {
+      const finishCheckeredMesh = this.createCheckeredLineMesh(TRACK_SAMPLES);
+      this.scene.add(finishCheckeredMesh);
       this.buildFinishGantry();
     }
   }
@@ -2167,29 +2199,9 @@ export class Racing3DRenderer {
 
     this.startLights = { redMat, amberMat, greenMat };
 
-    // Checkerboard starting line on road deck right under the arch
-    const checkWidth = ROAD_HALF_WIDTH * 2;
-    const numCols = 12;
-    const cellW = checkWidth / numCols;
-    for (let c = 0; c < numCols; c++) {
-      for (let r = 0; r < 2; r++) {
-        const isWhite = (c + r) % 2 === 0;
-        const cell = new THREE.Mesh(
-          new THREE.PlaneGeometry(cellW - 0.02, 0.6),
-          new THREE.MeshBasicMaterial({
-            color: isWhite ? 0xffffff : 0x0f172a,
-            side: THREE.DoubleSide,
-            depthWrite: false,
-          })
-        );
-        cell.rotation.x = Math.PI / 2;
-        const cellPos = pos.clone().addScaledVector(normal, -ROAD_HALF_WIDTH + (c + 0.5) * cellW);
-        cellPos.addScaledVector(tangent, (r - 0.5) * 0.6);
-        cellPos.y += 0.025;
-        cell.position.copy(cellPos);
-        gantry.add(cell);
-      }
-    }
+    // Crisp, perfectly aligned Checkerboard starting line on road deck right under the arch
+    const startCheckeredMesh = this.createCheckeredLineMesh(gantryIdx);
+    gantry.add(startCheckeredMesh);
 
     this.scene.add(gantry);
   }
@@ -2374,11 +2386,18 @@ export class Racing3DRenderer {
     }
     const centerX = (minX + maxX) * 0.5;
     const centerZ = (minZ + maxZ) * 0.5;
+    const spanX = Math.max(80, (maxX - minX) * 0.5);
+    const spanZ = Math.max(80, (maxZ - minZ) * 0.5);
 
-    const groundGeo = new THREE.PlaneGeometry(3000, 3000);
+    this.trackCenterX = centerX;
+    this.trackCenterZ = centerZ;
+    this.trackSpanX = spanX;
+    this.trackSpanZ = spanZ;
+
+    const groundGeo = new THREE.PlaneGeometry(4000, 4000);
     const groundMat = new THREE.MeshPhongMaterial({
-      color: isOffroad ? 0x3d2817 : 0x22542a, // Rich canyon dirt or lush green meadow
-      shininess: 5,
+      color: isOffroad ? 0x9a5b32 : 0x22542a, // Warm sunlit canyon terra or lush green stadium meadow
+      shininess: 8,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -2386,87 +2405,66 @@ export class Racing3DRenderer {
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    // 2. Mountains (Spaced naturally on the far scenic horizon >= 260m from track)
+    // 2. Scenic Mountain Horizon (Gentle rolling mountain silhouettes placed >= 480m away)
     this.addMountainRange();
 
     // 3. Roadside Vegetation (Pine & palm trees planted safely beside shoulders)
     this.addRoadsideVegetation();
 
+    // 4. Stadium Grandstands & Cheering Spectator Bleachers (อัฒจันทร์ผู้ชมการแข่งขัน)
+    this.addStadiumGrandstands();
+
+    // 5. Puffy 3D Sky Clouds (ก้อนเมฆลอยฟ้า)
+    this.addSkyClouds();
+
+    // 6. Floating Goodyear-style Stadium Airship Blimp (เรือเหาะลอยฟ้า)
+    this.addStadiumBlimp();
+
     this.scene.add(this.envGroup);
   }
 
   private addMountainRange() {
-    // 1. Calculate bounding box of sampled track positions
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-    for (const p of this.sampledPositions) {
-      if (p.x < minX) minX = p.x;
-      if (p.x > maxX) maxX = p.x;
-      if (p.z < minZ) minZ = p.z;
-      if (p.z > maxZ) maxZ = p.z;
-    }
-
-    const centerX = (minX + maxX) * 0.5;
-    const centerZ = (minZ + maxZ) * 0.5;
-    const spanX = (maxX - minX) * 0.5;
-    const spanZ = (maxZ - minZ) * 0.5;
-
     const isOffroad = this.trackId === 'offroad_downhill';
 
-    // Materials tailored to track theme
+    // Natural scenic mountain materials (alpine emerald or sunlit canyon ridges)
     const mtnMat = new THREE.MeshPhongMaterial({
-      color: isOffroad ? 0x8b4513 : 0x224c26, // Canyon terracotta/clay or alpine emerald
+      color: isOffroad ? 0x854d0e : 0x166534,
       flatShading: true,
       shininess: 4,
     });
     const secondaryMtnMat = new THREE.MeshPhongMaterial({
-      color: isOffroad ? 0xa0522d : 0x1b3b1e, // Sandstone or deep forest
+      color: isOffroad ? 0xa16207 : 0x14532d,
       flatShading: true,
       shininess: 4,
     });
     const capMat = new THREE.MeshPhongMaterial({
-      color: isOffroad ? 0xcd853f : 0xf8fafc, // Sunlit mesa sandstone cap or pristine snow cap
+      color: isOffroad ? 0xd97706 : 0xf8fafc,
       flatShading: true,
       shininess: 12,
     });
 
-    const numMountains = 24;
+    const numMountains = 20;
     for (let i = 0; i < numMountains; i++) {
       const angle = (i / numMountains) * Math.PI * 2;
-      const baseDistX = spanX + 280 + (i % 4) * 60;
-      const baseDistZ = spanZ + 280 + ((i * 3) % 4) * 60;
-      let mx = centerX + Math.cos(angle) * baseDistX;
-      let mz = centerZ + Math.sin(angle) * baseDistZ;
-      const radius = 60 + ((i * 11) % 45);
-      const height = 90 + ((i * 17) % 85);
-
-      // DeepSeek clearance verification: Mountain base must maintain clearance >= 260m from every track station
-      const getMinDistToTrack = () => {
-        let minD = Infinity;
-        for (const p of this.sampledPositions) {
-          const d = Math.hypot(p.x - mx, p.z - mz);
-          if (d < minD) minD = d;
-        }
-        return minD;
-      };
-
-      let minD = getMinDistToTrack();
-      while (minD - radius < 260) {
-        mx += Math.cos(angle) * 40;
-        mz += Math.sin(angle) * 40;
-        minD = getMinDistToTrack();
-      }
+      const baseDistX = this.trackSpanX + 520 + (i % 4) * 80;
+      const baseDistZ = this.trackSpanZ + 520 + ((i * 3) % 4) * 80;
+      const mx = this.trackCenterX + Math.cos(angle) * baseDistX;
+      const mz = this.trackCenterZ + Math.sin(angle) * baseDistZ;
+      const radius = 140 + ((i * 13) % 80);
+      const height = 150 + ((i * 19) % 110);
 
       const mat = i % 2 === 0 ? mtnMat : secondaryMtnMat;
-      const mtnGeo = new THREE.ConeGeometry(radius, height, 7);
+      const mtnGeo = new THREE.SphereGeometry(radius, 20, 14);
+      mtnGeo.scale(1.3, height / radius, 1.3);
       const mtn = new THREE.Mesh(mtnGeo, mat);
-      mtn.position.set(mx, -8 + height * 0.5, mz);
-      mtn.receiveShadow = true;
+      mtn.position.set(mx, -radius * 0.45, mz);
       this.envGroup.add(mtn);
 
-      // Summit peak cap (Snow cap on highway/alpine tracks, sunlit sandstone cap on offroad canyon)
-      const capGeo = new THREE.ConeGeometry(radius * 0.32, height * 0.22, 7);
+      // Distant summit cap
+      const capGeo = new THREE.SphereGeometry(radius * 0.42, 16, 10);
+      capGeo.scale(1.2, (height * 0.35) / (radius * 0.42), 1.2);
       const cap = new THREE.Mesh(capGeo, capMat);
-      cap.position.set(mx, -8 + height * 0.5 + height * 0.39, mz);
+      cap.position.set(mx, -radius * 0.45 + height * 0.55, mz);
       this.envGroup.add(cap);
     }
   }
@@ -2502,6 +2500,334 @@ export class Racing3DRenderer {
       );
       this.envGroup.add(treeGroup);
     }
+  }
+
+  // ─── Stadium Grandstands & Spectator Seating (อัฒจันทร์ผู้เข้าชมการแข่งขัน) ────
+
+  private addStadiumGrandstands() {
+    const grandstandGroup = new THREE.Group();
+
+    // Bleacher Materials (Shared across all grandstands)
+    const concreteMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8, shininess: 25 });
+    const seatColors = [0xef4444, 0x3b82f6, 0xf59e0b, 0x10b981, 0x8b5cf6, 0xf8fafc, 0x06b6d4];
+    const seatMaterials = seatColors.map((c) => new THREE.MeshPhongMaterial({ color: c, shininess: 30 }));
+    const roofMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, shininess: 60 });
+    const trussMat = new THREE.MeshPhongMaterial({ color: 0x475569, shininess: 50 });
+    const skinMat = new THREE.MeshPhongMaterial({ color: 0xfed7aa, shininess: 10 });
+
+    // Sponsor Banners (Canvas Textures)
+    const createBannerTexture = (brand: string, sub: string, bgColor: string, txtColor: string) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d')!;
+
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, 512, 128);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      for (let i = 0; i < 512; i += 28) {
+        ctx.fillRect(i, 0, 14, 128);
+      }
+
+      ctx.fillStyle = '#ffffff';
+      for (let c = 0; c < 32; c++) {
+        ctx.fillRect(c * 16, 0, 8, 8);
+        ctx.fillRect(c * 16 + 8, 120, 8, 8);
+      }
+
+      ctx.fillStyle = txtColor;
+      ctx.font = '900 48px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(brand, 256, 56);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '700 16px sans-serif';
+      ctx.fillText(sub, 256, 102);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      return tex;
+    };
+
+    const banners = [
+      createBannerTexture('PIRELLI', 'OFFICIAL MOTORSPORTS TYRE', '#dc2626', '#fef08a'),
+      createBannerTexture('GOODYEAR', 'HIGH PERFORMANCE RACING', '#1e3a8a', '#facc15'),
+      createBannerTexture('MONSTER', 'UNLEASH THE BEAST ⚡', '#090d16', '#22c55e'),
+      createBannerTexture('KWANJAI POWER', 'BATTERY QUEST CHAMPIONSHIP', '#047857', '#a7f3d0'),
+      createBannerTexture('BATTERY QUEST GP', 'POWER RACING ACADEMY', '#4338ca', '#fde047'),
+    ];
+
+    // Shared spectator box & sphere geometries
+    const bodyGeo = new THREE.BoxGeometry(0.38, 0.46, 0.34);
+    const headGeo = new THREE.SphereGeometry(0.13, 8, 8);
+    const capGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 8);
+
+    // DeepSeek V4 Pro: Rock-solid right-handed basis with perfect track clearance
+    // side = 1 (Right): Local +Z = normal (away from track), Local +X = tangent (along track), Local +Y = surfaceUp
+    // side = -1 (Left): Local +Z = -normal (away from track), Local +X = -tangent, Local +Y = surfaceUp
+    // In both cases, local -Z points TOWARDS the race track!
+    const buildGrandstandSegment = (stationZ: number, side: number, length: number = 20) => {
+      const { position, normal, tangent } = this.getTrackPosition(stationZ, 0);
+      const surfaceUp = new THREE.Vector3().crossVectors(normal, tangent).normalize();
+
+      // Safe clearance: 8.2m from center (3.8m outside the road shoulder)
+      const lateralDist = side * (ROAD_HALF_WIDTH + KERB_WIDTH + SHOULDER_WIDTH + 3.8);
+      const basePos = position.clone().addScaledVector(normal, lateralDist);
+
+      const stand = new THREE.Group();
+      stand.position.copy(basePos);
+
+      const xVec = side === 1 ? tangent.clone() : tangent.clone().negate();
+      const yVec = surfaceUp.clone();
+      const zVec = side === 1 ? normal.clone() : normal.clone().negate();
+      const rotMat = new THREE.Matrix4().makeBasis(xVec, yVec, zVec);
+      stand.quaternion.setFromRotationMatrix(rotMat);
+
+      const numTiers = 4;
+      const tierDepth = 1.1;
+      const tierHeight = 0.55;
+      const standWidth = length;
+
+      // 1. Concrete Stepped Tiers (Ascending along +Z and +Y)
+      for (let t = 0; t < numTiers; t++) {
+        const stepH = (t + 1) * tierHeight;
+        const step = new THREE.Mesh(
+          new THREE.BoxGeometry(standWidth, stepH, tierDepth),
+          concreteMat
+        );
+        step.position.set(0, stepH * 0.5, t * tierDepth + tierDepth * 0.5);
+        stand.add(step);
+
+        // Cheering Spectators on this tier (12 per tier, facing -Z toward road)
+        const spectatorsInTier = 12;
+        for (let s = 0; s < spectatorsInTier; s++) {
+          const seatMat = seatMaterials[(t * 3 + s) % seatMaterials.length];
+          const specGroup = new THREE.Group();
+
+          const body = new THREE.Mesh(bodyGeo, seatMat);
+          body.position.y = 0.23;
+          specGroup.add(body);
+
+          const head = new THREE.Mesh(headGeo, skinMat);
+          head.position.y = 0.55;
+          specGroup.add(head);
+
+          const cap = new THREE.Mesh(capGeo, seatMat);
+          cap.position.y = 0.66;
+          specGroup.add(cap);
+
+          // Rotate 180 deg so spectators face -Z (towards the race track)
+          specGroup.rotation.y = Math.PI;
+
+          const sx = -standWidth * 0.42 + (s / Math.max(1, spectatorsInTier - 1)) * (standWidth * 0.84);
+          specGroup.position.set(sx, (t + 1) * tierHeight, t * tierDepth + tierDepth * 0.5);
+          stand.add(specGroup);
+        }
+      }
+
+      // 2. Overhanging Cantilevered Canopy Roof
+      const totalDepth = numTiers * tierDepth;
+      const roofMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(standWidth + 1.0, 0.22, totalDepth + 1.8),
+        roofMat
+      );
+      roofMesh.position.set(0, numTiers * tierHeight + 2.7, totalDepth * 0.45);
+      roofMesh.rotation.x = 0.08; // Slanted down towards track (-Z)
+      stand.add(roofMesh);
+
+      // Support steel pillars at the back
+      [-standWidth * 0.45, 0, standWidth * 0.45].forEach((px) => {
+        const pillar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.14, 0.18, numTiers * tierHeight + 2.7, 8),
+          trussMat
+        );
+        pillar.position.set(px, (numTiers * tierHeight + 2.7) * 0.5, totalDepth + 0.2);
+        stand.add(pillar);
+      });
+
+      // 3. Trackside Sponsor Billboard facing road at Z = 0
+      const bannerTex = banners[Math.floor(Math.random() * banners.length)];
+      const bannerMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(standWidth, 1.3),
+        new THREE.MeshBasicMaterial({ map: bannerTex, side: THREE.DoubleSide })
+      );
+      bannerMesh.position.set(0, 0.75, 0);
+      bannerMesh.rotation.y = Math.PI; // Face -Z towards track
+      stand.add(bannerMesh);
+
+      // 4. Stadium Floodlight Tower at back center
+      const floodTower = new THREE.Group();
+      const mastHeight = numTiers * tierHeight + 7.5;
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, mastHeight, 8), trussMat);
+      mast.position.y = mastHeight * 0.5;
+      floodTower.add(mast);
+
+      const lampHead = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 0.5), roofMat);
+      lampHead.position.set(0, mastHeight, 0);
+      lampHead.rotation.x = 0.22; // Angled down towards track (-Z)
+      floodTower.add(lampHead);
+
+      floodTower.position.set(0, 0, totalDepth + 0.9);
+      stand.add(floodTower);
+
+      grandstandGroup.add(stand);
+    };
+
+    // User Requirement: ONLY at Start Straight (ออกตัว) and Finish (เข้าเส้นชัยนิดนึง)
+    // 1. Start straight grandstands (Left & Right, safe from any curve)
+    buildGrandstandSegment(16, -1, 20);
+    buildGrandstandSegment(16, 1, 20);
+
+    // 2. Finish straight grandstands
+    if (!this.isClosedTrack) {
+      // Point-to-point finish summit arena (Hill Climb, MX Offroad Downhill)
+      const finishZ = Math.max(25, this.gameTrackLength - 16);
+      buildGrandstandSegment(finishZ, -1, 18);
+      buildGrandstandSegment(finishZ, 1, 18);
+    } else {
+      // Closed circuit approach straight
+      const approachZ = this.gameTrackLength - 18;
+      if (approachZ > 45) {
+        buildGrandstandSegment(approachZ, -1, 18);
+        buildGrandstandSegment(approachZ, 1, 18);
+      }
+    }
+
+    this.envGroup.add(grandstandGroup);
+  }
+
+  // ─── 3D Puffy Sky Clouds (ก้อนเมฆ 3 มิติลอยฟ้า) ───────────────────────────────
+
+  private addSkyClouds() {
+    const cloudMat = new THREE.MeshLambertMaterial({
+      color: 0xffffff,
+      flatShading: true,
+      transparent: true,
+      opacity: 0.94,
+    });
+
+    const numClouds = 28;
+    for (let i = 0; i < numClouds; i++) {
+      const cloud = new THREE.Group();
+      const numPuffs = 6 + (i % 4);
+      for (let p = 0; p < numPuffs; p++) {
+        const radius = 18 + ((p * 7 + i * 5) % 18);
+        const puffGeo = new THREE.DodecahedronGeometry(radius, 1);
+        const puff = new THREE.Mesh(puffGeo, cloudMat);
+        puff.position.set(
+          (p - numPuffs * 0.5) * (radius * 0.75),
+          ((p % 3) - 1) * 4.0,
+          (((p * 2) % 3) - 1) * (radius * 0.5)
+        );
+        cloud.add(puff);
+      }
+
+      // Distribute clouds across the racing arena
+      const angle = (i / numClouds) * Math.PI * 2;
+      const dist = 140 + (i % 6) * 75;
+      const cx = this.trackCenterX + Math.cos(angle) * (this.trackSpanX + dist);
+      const cz = this.trackCenterZ + Math.sin(angle) * (this.trackSpanZ + dist);
+      const cy = 90 + (i % 5) * 24;
+
+      cloud.position.set(cx, cy, cz);
+      this.clouds.push(cloud);
+      this.envGroup.add(cloud);
+    }
+  }
+
+  // ─── Floating Goodyear-style Stadium Airship Blimp (เรือเหาะลอยฟ้า) ───────────
+
+  private addStadiumBlimp() {
+    const blimpGroup = new THREE.Group();
+
+    // Hull (Pristine White aerodynamic zeppelin shape with bold Goodyear livery)
+    const hullMat = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      shininess: 95,
+      specular: 0x99ccff,
+    });
+    const bellyMat = new THREE.MeshPhongMaterial({ color: 0x1e3a8a, shininess: 85 }); // Goodyear Deep Navy Blue
+    const finMat = new THREE.MeshPhongMaterial({ color: 0xfacc15, shininess: 90, side: THREE.DoubleSide }); // Racing Yellow
+
+    // Main Upper Hull
+    const hullGeo = new THREE.SphereGeometry(10.0, 24, 16);
+    hullGeo.scale(1.0, 1.0, 3.4);
+    const hull = new THREE.Mesh(hullGeo, hullMat);
+    blimpGroup.add(hull);
+
+    // Deep Navy Blue bottom belly shell
+    const bellyGeo = new THREE.SphereGeometry(10.05, 24, 16, 0, Math.PI * 2, Math.PI * 0.46, Math.PI * 0.54);
+    bellyGeo.scale(1.0, 1.0, 3.4);
+    const belly = new THREE.Mesh(bellyGeo, bellyMat);
+    blimpGroup.add(belly);
+
+    // 4 Tail Fins in Cross (+) Layout
+    const finGeo = new THREE.BoxGeometry(0.25, 6.0, 6.5);
+
+    // Top & Bottom Fins
+    const topFin = new THREE.Mesh(finGeo, finMat);
+    topFin.position.set(0, 9.2, -22);
+    blimpGroup.add(topFin);
+    const btmFin = new THREE.Mesh(finGeo, finMat);
+    btmFin.position.set(0, -9.2, -22);
+    blimpGroup.add(btmFin);
+
+    // Left & Right Fins
+    const horizFinGeo = new THREE.BoxGeometry(6.0, 0.25, 6.5);
+    const leftFin = new THREE.Mesh(horizFinGeo, finMat);
+    leftFin.position.set(9.2, 0, -22);
+    blimpGroup.add(leftFin);
+    const rightFin = new THREE.Mesh(horizFinGeo, finMat);
+    rightFin.position.set(-9.2, 0, -22);
+    blimpGroup.add(rightFin);
+
+    // Passenger / Pilot Gondola underneath
+    const gondolaMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 80 });
+    const gondola = new THREE.Mesh(new THREE.BoxGeometry(3.0, 2.4, 11.0), gondolaMat);
+    gondola.position.set(0, -10.5, 1.0);
+    blimpGroup.add(gondola);
+
+    // Glowing Cabin Windows
+    const windowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const winGeo = new THREE.BoxGeometry(3.05, 0.8, 9.0);
+    const cabinWin = new THREE.Mesh(winGeo, windowMat);
+    cabinWin.position.set(0, -10.3, 1.0);
+    blimpGroup.add(cabinWin);
+
+    // Glowing electronic sponsor board on side of hull (like GOODYEAR in reference photo)
+    const boardCvs = document.createElement('canvas');
+    boardCvs.width = 512;
+    boardCvs.height = 128;
+    const bctx = boardCvs.getContext('2d')!;
+    bctx.fillStyle = '#1e3a8a';
+    bctx.fillRect(0, 0, 512, 128);
+    bctx.lineWidth = 6;
+    bctx.strokeStyle = '#facc15';
+    bctx.strokeRect(4, 4, 504, 120);
+    bctx.fillStyle = '#facc15';
+    bctx.font = '900 46px sans-serif';
+    bctx.textAlign = 'center';
+    bctx.textBaseline = 'middle';
+    bctx.fillText('⚡ GOODYEAR RACING ⚡', 256, 64);
+    const boardTex = new THREE.CanvasTexture(boardCvs);
+
+    [-1, 1].forEach((side) => {
+      const banner = new THREE.Mesh(
+        new THREE.PlaneGeometry(22, 5.8),
+        new THREE.MeshBasicMaterial({ map: boardTex, side: THREE.DoubleSide })
+      );
+      banner.position.set(side * 10.1, 0, 0);
+      banner.rotation.y = (side * Math.PI) / 2;
+      blimpGroup.add(banner);
+    });
+
+    // Hover altitude and initial position centered over track
+    blimpGroup.position.set(this.trackCenterX + 60, 95, this.trackCenterZ - 40);
+    this.stadiumBlimp = blimpGroup;
+    this.envGroup.add(blimpGroup);
   }
 
   // ─── Custom Blender/glTF GLB Bike Loader ─────────────────────────────────────────
@@ -2939,8 +3265,10 @@ export class Racing3DRenderer {
       const targetFov = BASE_FOV + (MAX_FOV_KICK * (speed01 * speed01)) + (isBoosting ? 4 : 0);
       const fovAlpha = 1 - Math.exp(-4.0 * dt);
       this.smoothFov += (targetFov - this.smoothFov) * fovAlpha;
-      this.camera.fov = this.smoothFov;
-      this.camera.updateProjectionMatrix();
+      if (Math.abs(this.camera.fov - this.smoothFov) > 0.05) {
+        this.camera.fov = this.smoothFov;
+        this.camera.updateProjectionMatrix();
+      }
     }
 
     // ── Update Collision Shockwave ──
@@ -2953,6 +3281,24 @@ export class Racing3DRenderer {
       if (this.shockwaveLife <= 0) {
         this.collisionShockwave.position.y = -9999;
       }
+    }
+
+    // ── Animate Sky Clouds & Floating Stadium Blimp ──
+    for (const c of this.clouds) {
+      c.position.x += dt * 2.2;
+      const maxX = this.trackCenterX + this.trackSpanX + 380;
+      const minX = this.trackCenterX - this.trackSpanX - 380;
+      if (c.position.x > maxX) c.position.x = minX;
+    }
+
+    if (this.stadiumBlimp) {
+      const blimpT = this.elapsedTime * 0.05;
+      const orbitR_X = Math.max(85, this.trackSpanX * 0.55);
+      const orbitR_Z = Math.max(85, this.trackSpanZ * 0.55);
+      this.stadiumBlimp.position.x = this.trackCenterX + Math.cos(blimpT) * orbitR_X;
+      this.stadiumBlimp.position.z = this.trackCenterZ + Math.sin(blimpT) * orbitR_Z;
+      this.stadiumBlimp.position.y = 85 + Math.sin(this.elapsedTime * 0.18) * 4.0;
+      this.stadiumBlimp.rotation.y = -blimpT + Math.PI / 2;
     }
 
     // Render Scene

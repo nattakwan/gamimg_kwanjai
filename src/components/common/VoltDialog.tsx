@@ -23,45 +23,52 @@ export const VoltDialog: React.FC<VoltDialogProps> = ({
 }) => {
   const moodConfig = {
     happy: {
-      bg: 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200',
-      iconBg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
-      badge: 'text-emerald-400',
+      bg: 'bg-white/95 border-emerald-200/90 text-slate-800 shadow-sm',
+      iconBg: 'bg-emerald-100 text-emerald-600 border-emerald-200',
+      badge: 'text-emerald-700',
+      hintBg: 'bg-emerald-50 border-emerald-200 text-emerald-900',
       Icon: Sparkles,
     },
     celebrate: {
-      bg: 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200',
-      iconBg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
-      badge: 'text-emerald-400',
+      bg: 'bg-white/95 border-emerald-200/90 text-slate-800 shadow-sm',
+      iconBg: 'bg-emerald-100 text-emerald-600 border-emerald-200',
+      badge: 'text-emerald-700',
+      hintBg: 'bg-emerald-50 border-emerald-200 text-emerald-900',
       Icon: Sparkles,
     },
     idea: {
-      bg: 'bg-sky-950/40 border-sky-500/40 text-sky-200',
-      iconBg: 'bg-sky-500/20 text-sky-400 border-sky-500/40',
-      badge: 'text-sky-400',
+      bg: 'bg-white/95 border-sky-200/90 text-slate-800 shadow-sm',
+      iconBg: 'bg-sky-100 text-sky-600 border-sky-200',
+      badge: 'text-sky-700',
+      hintBg: 'bg-sky-50 border-sky-200 text-sky-900',
       Icon: Lightbulb,
     },
     warning: {
-      bg: 'bg-rose-950/50 border-rose-500/50 text-rose-200',
-      iconBg: 'bg-rose-500/20 text-rose-400 border-rose-500/40',
-      badge: 'text-rose-400',
+      bg: 'bg-white/95 border-rose-200/90 text-slate-800 shadow-sm',
+      iconBg: 'bg-rose-100 text-rose-600 border-rose-200',
+      badge: 'text-rose-700',
+      hintBg: 'bg-rose-50 border-rose-200 text-rose-900',
       Icon: AlertTriangle,
     },
     alarm: {
-      bg: 'bg-rose-950/50 border-rose-500/50 text-rose-200',
-      iconBg: 'bg-rose-500/20 text-rose-400 border-rose-500/40',
-      badge: 'text-rose-400',
+      bg: 'bg-white/95 border-rose-200/90 text-slate-800 shadow-sm',
+      iconBg: 'bg-rose-100 text-rose-600 border-rose-200',
+      badge: 'text-rose-700',
+      hintBg: 'bg-rose-50 border-rose-200 text-rose-900',
       Icon: AlertTriangle,
     },
     thinking: {
-      bg: 'bg-amber-950/40 border-amber-500/40 text-amber-200',
-      iconBg: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
-      badge: 'text-amber-400',
+      bg: 'bg-white/95 border-amber-200/90 text-slate-800 shadow-sm',
+      iconBg: 'bg-amber-100 text-amber-600 border-amber-200',
+      badge: 'text-amber-700',
+      hintBg: 'bg-amber-50 border-amber-200 text-amber-900',
       Icon: HelpCircle,
     },
     excited: {
-      bg: 'bg-purple-950/40 border-purple-500/40 text-purple-200',
-      iconBg: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
-      badge: 'text-purple-400',
+      bg: 'bg-white/95 border-purple-200/90 text-slate-800 shadow-sm',
+      iconBg: 'bg-purple-100 text-purple-600 border-purple-200',
+      badge: 'text-purple-700',
+      hintBg: 'bg-purple-50 border-purple-200 text-purple-900',
       Icon: Bot,
     },
   }[mood];
@@ -70,28 +77,34 @@ export const VoltDialog: React.FC<VoltDialogProps> = ({
 
   return (
     <div
-      className={`rounded-2xl border p-3.5 sm:p-4 shadow-lg backdrop-blur flex items-start gap-3 sm:gap-3.5 transition-all ${moodConfig.bg} ${className}`}
+      className={`rounded-2xl border p-3.5 sm:p-4 shadow-sm flex items-start gap-3 sm:gap-3.5 transition-all ${moodConfig.bg} ${className}`}
     >
       <div
-        className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-md ${moodConfig.iconBg}`}
+        className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-sm ${moodConfig.iconBg}`}
       >
         <IconComp className="w-5 h-5 animate-pulse" />
       </div>
 
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-extrabold uppercase tracking-wider ${moodConfig.badge}`}>
+          <span className={`text-xs font-black uppercase tracking-wider ${moodConfig.badge}`}>
             {title}
           </span>
-          <span className="text-[10px] text-slate-500 font-mono">ROBOT TUTOR</span>
+          <span className="text-[10px] text-slate-400 font-bold bg-slate-100 px-1.5 py-0.5 rounded-full border border-slate-200 font-mono">
+            ROBOT TUTOR
+          </span>
         </div>
 
-        <p className="text-xs sm:text-sm leading-relaxed text-slate-200">{message}</p>
+        <p className="text-xs sm:text-sm leading-relaxed text-slate-700 font-medium">{message}</p>
 
         {hint && (
-          <div className="text-[11px] text-amber-300/90 font-medium pt-1 flex items-center gap-1.5 border-t border-slate-800/80 mt-1.5">
-            <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span>คำแนะนำ: {hint}</span>
+          <div
+            className={`text-xs font-medium p-2 rounded-xl border flex items-center gap-1.5 mt-2 ${moodConfig.hintBg}`}
+          >
+            <Lightbulb className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              <strong className="font-bold">เคล็ดลับวิศวกร:</strong> {hint}
+            </span>
           </div>
         )}
       </div>

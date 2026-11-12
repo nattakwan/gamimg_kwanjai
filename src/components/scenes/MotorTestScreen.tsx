@@ -518,27 +518,30 @@ export const MotorTestScreen: React.FC = () => {
   const tachAngle = Math.min(110, Math.max(-110, (simulation.rpm / maxDisplayRpm) * 220 - 110));
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white flex flex-col font-sans select-none">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/40 text-slate-800 flex flex-col font-sans select-none pb-12">
       {/* Top Header */}
-      <div className="bg-slate-900/90 border-b border-indigo-500/30 backdrop-blur-md px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
+      <div className="bg-white/95 border-b border-slate-200/90 shadow-sm px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <button
             onClick={() => goToScene('mission_map')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition active:scale-95 min-h-[44px]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition active:scale-95 min-h-[40px] cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4 text-emerald-400" />
+            <ArrowLeft className="w-4 h-4 text-emerald-600" />
             <span>แผนที่ภารกิจ</span>
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-sm shadow-md">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-sm text-white shadow-sm">
               05
             </div>
             <div>
-              <h1 className="text-sm md:text-base font-black text-cyan-200">
-                LAB-05: แท่นทดสอบมอเตอร์ไฟฟ้ากระแสตรง (DC Motor Dyno Test Bench)
+              <h1 className="text-sm md:text-base font-black text-slate-900 flex items-center gap-2">
+                <span>LAB-05: แท่นทดสอบมอเตอร์ไฟฟ้ากระแสตรง (DC Motor Dyno Test Bench)</span>
+                <span className="text-[10px] font-bold bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded-full border border-cyan-200">
+                  ฉากที่ 10
+                </span>
               </h1>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 ทดสอบมอเตอร์ DC พิกัด 3.0V ด้วยทาโคมิเตอร์จำลอง แอมมิเตอร์ และสมการ Back EMF ใต้โหลดเชิงกล
               </p>
             </div>
@@ -550,26 +553,26 @@ export const MotorTestScreen: React.FC = () => {
           <button
             onClick={handleUndo}
             disabled={history.length === 0}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 text-xs font-medium border border-slate-700 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 disabled:opacity-40 text-slate-700 text-xs font-semibold border border-slate-200 transition min-h-[38px] cursor-pointer"
             title="ย้อนกลับการกระทำล่าสุด"
           >
-            <Undo2 className="w-4 h-4 text-indigo-400" />
+            <Undo2 className="w-3.5 h-3.5 text-indigo-600" />
             <span className="hidden sm:inline">ย้อนกลับ</span>
           </button>
 
           <button
             onClick={handleResetWires}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 text-xs font-medium border border-slate-700 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-semibold border border-slate-200 hover:border-rose-300 transition min-h-[38px] cursor-pointer"
             title="ลบสายไฟทั้งหมด"
           >
-            <RotateCcw className="w-4 h-4 text-rose-400" />
+            <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
             <span className="hidden sm:inline">รีเซ็ตสาย</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowMultimeter(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition min-h-[44px] cursor-pointer active:scale-95 shadow"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 transition min-h-[38px] cursor-pointer shadow-sm"
             title="เปิดมัลติมิเตอร์วัดแรงดัน"
           >
             <span>🎛️ มัลติมิเตอร์ (DMM)</span>
@@ -577,34 +580,34 @@ export const MotorTestScreen: React.FC = () => {
 
           <button
             onClick={() => setShowCompareModal(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-900/50 hover:bg-purple-800/70 text-purple-300 text-xs font-semibold border border-purple-700 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200 transition min-h-[38px] cursor-pointer"
           >
-            <Scale className="w-4 h-4 text-amber-400" />
+            <Scale className="w-3.5 h-3.5 text-purple-600" />
             <span>เปรียบเทียบ 2S1P vs 2S2P</span>
           </button>
 
           <button
             onClick={() => setShowHintModal(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-xs font-semibold border border-amber-700/60 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition min-h-[38px] cursor-pointer"
           >
-            <HelpCircle className="w-4 h-4 text-amber-400" />
+            <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
             <span>คำใบ้</span>
           </button>
 
           <button
             onClick={handleSaveTest}
-            className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 text-xs font-semibold border border-emerald-700/60 transition min-h-[44px]"
+            className="flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 transition min-h-[38px] cursor-pointer"
           >
-            <Save className="w-4 h-4 text-emerald-400" />
+            <Save className="w-3.5 h-3.5 text-emerald-600" />
             <span>บันทึกผลทดสอบ</span>
           </button>
 
           <button
             onClick={handleContinueToGarage}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 hover:brightness-110 text-slate-950 text-xs font-black shadow-lg shadow-cyan-500/20 active:scale-95 transition min-h-[44px]"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 hover:brightness-105 text-white text-xs font-black shadow-md shadow-cyan-600/20 active:scale-95 transition min-h-[38px] cursor-pointer"
           >
             <span>ต่อไปยังโรงเก็บจักรยาน</span>
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -615,25 +618,25 @@ export const MotorTestScreen: React.FC = () => {
         <div className="lg:col-span-8 flex flex-col gap-4">
           <div
             ref={workbenchRef}
-            className="relative flex-1 min-h-[500px] rounded-2xl bg-gradient-to-b from-slate-900/95 to-slate-950 border border-cyan-500/30 p-4 md:p-6 shadow-2xl flex flex-col justify-between overflow-hidden"
+            className="relative flex-1 min-h-[500px] rounded-3xl bg-white/95 border border-slate-200/90 p-4 md:p-6 shadow-sm flex flex-col justify-between overflow-hidden"
           >
             {/* Grid Pattern Background */}
             <div
-              className="absolute inset-0 opacity-10 pointer-events-none"
+              className="absolute inset-0 opacity-15 pointer-events-none"
               style={{
                 backgroundImage:
-                  'radial-gradient(circle at 10px 10px, #06b6d4 1.5px, transparent 0)',
+                  'radial-gradient(circle at 10px 10px, #0891b2 1.5px, transparent 0)',
                 backgroundSize: '24px 24px',
               }}
             />
 
             {/* Instruction Banner */}
-            <div className="relative z-10 flex flex-wrap items-center justify-between bg-slate-950/85 border border-slate-800 rounded-xl px-4 py-2.5 backdrop-blur-md gap-2">
+            <div className="relative z-10 flex flex-wrap items-center justify-between bg-white/90 border border-slate-200/90 rounded-xl px-4 py-2.5 shadow-sm backdrop-blur-md gap-2">
               <div className="flex items-center gap-2 text-xs">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                <span className="text-slate-700">
                   {activeTerminalId ? (
-                    <span className="text-amber-300 font-bold">
+                    <span className="text-amber-800 font-bold">
                       เลือกขั้วปลายทาง (กำลังเชื่อมจาก: {terminalMeta[activeTerminalId]?.componentName} {terminalMeta[activeTerminalId]?.label})
                     </span>
                   ) : (
@@ -645,11 +648,11 @@ export const MotorTestScreen: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleQuickConnect}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-cyan-300 border border-slate-700 transition"
+                  className="px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-[11px] font-bold text-cyan-800 border border-cyan-200 transition cursor-pointer shadow-sm"
                 >
                   ⚡ ต่อสายด่วน
                 </button>
-                <span className="text-[11px] text-cyan-400 font-mono">
+                <span className="text-[11px] text-cyan-800 font-mono font-bold bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200">
                   สายไฟ: {wires.length} เส้น
                 </span>
               </div>
@@ -667,10 +670,10 @@ export const MotorTestScreen: React.FC = () => {
             {/* Test Bench Component Area */}
             <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-5 my-auto pt-2 items-center">
               {/* Left Side: Selectable Battery Pack Unit (5 Cols) */}
-              <div className="md:col-span-5 bg-slate-950/90 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <span className="text-xs font-black text-amber-300 flex items-center gap-1.5 uppercase">
-                    <BatteryCharging className="w-4 h-4 text-amber-400" />
+              <div className="md:col-span-5 bg-slate-50/90 border border-slate-200/90 rounded-2xl p-4 shadow-inner flex flex-col gap-3">
+                <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                  <span className="text-xs font-black text-amber-800 flex items-center gap-1.5 uppercase">
+                    <BatteryCharging className="w-4 h-4 text-amber-600" />
                     ชุดแบตเตอรี่จ่ายไฟ (Selected Battery Pack)
                   </span>
                 </div>
@@ -686,31 +689,31 @@ export const MotorTestScreen: React.FC = () => {
                           playTone(550, 'sine', 0.08);
                           setSelectedPackId(pack.id);
                         }}
-                        className={`p-2 rounded-xl border text-left text-xs transition-all flex items-center justify-between ${
+                        className={`p-2 rounded-xl border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${
                           isSelected
-                            ? 'bg-amber-950/60 border-amber-500 text-white shadow-md'
-                            : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                            ? 'bg-amber-50 border-amber-400 text-amber-950 font-bold shadow-sm ring-1 ring-amber-300'
+                            : 'bg-white border-slate-200/90 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                         }`}
                       >
                         <div>
                           <div className="font-bold flex items-center gap-1.5">
                             <span>{pack.code}</span>
                             {pack.isRecommended && (
-                              <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded font-mono">
+                              <span className="text-[9px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded font-mono font-bold">
                                 แนะนำ
                               </span>
                             )}
                           </div>
-                          <div className="text-[10px] text-slate-400">R_in: {pack.internalResistance}Ω</div>
+                          <div className="text-[10px] text-slate-500">R_in: {pack.internalResistance}Ω</div>
                         </div>
-                        {isSelected && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
+                        {isSelected && <Check className="w-4 h-4 text-amber-600 shrink-0" />}
                       </button>
                     );
                   })}
                 </div>
 
                 {/* 3D Battery Pack Preview */}
-                <div className="w-full bg-slate-900/60 rounded-xl border border-slate-800 p-1.5">
+                <div className="w-full bg-white rounded-xl border border-slate-200/90 p-1.5 shadow-sm">
                   <BatteryCell3D
                     voltage={selectedPack.nominalVoltage}
                     label={selectedPack.code}
@@ -720,27 +723,27 @@ export const MotorTestScreen: React.FC = () => {
                 </div>
 
                 {/* Battery Pack Output Terminals */}
-                <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex items-center justify-between mt-1">
+                <div className="bg-white p-3 rounded-xl border border-slate-200/90 flex items-center justify-between mt-1 shadow-sm">
                   <div className="flex flex-col items-center gap-1">
                     <button
                       id="dyno-term-pack_pos"
                       onClick={() => handleTerminalClick('pack_pos')}
-                      className={`w-10 h-10 rounded-full bg-rose-600 text-white font-bold text-sm ring-4 transition-all ${
+                      className={`w-10 h-10 rounded-full bg-rose-600 text-white font-bold text-sm ring-4 transition-all shadow-sm ${
                         activeTerminalId === 'pack_pos'
-                          ? 'ring-white scale-110'
-                          : 'ring-rose-500/40 hover:ring-rose-300'
+                          ? 'ring-cyan-400 scale-110'
+                          : 'ring-rose-200 hover:ring-rose-300'
                       }`}
                     >
                       +
                     </button>
-                    <span className="text-[10px] text-rose-300 font-bold">PACK (+)</span>
+                    <span className="text-[10px] text-rose-700 font-bold">PACK (+)</span>
                   </div>
 
                   <div className="text-center">
-                    <span className="text-xs font-mono font-bold text-amber-400 block">
+                    <span className="text-xs font-mono font-bold text-slate-800 block">
                       {selectedPack.nominalVoltage.toFixed(1)}V
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-slate-500 font-mono">
                       {selectedPack.capacityMah} mAh (R_in: {selectedPack.internalResistance}Ω)
                     </span>
                   </div>
@@ -749,23 +752,23 @@ export const MotorTestScreen: React.FC = () => {
                     <button
                       id="dyno-term-pack_neg"
                       onClick={() => handleTerminalClick('pack_neg')}
-                      className={`w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-sm ring-4 transition-all ${
+                      className={`w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-sm ring-4 transition-all shadow-sm ${
                         activeTerminalId === 'pack_neg'
-                          ? 'ring-white scale-110'
-                          : 'ring-blue-500/40 hover:ring-blue-300'
+                          ? 'ring-cyan-400 scale-110'
+                          : 'ring-blue-200 hover:ring-blue-300'
                       }`}
                     >
                       -
                     </button>
-                    <span className="text-[10px] text-blue-300 font-bold">PACK (-)</span>
+                    <span className="text-[10px] text-blue-700 font-bold">PACK (-)</span>
                   </div>
                 </div>
               </div>
 
               {/* Middle: 3D Knife Switch Control (2 Cols) */}
               <div className="md:col-span-2 flex flex-col items-center justify-center">
-                <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-2.5 shadow-lg flex flex-col items-center text-center w-full">
-                  <span className="text-[10px] font-bold text-slate-400 mb-1">สวิตช์ไดโน 3 มิติ</span>
+                <div className="bg-slate-50/90 border border-slate-200/90 rounded-2xl p-2.5 shadow-inner flex flex-col items-center text-center w-full">
+                  <span className="text-[10px] font-bold text-slate-700 mb-1">สวิตช์ไดโน 3 มิติ</span>
                   <div className="w-full">
                     <KnifeSwitch3D
                       isClosed={isSwitchClosed}
@@ -779,13 +782,13 @@ export const MotorTestScreen: React.FC = () => {
               </div>
 
               {/* Right Side: DC Motor Rated 3V & Rotating Shaft (5 Cols) */}
-              <div className="md:col-span-5 bg-slate-950/90 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col items-center justify-between">
-                <div className="w-full flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-                  <span className="text-xs font-black text-cyan-300 flex items-center gap-1.5 uppercase">
-                    <Gauge className="w-4 h-4 text-cyan-400" />
+              <div className="md:col-span-5 bg-slate-50/90 border border-slate-200/90 rounded-2xl p-4 shadow-inner flex flex-col items-center justify-between">
+                <div className="w-full flex items-center justify-between border-b border-slate-200/80 pb-2 mb-2">
+                  <span className="text-xs font-black text-cyan-800 flex items-center gap-1.5 uppercase">
+                    <Gauge className="w-4 h-4 text-cyan-600" />
                     มอเตอร์ไฟฟ้า DC ไฮทอร์ก 3 มิติ (DC 130 Racing)
                   </span>
-                  <span className="text-[9px] font-mono bg-cyan-950 text-cyan-400 px-2 py-0.5 rounded border border-cyan-800">
+                  <span className="text-[9px] font-mono bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded-full border border-cyan-200 font-bold">
                     Rw = 1.0Ω | Kv = 800
                   </span>
                 </div>
@@ -802,20 +805,20 @@ export const MotorTestScreen: React.FC = () => {
                 </div>
 
                 {/* Motor Terminals */}
-                <div className="w-full flex items-center justify-between px-3 pt-2 border-t border-slate-800">
+                <div className="w-full flex items-center justify-between px-3 pt-2 border-t border-slate-200/80">
                   <div className="flex flex-col items-center gap-1">
                     <button
                       id="dyno-term-motor_pos"
                       onClick={() => handleTerminalClick('motor_pos')}
-                      className={`w-9 h-9 rounded-full bg-rose-600 text-white font-bold text-xs ring-4 transition-all ${
+                      className={`w-9 h-9 rounded-full bg-rose-600 text-white font-bold text-xs ring-4 transition-all shadow-sm ${
                         activeTerminalId === 'motor_pos'
-                          ? 'ring-white scale-110'
-                          : 'ring-rose-500/40 hover:ring-rose-300'
+                          ? 'ring-cyan-400 scale-110'
+                          : 'ring-rose-200 hover:ring-rose-300'
                       }`}
                     >
                       +
                     </button>
-                    <span className="text-[10px] text-rose-300 font-bold">MOTOR (+)</span>
+                    <span className="text-[10px] text-rose-700 font-bold">MOTOR (+)</span>
                   </div>
 
                   <span className="text-[10px] text-slate-500 font-mono">ขั้วมอเตอร์ DC</span>
@@ -824,15 +827,15 @@ export const MotorTestScreen: React.FC = () => {
                     <button
                       id="dyno-term-motor_neg"
                       onClick={() => handleTerminalClick('motor_neg')}
-                      className={`w-9 h-9 rounded-full bg-blue-600 text-white font-bold text-xs ring-4 transition-all ${
+                      className={`w-9 h-9 rounded-full bg-blue-600 text-white font-bold text-xs ring-4 transition-all shadow-sm ${
                         activeTerminalId === 'motor_neg'
-                          ? 'ring-white scale-110'
-                          : 'ring-blue-500/40 hover:ring-blue-300'
+                          ? 'ring-cyan-400 scale-110'
+                          : 'ring-blue-200 hover:ring-blue-300'
                       }`}
                     >
                       -
                     </button>
-                    <span className="text-[10px] text-blue-300 font-bold">MOTOR (-)</span>
+                    <span className="text-[10px] text-blue-700 font-bold">MOTOR (-)</span>
                   </div>
                 </div>
               </div>
@@ -840,24 +843,24 @@ export const MotorTestScreen: React.FC = () => {
 
             {/* Bottom Live Safety Feedback Bar */}
             <div
-              className={`relative z-10 mt-3 p-3 rounded-xl border flex items-center gap-3 transition-colors ${
+              className={`relative z-10 mt-3 p-3 rounded-2xl border flex items-center gap-3 transition-colors shadow-sm ${
                 simulation.alertType === 'danger'
-                  ? 'bg-rose-950/80 border-rose-600 text-rose-200'
+                  ? 'bg-rose-50 border-rose-200 text-rose-800'
                   : simulation.alertType === 'warning'
-                  ? 'bg-amber-950/80 border-amber-600 text-amber-200'
+                  ? 'bg-amber-50 border-amber-200 text-amber-800'
                   : simulation.alertType === 'success'
-                  ? 'bg-emerald-950/80 border-emerald-600 text-emerald-200'
-                  : 'bg-slate-900/80 border-slate-700 text-slate-300'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-white border-slate-200 text-slate-700'
               }`}
             >
               {simulation.alertType === 'danger' ? (
-                <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
+                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
               ) : simulation.alertType === 'warning' ? (
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
               ) : simulation.alertType === 'success' ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               ) : (
-                <Info className="w-5 h-5 text-cyan-400 shrink-0" />
+                <Info className="w-5 h-5 text-cyan-600 shrink-0" />
               )}
               <div className="text-xs">
                 <span className="font-bold mr-1">สถานะไดนาโมมิเตอร์:</span>
@@ -870,26 +873,26 @@ export const MotorTestScreen: React.FC = () => {
         {/* Right Column: Simulated Tachometer, Ammeter & Scientific Readouts (4 Cols) */}
         <div className="lg:col-span-4 flex flex-col gap-4">
           {/* Simulated Analog / Digital Tachometer */}
-          <div className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-cyan-300 flex items-center gap-1.5 uppercase">
-                <Gauge className="w-4 h-4 text-cyan-400" />
+          <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-cyan-800 flex items-center gap-1.5 uppercase">
+                <Gauge className="w-4 h-4 text-cyan-600" />
                 ทาโคมิเตอร์จำลอง (Simulated Tachometer)
               </span>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-mono font-bold text-cyan-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">
                 0 - 3,000 RPM
               </span>
             </div>
 
             {/* Tachometer Visual Dial */}
-            <div className="h-32 bg-slate-950 rounded-xl border border-slate-800 relative flex flex-col items-center justify-end pb-3 overflow-hidden">
+            <div className="h-32 bg-slate-50 rounded-2xl border border-slate-200/90 relative flex flex-col items-center justify-end pb-3 overflow-hidden shadow-inner">
               {/* Dial Arc */}
               <svg viewBox="0 0 200 110" className="w-48 h-28">
                 {/* Safe zone arc */}
                 <path
                   d="M 25 100 A 75 75 0 0 1 175 100"
                   fill="none"
-                  stroke="#334155"
+                  stroke="#e2e8f0"
                   strokeWidth="12"
                   strokeLinecap="round"
                 />
@@ -908,14 +911,14 @@ export const MotorTestScreen: React.FC = () => {
                   strokeLinecap="round"
                 />
                 {/* Center Hub */}
-                <circle cx="100" cy="100" r="10" fill="#0f172a" stroke="#06b6d4" strokeWidth="2" />
+                <circle cx="100" cy="100" r="10" fill="#0284c7" stroke="#38bdf8" strokeWidth="2" />
                 {/* Needle */}
                 <line
                   x1="100"
                   y1="100"
                   x2="100"
                   y2="30"
-                  stroke="#f59e0b"
+                  stroke="#d97706"
                   strokeWidth="3.5"
                   strokeLinecap="round"
                   style={{
@@ -927,87 +930,89 @@ export const MotorTestScreen: React.FC = () => {
               </svg>
 
               <div className="absolute bottom-2 text-center">
-                <span className="text-xl font-black font-mono text-cyan-300">
+                <span className="text-xl font-black font-mono text-cyan-950">
                   {simulation.rpm.toLocaleString()}
                 </span>
-                <span className="text-[10px] text-slate-400 block -mt-0.5">RPM (รอบต่อนาที)</span>
+                <span className="text-[10px] text-slate-500 block -mt-0.5 font-semibold">RPM (รอบต่อนาที)</span>
               </div>
             </div>
 
             {/* Electrical Telemetry Parameters (Voltmeter, Ammeter, Wattmeter) */}
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[10px]">โวลต์มิเตอร์ (V_term)</span>
-                <span className="font-mono font-black text-amber-400 text-base">
+              <div className="bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/80">
+                <span className="text-amber-700 block text-[10px] font-semibold">โวลต์มิเตอร์ (V_term)</span>
+                <span className="font-mono font-black text-amber-900 text-base">
                   {simulation.terminalVoltage.toFixed(2)} V
                 </span>
-                <span className="text-[9px] text-slate-500 block">แรงดันตกคร่อมใต้โหลด</span>
+                <span className="text-[9px] text-amber-600 block">แรงดันตกคร่อมใต้โหลด</span>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[10px]">แอมมิเตอร์ (Current I)</span>
-                <span className="font-mono font-black text-cyan-400 text-base">
+              <div className="bg-cyan-50/70 p-2.5 rounded-xl border border-cyan-200/80">
+                <span className="text-cyan-700 block text-[10px] font-semibold">แอมมิเตอร์ (Current I)</span>
+                <span className="font-mono font-black text-cyan-900 text-base">
                   {simulation.currentAmps.toFixed(2)} A
                 </span>
-                <span className="text-[9px] text-slate-500 block">กระแสขดลวดมอเตอร์</span>
+                <span className="text-[9px] text-cyan-600 block">กระแสขดลวดมอเตอร์</span>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[10px]">กำลังไฟฟ้า (Power P_in)</span>
-                <span className="font-mono font-black text-purple-400 text-base">
+              <div className="bg-purple-50/70 p-2.5 rounded-xl border border-purple-200/80">
+                <span className="text-purple-700 block text-[10px] font-semibold">กำลังไฟฟ้า (Power P_in)</span>
+                <span className="font-mono font-black text-purple-900 text-base">
                   {simulation.powerWatts.toFixed(2)} W
                 </span>
-                <span className="text-[9px] text-slate-500 block">V_term × I</span>
+                <span className="text-[9px] text-purple-600 block">V_term × I</span>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[10px]">แรงเคลื่อนไฟฟ้าย้อนกลับ (Back EMF)</span>
-                <span className="font-mono font-black text-emerald-400 text-base">
+              <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200/80">
+                <span className="text-emerald-700 block text-[10px] font-semibold">แรงเคลื่อนย้อนกลับ (Back EMF)</span>
+                <span className="font-mono font-black text-emerald-900 text-base">
                   {simulation.backEmf.toFixed(2)} V
                 </span>
-                <span className="text-[9px] text-slate-500 block">Eb = V_term - I×Rw</span>
+                <span className="text-[9px] text-emerald-600 block">Eb = V_term - I×Rw</span>
               </div>
 
               {/* Vocational Battery Electrical Metrics (มาตรฐานช่าง ปวช.) */}
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-amber-500/30 col-span-2 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-bold text-amber-400">
-                  <span>⚡ สมรรถนะแบตเตอรี่ช่างไฟฟ้า (Vocational Battery Analysis)</span>
-                  <span className="font-mono text-[10px]">Ri = {selectedPack.internalResistance}Ω</span>
+              <div className="bg-slate-50/90 p-2.5 rounded-2xl border border-slate-200/90 col-span-2 space-y-1.5 shadow-inner">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
+                  <span>⚡ สมรรถนะแบตเตอรี่ช่างไฟฟ้า (Battery Analysis)</span>
+                  <span className="font-mono text-[10px] font-bold bg-white px-2 py-0.5 rounded-md border border-slate-200 text-slate-700">
+                    Ri = {selectedPack.internalResistance}Ω
+                  </span>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono text-center">
-                  <div className="bg-slate-900 p-1.5 rounded border border-slate-800">
-                    <span className="text-slate-400 block text-[9px]">แรงดันตก (Voltage Sag)</span>
-                    <span className="font-black text-rose-400">-{voltageSag.toFixed(2)} V</span>
+                  <div className="bg-white p-1.5 rounded-xl border border-slate-200/90 shadow-sm">
+                    <span className="text-slate-500 block text-[9px] font-semibold">แรงดันตก Sag</span>
+                    <span className="font-black text-rose-600">-{voltageSag.toFixed(2)} V</span>
                   </div>
-                  <div className="bg-slate-900 p-1.5 rounded border border-slate-800">
-                    <span className="text-slate-400 block text-[9px]">อัตราจ่าย C-Rate</span>
-                    <span className="font-black text-cyan-400">{cRate} C</span>
+                  <div className="bg-white p-1.5 rounded-xl border border-slate-200/90 shadow-sm">
+                    <span className="text-slate-500 block text-[9px] font-semibold">อัตรา C-Rate</span>
+                    <span className="font-black text-cyan-700">{cRate} C</span>
                   </div>
-                  <div className="bg-slate-900 p-1.5 rounded border border-slate-800">
-                    <span className="text-slate-400 block text-[9px]">ความร้อน I²Ri</span>
-                    <span className="font-black text-amber-400">{heatLossWatts} W</span>
+                  <div className="bg-white p-1.5 rounded-xl border border-slate-200/90 shadow-sm">
+                    <span className="text-slate-500 block text-[9px] font-semibold">ความร้อน I²Ri</span>
+                    <span className="font-black text-amber-700">{heatLossWatts} W</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 col-span-2 flex items-center justify-between">
+              <div className="bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/90 col-span-2 flex items-center justify-between">
                 <div>
-                  <span className="text-slate-400 block text-[10px]">พลังงานที่ใช้ไปสะสม (Energy Used)</span>
-                  <span className="font-mono font-bold text-amber-300 text-sm">
+                  <span className="text-slate-500 block text-[10px] font-semibold">พลังงานสะสมที่ใช้ไป</span>
+                  <span className="font-mono font-bold text-slate-800 text-sm">
                     {energyConsumedMah.toFixed(1)} mAh (เวลา: {testTimeSeconds} วิ)
                   </span>
                 </div>
-                <div className="text-right text-[10px] text-slate-400 font-mono">
+                <div className="text-right text-[10px] text-slate-500 font-mono">
                   <span>เหลือ ~{Math.max(0, Math.round(selectedPack.capacityMah - energyConsumedMah))} mAh</span>
                 </div>
               </div>
             </div>
 
             {/* Mechanical Load Friction Slider */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+            <div className="bg-slate-50/90 p-3 rounded-2xl border border-slate-200/90 flex flex-col gap-1.5 shadow-inner">
               <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-300">โหลดเชิงกล / แรงเสียดทาน: {mechanicalLoadFactor.toFixed(1)}x</span>
-                <span className="text-[10px] font-mono text-cyan-400">
+                <span className="font-bold text-slate-700">โหลดเชิงกล / แรงเสียดทาน: {mechanicalLoadFactor.toFixed(1)}x</span>
+                <span className="text-[10px] font-mono font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200">
                   แรงบิด: {(simulation.torqueNm * 1000).toFixed(1)} mNm
                 </span>
               </div>
@@ -1018,7 +1023,7 @@ export const MotorTestScreen: React.FC = () => {
                 step="0.1"
                 value={mechanicalLoadFactor}
                 onChange={(e) => setMechanicalLoadFactor(Number(e.target.value))}
-                className="w-full accent-cyan-400 cursor-pointer h-2 bg-slate-800 rounded-lg"
+                className="w-full accent-cyan-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
               />
               <span className="text-[9px] text-slate-500">
                 ปรับแรงต้านทานของลูกปืนและน้ำหนักเพื่อทดสอบสมรรถนะของมอเตอร์ภายใต้ภาระจริง
@@ -1052,18 +1057,18 @@ export const MotorTestScreen: React.FC = () => {
 
       {/* Comparison Modal (2S1P vs 2S2P) */}
       {showCompareModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-purple-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Scale className="w-5 h-5 text-purple-400" />
-                <h3 className="font-black text-sm text-purple-200">
+                <Scale className="w-5 h-5 text-purple-600" />
+                <h3 className="font-black text-sm text-slate-800">
                   เปรียบเทียบขับมอเตอร์ 3V: แพ็ก 2S1P vs แพ็ก 2S2P
                 </h3>
               </div>
               <button
                 onClick={() => setShowCompareModal(false)}
-                className="text-slate-400 hover:text-white text-xs px-2.5 py-1 rounded-lg bg-slate-800"
+                className="text-slate-500 hover:text-slate-800 text-xs px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 cursor-pointer"
               >
                 ปิด
               </button>
@@ -1071,31 +1076,31 @@ export const MotorTestScreen: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               {/* 2S1P */}
-              <div className="bg-slate-950 p-3 rounded-xl border border-indigo-800 flex flex-col gap-2">
-                <span className="font-bold text-indigo-300">แบบ 2S1P (อนุกรม 2 ก้อน)</span>
-                <div className="text-[11px] text-slate-300 space-y-1">
-                  <div>ความต้านทานภายใน: <span className="font-mono text-amber-400">0.30 Ω</span></div>
-                  <div>แรงดันตกคร่อมใต้โหลด: <span className="font-mono text-cyan-400">~2.79 V</span></div>
-                  <div>ความเร็วรอบ: <span className="font-mono text-emerald-400">~1,670 RPM</span></div>
-                  <div>ความจุ: <span className="font-mono text-purple-400">2,000 mAh</span></div>
-                  <div>ระยะเวลาวิ่งต่อเนื่อง: <span className="text-amber-400 font-bold">~2.8 ชั่วโมง</span></div>
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex flex-col gap-2">
+                <span className="font-bold text-indigo-900">แบบ 2S1P (อนุกรม 2 ก้อน)</span>
+                <div className="text-[11px] text-slate-600 space-y-1">
+                  <div>ความต้านทานภายใน: <span className="font-mono font-bold text-amber-700">0.30 Ω</span></div>
+                  <div>แรงดันตกคร่อมใต้โหลด: <span className="font-mono font-bold text-cyan-700">~2.79 V</span></div>
+                  <div>ความเร็วรอบ: <span className="font-mono font-bold text-slate-800">~1,670 RPM</span></div>
+                  <div>ความจุ: <span className="font-mono font-bold text-purple-700">2,000 mAh</span></div>
+                  <div>ระยะเวลาวิ่งต่อเนื่อง: <span className="text-amber-700 font-bold">~2.8 ชั่วโมง</span></div>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-[10px] text-slate-500 mt-1">
                   เนื่องจากความต้านทานภายในสูงกว่า แรงดันจึงตกลงมากกว่า ทำให้รอบตกและหมดเร็วกว่า
                 </p>
               </div>
 
               {/* 2S2P */}
-              <div className="bg-slate-950 p-3 rounded-xl border-2 border-emerald-500 flex flex-col gap-2">
-                <span className="font-bold text-emerald-300">แบบ 2S2P (ชุดผสม 4 ก้อน) 🔥</span>
-                <div className="text-[11px] text-slate-300 space-y-1">
-                  <div>ความต้านทานภายใน: <span className="font-mono text-emerald-400 font-bold">0.15 Ω (ต่ำกว่าครึ่ง!)</span></div>
-                  <div>แรงดันตกคร่อมใต้โหลด: <span className="font-mono text-cyan-400 font-bold">~2.90 V (เสถียรกว่า)</span></div>
-                  <div>ความเร็วรอบ: <span className="font-mono text-emerald-400 font-bold">~1,760 RPM (+90 RPM!)</span></div>
-                  <div>ความจุ: <span className="font-mono text-purple-400 font-bold">4,000 mAh (2 เท่า!)</span></div>
-                  <div>ระยะเวลาวิ่งต่อเนื่อง: <span className="text-emerald-400 font-bold">~5.7 ชั่วโมง (ยาวนาน 2 เท่า!)</span></div>
+              <div className="bg-emerald-50/70 p-3.5 rounded-2xl border-2 border-emerald-400 flex flex-col gap-2">
+                <span className="font-bold text-emerald-950">แบบ 2S2P (ชุดผสม 4 ก้อน) 🔥</span>
+                <div className="text-[11px] text-emerald-900 space-y-1">
+                  <div>ความต้านทานภายใน: <span className="font-mono text-emerald-700 font-bold">0.15 Ω (ต่ำกว่าครึ่ง!)</span></div>
+                  <div>แรงดันตกคร่อมใต้โหลด: <span className="font-mono text-cyan-700 font-bold">~2.90 V (เสถียรกว่า)</span></div>
+                  <div>ความเร็วรอบ: <span className="font-mono text-emerald-700 font-bold">~1,760 RPM (+90 RPM!)</span></div>
+                  <div>ความจุ: <span className="font-mono text-purple-700 font-bold">4,000 mAh (2 เท่า!)</span></div>
+                  <div>ระยะเวลาวิ่งต่อเนื่อง: <span className="text-emerald-700 font-bold">~5.7 ชั่วโมง (นาน 2 เท่า!)</span></div>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-[10px] text-emerald-700 mt-1">
                   การขนานช่วยลดความต้านทานภายในลงครึ่งหนึ่ง ทำให้แรงดันไม่ตก มอเตอร์หมุนเร็วกว่าและวิ่งได้นานขึ้นเท่าตัว!
                 </p>
               </div>
@@ -1103,7 +1108,7 @@ export const MotorTestScreen: React.FC = () => {
 
             <button
               onClick={() => setShowCompareModal(false)}
-              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition"
+              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-sm transition cursor-pointer"
             >
               เข้าใจแล้ว
             </button>
@@ -1113,13 +1118,13 @@ export const MotorTestScreen: React.FC = () => {
 
       {/* Hint Modal */}
       {showHintModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-2 text-amber-400 font-black text-sm">
-              <HelpCircle className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-2 text-amber-800 font-black text-sm">
+              <HelpCircle className="w-5 h-5 text-amber-600" />
               <span>คำใบ้จากหุ่นยนต์ VOLT</span>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               1. เลือกชุดแบตเตอรี่ <strong>2S2P (3.0V 4000mAh)</strong> เพื่อให้ได้สมรรถนะสูงสุดและเสถียรที่สุด<br />
               2. ลากสายไฟเชื่อมจาก <strong>PACK (+)</strong> ไปยัง <strong>MOTOR (+)</strong><br />
               3. ลากสายไฟเชื่อมจาก <strong>PACK (-)</strong> ไปยัง <strong>MOTOR (-)</strong><br />
@@ -1127,7 +1132,7 @@ export const MotorTestScreen: React.FC = () => {
             </p>
             <button
               onClick={() => setShowHintModal(false)}
-              className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs transition"
+              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition cursor-pointer"
             >
               รับทราบคำใบ้
             </button>
@@ -1137,7 +1142,7 @@ export const MotorTestScreen: React.FC = () => {
 
       {/* Save Toast */}
       {saveToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs animate-in slide-in-from-bottom-2">
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs animate-in slide-in-from-bottom-2">
           <CheckCircle2 className="w-4 h-4" />
           <span>{saveToast}</span>
         </div>

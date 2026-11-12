@@ -325,21 +325,21 @@ export const LearningReflectionScreen: React.FC = () => {
   const allQuestionsAnswered = answeredQuestionsCount === REFLECTION_QUESTIONS.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white flex flex-col font-sans select-none p-3 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/40 text-slate-800 flex flex-col font-sans select-none p-3 md:p-6 pb-12">
       {/* Top Header */}
-      <div className="bg-slate-900/95 border-b border-indigo-500/40 backdrop-blur-md px-4 py-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 max-w-6xl mx-auto w-full mb-4 shadow-xl">
+      <div className="bg-white/95 border border-slate-200/90 shadow-sm px-4 py-3 rounded-3xl flex flex-wrap items-center justify-between gap-3 max-w-6xl mx-auto w-full mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-emerald-500 flex items-center justify-center font-bold text-base shadow-md">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-600 to-emerald-500 flex items-center justify-center font-bold text-base shadow-sm">
             <BookOpen className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-base md:text-lg font-black text-indigo-200 flex items-center gap-2">
+            <h1 className="text-base md:text-lg font-black text-slate-900 flex items-center gap-2">
               <span>ถอดบทเรียนและประเมินผลการเรียนรู้ (Learning Reflection Dashboard)</span>
-              <span className="text-[10px] bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 px-2 py-0.5 rounded font-mono">
-                SCENE 15
+              <span className="text-[10px] bg-indigo-50 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded-full font-bold">
+                ฉากที่ 15
               </span>
             </h1>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500">
               วิเคราะห์วงจร แบตเตอรี่ ผลการทดสอบ และการแข่งขัน พร้อมตอบคำถามสะท้อนคิดเพื่อรับใบประกาศนียบัตร
             </p>
           </div>
@@ -347,24 +347,24 @@ export const LearningReflectionScreen: React.FC = () => {
 
         {/* Total Score Pill */}
         <div className="flex items-center gap-3">
-          <div className="bg-slate-950 px-3 py-1.5 rounded-xl border border-amber-500/50 flex items-center gap-2 shadow-lg shadow-amber-500/20">
-            <Award className="w-4 h-4 text-amber-400" />
+          <div className="bg-amber-50/80 px-3.5 py-1.5 rounded-2xl border border-amber-200 flex items-center gap-2 shadow-sm">
+            <Award className="w-4 h-4 text-amber-600" />
             <div className="flex flex-col">
-              <span className="text-[9px] text-slate-400 uppercase font-mono">คะแนนประเมินรวม</span>
-              <span className="text-sm font-black font-mono text-amber-300">
-                {totalCompositeScore} <span className="text-[10px] text-slate-400 font-normal">/ 100</span>
+              <span className="text-[9px] text-amber-700 uppercase font-mono font-bold">คะแนนประเมินรวม</span>
+              <span className="text-sm font-black font-mono text-amber-900">
+                {totalCompositeScore} <span className="text-[10px] text-amber-600 font-normal">/ 100</span>
               </span>
             </div>
-            <span className="text-xs font-black font-mono text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded">
+            <span className="text-xs font-black font-mono text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full">
               {gradeInfo.grade}
             </span>
           </div>
 
           <button
             onClick={() => goToScene('main_menu')}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 min-h-[44px]"
+            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 transition flex items-center gap-1.5 min-h-[40px] cursor-pointer"
           >
-            <Home className="w-4 h-4 text-slate-400" />
+            <Home className="w-4 h-4 text-slate-500" />
             <span className="hidden sm:inline">เมนูหลัก</span>
           </button>
         </div>
@@ -375,151 +375,151 @@ export const LearningReflectionScreen: React.FC = () => {
         {/* Row 1: Educational Summary Dashboard (Saved Config, Dyno Test, Race Performance) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Card 1: Saved Battery Configuration */}
-          <div className="bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col justify-between gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-amber-300 uppercase flex items-center gap-1.5">
-                <BatteryCharging className="w-4 h-4 text-amber-400" />
+          <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col justify-between gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-amber-800 uppercase flex items-center gap-1.5">
+                <BatteryCharging className="w-4 h-4 text-amber-600" />
                 ชุดแบตเตอรี่ที่บันทึกไว้ (Saved Pack)
               </span>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
                 VALIDATED
               </span>
             </div>
 
             <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">ชื่อโครงแบบ:</span>
-                <span className="font-bold text-white">{pack.name || 'ชุดผสม 2S2P (4 ก้อน)'}</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">ชื่อโครงแบบ:</span>
+                <span className="font-bold text-slate-900">{pack.name || 'ชุดผสม 2S2P (4 ก้อน)'}</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">แรงดันพิกัด (Nominal V):</span>
-                <span className="font-mono font-bold text-amber-300">{packV.toFixed(1)} โวลต์</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">แรงดันพิกัด (Nominal V):</span>
+                <span className="font-mono font-bold text-amber-800">{packV.toFixed(1)} โวลต์</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">ความจุประจุ (Capacity):</span>
-                <span className="font-mono font-bold text-cyan-300">{packMah} mAh</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">ความจุประจุ (Capacity):</span>
+                <span className="font-mono font-bold text-teal-800">{packMah} mAh</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">ความต้านทานภายใน (R_in):</span>
-                <span className="font-mono font-bold text-emerald-300">{packRin.toFixed(2)} โอห์ม</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">ความต้านทานภายใน (R_in):</span>
+                <span className="font-mono font-bold text-emerald-800">{packRin.toFixed(2)} โอห์ม</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">พลังงานสะสมทฤษฎี:</span>
-                <span className="font-mono font-bold text-purple-300">
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">พลังงานสะสมทฤษฎี:</span>
+                <span className="font-mono font-bold text-purple-800">
                   {((packV * packMah) / 1000).toFixed(1)} Wh
                 </span>
               </div>
             </div>
 
-            <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 text-[11px] text-slate-300">
+            <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-[11px] text-slate-600 shadow-inner">
               💡 2S (อนุกรม 2 ก้อน) รวมแรงดันเป็น 3.0V และ 2P (ขนาน 2 แถว) รวมความจุเป็น 4000mAh
             </div>
           </div>
 
           {/* Card 2: Motor Dyno Test Outcomes */}
-          <div className="bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col justify-between gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-cyan-300 uppercase flex items-center gap-1.5">
-                <Gauge className="w-4 h-4 text-cyan-400" />
+          <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col justify-between gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-cyan-800 uppercase flex items-center gap-1.5">
+                <Gauge className="w-4 h-4 text-cyan-600" />
                 การจับคู่มอเตอร์กับชุดแบตเตอรี่ (Engineering Match)
               </span>
-              <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/20 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-mono text-cyan-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full font-bold">
                 DC {chosenMotorV}V MOTOR
               </span>
             </div>
 
             <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">พิกัดมอเตอร์ไฟฟ้า:</span>
-                <span className="font-bold text-white">DC {chosenMotorV}V ({chosenMotorV === 24 ? '800W' : chosenMotorV === 12 ? '450W' : '200W'})</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">พิกัดมอเตอร์ไฟฟ้า:</span>
+                <span className="font-bold text-slate-900">DC {chosenMotorV}V ({chosenMotorV === 24 ? '800W' : chosenMotorV === 12 ? '450W' : '200W'})</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">แรงดันแบตเตอรี่ที่จ่าย:</span>
-                <span className="font-mono font-bold text-amber-300">{packV.toFixed(1)} โวลต์</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">แรงดันแบตเตอรี่ที่จ่าย:</span>
+                <span className="font-mono font-bold text-amber-800">{packV.toFixed(1)} โวลต์</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">อัตราส่วนการจับคู่ (Match Ratio):</span>
-                <span className="font-mono font-bold text-cyan-300">{Math.round((packV / chosenMotorV) * 100)}%</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">อัตราส่วนการจับคู่ (Match Ratio):</span>
+                <span className="font-mono font-bold text-cyan-800">{Math.round((packV / chosenMotorV) * 100)}%</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">โควตาเซลล์ที่ใช้:</span>
-                <span className="font-mono font-bold text-purple-300">{pack.totalCells || 8} / 8 เซลล์</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">โควตาเซลล์ที่ใช้:</span>
+                <span className="font-mono font-bold text-purple-800">{pack.totalCells || 8} / 8 เซลล์</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">สถานะความปลอดภัย:</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">สถานะความปลอดภัย:</span>
                 <span className={`font-bold flex items-center gap-1 ${
-                  packV <= chosenMotorV * 1.05 ? 'text-emerald-400' : 'text-rose-400'
+                  packV <= chosenMotorV * 1.05 ? 'text-emerald-700' : 'text-rose-700'
                 }`}>
                   {packV <= chosenMotorV * 1.05 ? (
                     <>
-                      <CheckCircle2 className="w-3.5 h-3.5" /> ไม่เกินพิกัด
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> ไม่เกินพิกัด
                     </>
                   ) : (
                     <>
-                      <AlertTriangle className="w-3.5 h-3.5" /> แรงดันเกินพิกัด!
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> แรงดันเกินพิกัด!
                     </>
                   )}
                 </span>
               </div>
             </div>
 
-            <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 text-[11px] text-slate-300">
+            <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-[11px] text-slate-600 shadow-inner">
               🛡️ {packV === chosenMotorV ? `แรงดัน ${packV}V ตรงพิกัดมอเตอร์ ${chosenMotorV}V สมบูรณ์แบบ` : packV < chosenMotorV ? `แรงดันต่ำกว่าพิกัด มอเตอร์สูญเสียกำลังขับ` : `แรงดันเกินพิกัด มอเตอร์เสี่ยงชำรุด`}
             </div>
           </div>
 
           {/* Card 3: Race Performance Telemetry */}
-          <div className="bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col justify-between gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-emerald-300 uppercase flex items-center gap-1.5">
-                <Trophy className="w-4 h-4 text-emerald-400" />
+          <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col justify-between gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-emerald-800 uppercase flex items-center gap-1.5">
+                <Trophy className="w-4 h-4 text-emerald-600" />
                 ผลงานการแข่งขันจริง (Race Telemetry)
               </span>
-              <span className="text-[10px] font-mono text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded font-bold">
+              <span className="text-[10px] font-mono text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
                 RANK #{raceRank}
               </span>
             </div>
 
             <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">สนามแข่งขัน:</span>
-                <span className="font-bold text-white truncate max-w-[150px]">{trackName.split('(')[0]}</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">สนามแข่งขัน:</span>
+                <span className="font-bold text-slate-900 truncate max-w-[150px]">{trackName.split('(')[0]}</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">เวลาเข้าเส้นชัยรวม:</span>
-                <span className="font-mono font-bold text-emerald-300">{raceTimeSec.toFixed(1)} วิ</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">เวลาเข้าเส้นชัยรวม:</span>
+                <span className="font-mono font-bold text-emerald-800">{raceTimeSec.toFixed(1)} วิ</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">ความเร็วเฉลี่ย:</span>
-                <span className="font-mono font-bold text-cyan-300">{raceAvgSpeed} กม./ชม.</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">ความเร็วเฉลี่ย:</span>
+                <span className="font-mono font-bold text-cyan-800">{raceAvgSpeed} กม./ชม.</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">ความเร็วสูงสุด:</span>
-                <span className="font-mono font-bold text-cyan-300">{raceTopSpeed} กม./ชม.</span>
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">ความเร็วสูงสุด:</span>
+                <span className="font-mono font-bold text-cyan-800">{raceTopSpeed} กม./ชม.</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span className="text-slate-400">ประจุที่ใช้ / คงเหลือ:</span>
-                <span className="font-mono font-bold text-amber-300">
+              <div className="flex justify-between text-slate-700">
+                <span className="text-slate-500">ประจุที่ใช้ / คงเหลือ:</span>
+                <span className="font-mono font-bold text-amber-800">
                   {raceEnergyUsed} / {raceEnergyRemaining} mAh ({raceEnergyPct}%)
                 </span>
               </div>
             </div>
 
-            <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 text-[11px] text-slate-300">
+            <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-[11px] text-slate-600 shadow-inner">
               🏁 สถิติการแข่งจริง: เข้าเส้นชัยอันดับ #{raceRank} พร้อมพลังงานคงเหลือ {raceEnergyPct}%
             </div>
           </div>
         </div>
 
         {/* Row 2: Strict Scoring Breakdown Card (100 Points Total) */}
-        <div className="bg-slate-900/90 border-2 border-indigo-500/40 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 gap-2">
+        <div className="bg-white/95 border-2 border-indigo-200/90 rounded-3xl p-4 shadow-sm flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between border-b border-slate-100 pb-2 gap-2">
             <div>
-              <span className="text-xs font-black text-amber-300 uppercase flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-amber-400" />
+              <span className="text-xs font-black text-amber-800 uppercase flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-amber-600" />
                 ตารางแจกแจงคะแนนประเมินอย่างเป็นทางการ (Scoring Rubric - 100 Points Max)
               </span>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 คำนวณจากความถูกต้องทางทฤษฎี ผลการทดสอบ การแข่งขันจริง และคำตอบสะท้อนคิด (ไม่มีการให้คะแนนฟรี)
               </p>
             </div>
@@ -533,70 +533,70 @@ export const LearningReflectionScreen: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
             {/* Metric 1 */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col justify-between gap-1">
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col justify-between gap-1 shadow-inner">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-slate-300">1. ความถูกต้องวงจร</span>
-                <span className="font-mono font-black text-amber-300 text-sm">{circuitCorrectnessScore} / 30</span>
+                <span className="font-bold text-slate-700">1. ความถูกต้องวงจร</span>
+                <span className="font-mono font-black text-amber-800 text-sm">{circuitCorrectnessScore} / 30</span>
               </div>
-              <span className="text-[10px] text-slate-400 leading-relaxed">
+              <span className="text-[10px] text-slate-500 leading-relaxed">
                 {isValidated ? 'ผ่านเกณฑ์: ตรวจสอบวงจรปิด ไม่มีการต่อกลับขั้วหรือลัดวงจร' : 'ไม่ผ่านเกณฑ์วงจร'}
               </span>
-              <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-1">
+              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
                 <div
-                  className="bg-amber-400 h-full rounded-full"
+                  className="bg-amber-500 h-full rounded-full"
                   style={{ width: `${(circuitCorrectnessScore / 30) * 100}%` }}
                 />
               </div>
             </div>
 
             {/* Metric 2 */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col justify-between gap-1">
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col justify-between gap-1 shadow-inner">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-slate-300">2. ความเหมาะสมแบตเตอรี่</span>
-                <span className="font-mono font-black text-cyan-300 text-sm">{batterySuitabilityScore} / 20</span>
+                <span className="font-bold text-slate-700">2. ความเหมาะสมแบตเตอรี่</span>
+                <span className="font-mono font-black text-cyan-800 text-sm">{batterySuitabilityScore} / 20</span>
               </div>
-              <span className="text-[10px] text-slate-400 leading-relaxed">
+              <span className="text-[10px] text-slate-500 leading-relaxed">
                 {isVoltageMatched ? 'แรงดัน 3.0V ตรงพิกัดมอเตอร์ DC 3V + R_in 0.15Ω ต่ำ' : 'แรงดันไม่ตรงพิกัด'}
               </span>
-              <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-1">
+              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
                 <div
-                  className="bg-cyan-400 h-full rounded-full"
+                  className="bg-cyan-500 h-full rounded-full"
                   style={{ width: `${(batterySuitabilityScore / 20) * 100}%` }}
                 />
               </div>
             </div>
 
             {/* Metric 3 */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col justify-between gap-1">
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col justify-between gap-1 shadow-inner">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-slate-300">3. ผลงานการแข่งขัน</span>
-                <span className="font-mono font-black text-emerald-300 text-sm">{racePerformanceScore} / 30</span>
+                <span className="font-bold text-slate-700">3. ผลงานการแข่งขัน</span>
+                <span className="font-mono font-black text-emerald-800 text-sm">{racePerformanceScore} / 30</span>
               </div>
-              <span className="text-[10px] text-slate-400 leading-relaxed">
+              <span className="text-[10px] text-slate-500 leading-relaxed">
                 อิงจากอันดับ #{raceRank}, ความเร็ว {raceAvgSpeed} กม./ชม., และประจุคงเหลือ {raceEnergyPct}%
               </span>
-              <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-1">
+              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
                 <div
-                  className="bg-emerald-400 h-full rounded-full"
+                  className="bg-emerald-500 h-full rounded-full"
                   style={{ width: `${(racePerformanceScore / 30) * 100}%` }}
                 />
               </div>
             </div>
 
             {/* Metric 4 */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col justify-between gap-1">
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col justify-between gap-1 shadow-inner">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-slate-300">4. การสะท้อนคิดวิชาการ</span>
-                <span className="font-mono font-black text-purple-300 text-sm">
+                <span className="font-bold text-slate-700">4. การสะท้อนคิดวิชาการ</span>
+                <span className="font-mono font-black text-purple-800 text-sm">
                   {learningExplanationScore} / 20
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400 leading-relaxed">
+              <span className="text-[10px] text-slate-500 leading-relaxed">
                 ตอบถูก {learningExplanationScore === 20 ? '3/3 ข้อครบถ้วน' : `${Math.floor(learningExplanationScore / 7)}/3 ข้อ`} (ข้อละ 6–7 คะแนน)
               </span>
-              <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-1">
+              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
                 <div
-                  className="bg-purple-400 h-full rounded-full"
+                  className="bg-purple-500 h-full rounded-full"
                   style={{ width: `${(learningExplanationScore / 20) * 100}%` }}
                 />
               </div>
@@ -605,13 +605,13 @@ export const LearningReflectionScreen: React.FC = () => {
         </div>
 
         {/* Row 3: Three Short Thai Reflection Questions */}
-        <div className="bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span className="text-xs font-black text-indigo-300 uppercase flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-amber-400" />
+        <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <span className="text-xs font-black text-amber-800 uppercase flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-amber-600" />
               คำถามสะท้อนคิดทางวิศวกรรมไฟฟ้า 3 ข้อ (3 Interactive Reflection Questions)
             </span>
-            <span className="text-xs font-mono bg-purple-500/20 text-purple-300 px-3 py-0.5 rounded-full font-bold">
+            <span className="text-xs font-mono bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-0.5 rounded-full font-bold">
               ตอบแล้ว {answeredQuestionsCount} / {REFLECTION_QUESTIONS.length} ข้อ
             </span>
           </div>
@@ -626,14 +626,14 @@ export const LearningReflectionScreen: React.FC = () => {
               return (
                 <div
                   key={q.id}
-                  className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 flex flex-col gap-3"
+                  className="bg-slate-50/90 p-4 rounded-2xl border border-slate-200 flex flex-col gap-3 shadow-inner"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider">
+                      <span className="text-[10px] font-black uppercase text-amber-600 tracking-wider">
                         {q.topicTitle} ({q.points} คะแนน)
                       </span>
-                      <h3 className="text-xs md:text-sm font-bold text-slate-100 mt-0.5 leading-relaxed">
+                      <h3 className="text-xs md:text-sm font-bold text-slate-800 mt-0.5 leading-relaxed">
                         {q.question}
                       </h3>
                     </div>
@@ -643,17 +643,17 @@ export const LearningReflectionScreen: React.FC = () => {
                         playReflectionTone('hint');
                         setActiveHintId(isHintActive ? null : q.id);
                       }}
-                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold border border-slate-700 transition flex items-center gap-1 shrink-0"
+                      className="px-2.5 py-1 rounded-xl bg-white hover:bg-slate-100 text-amber-700 text-[10px] font-bold border border-slate-200 shadow-sm transition flex items-center gap-1 shrink-0"
                     >
-                      <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                      <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
                       <span>{isHintActive ? 'ปิดคำใบ้' : 'ขอคำใบ้'}</span>
                     </button>
                   </div>
 
                   {/* Hint Box */}
                   {isHintActive && (
-                    <div className="bg-amber-950/40 border border-amber-500/40 p-2.5 rounded-lg text-xs text-amber-200 flex items-start gap-2 animate-in fade-in">
-                      <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-xs text-amber-800 flex items-start gap-2 animate-in fade-in">
+                      <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                       <span>{q.hint}</span>
                     </div>
                   )}
@@ -662,13 +662,13 @@ export const LearningReflectionScreen: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
                     {q.options.map((opt, optIdx) => {
                       const isThisSelected = selectedIdx === optIdx;
-                      let btnStyle = 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700';
+                      let btnStyle = 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm';
 
                       if (isAnswered) {
                         if (optIdx === q.correctIndex) {
-                          btnStyle = 'bg-emerald-950/70 border-emerald-500 text-emerald-300 font-bold';
+                          btnStyle = 'bg-emerald-50 border-emerald-400 text-emerald-800 font-bold shadow-sm';
                         } else if (isThisSelected && !isCorrect) {
-                          btnStyle = 'bg-rose-950/70 border-rose-500 text-rose-300 line-through';
+                          btnStyle = 'bg-rose-50 border-rose-400 text-rose-800 line-through';
                         }
                       }
 
@@ -681,10 +681,10 @@ export const LearningReflectionScreen: React.FC = () => {
                         >
                           <span className="leading-snug">{opt}</span>
                           {isAnswered && optIdx === q.correctIndex && (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 ml-2" />
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 ml-2" />
                           )}
                           {isAnswered && isThisSelected && !isCorrect && (
-                            <XCircle className="w-4 h-4 text-rose-400 shrink-0 ml-2" />
+                            <XCircle className="w-4 h-4 text-rose-600 shrink-0 ml-2" />
                           )}
                         </button>
                       );
@@ -696,8 +696,8 @@ export const LearningReflectionScreen: React.FC = () => {
                     <div
                       className={`p-3 rounded-xl text-xs leading-relaxed border ${
                         isCorrect
-                          ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                          : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                          : 'bg-amber-50 border-amber-300 text-amber-900'
                       }`}
                     >
                       <div className="font-bold flex items-center gap-1.5 mb-0.5">
@@ -719,7 +719,7 @@ export const LearningReflectionScreen: React.FC = () => {
                   playReflectionTone('complete');
                   setShowCertificate(true);
                 }}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 hover:brightness-110 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2 transition active:scale-95"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-sm shadow-md flex items-center justify-center gap-2 transition active:scale-95"
               >
                 <Award className="w-5 h-5 fill-current" />
                 <span>รับประกาศนียบัตรสำเร็จหลักสูตร (View Certificate - {totalCompositeScore}/100)</span>
@@ -739,34 +739,34 @@ export const LearningReflectionScreen: React.FC = () => {
           {/* 1. Review Lab */}
           <button
             onClick={() => goToScene('mixed_lab')}
-            className="py-3.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-700 active:scale-95 shadow-md"
+            className="py-3.5 px-3 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-200 active:scale-95 shadow-sm"
           >
-            <Wrench className="w-4 h-4 text-amber-400" />
+            <Wrench className="w-4 h-4 text-amber-500" />
             <span>ทบทวนห้องแล็บ (Review Lab)</span>
           </button>
 
           {/* 2. Retry Race */}
           <button
             onClick={() => goToScene('racing')}
-            className="py-3.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-700 active:scale-95 shadow-md"
+            className="py-3.5 px-3 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-200 active:scale-95 shadow-sm"
           >
-            <RotateCcw className="w-4 h-4 text-cyan-400" />
+            <RotateCcw className="w-4 h-4 text-cyan-600" />
             <span>แข่งใหม่อีกครั้ง (Retry Race)</span>
           </button>
 
           {/* 3. Next Mission / Mission Map */}
           <button
             onClick={() => goToScene('mission_map')}
-            className="py-3.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-700 active:scale-95 shadow-md"
+            className="py-3.5 px-3 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-200 active:scale-95 shadow-sm"
           >
-            <Milestone className="w-4 h-4 text-emerald-400" />
+            <Milestone className="w-4 h-4 text-emerald-600" />
             <span>แผนที่ภารกิจ (Mission Map)</span>
           </button>
 
           {/* 4. Main Menu */}
           <button
             onClick={() => goToScene('main_menu')}
-            className="py-3.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:brightness-110 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transition min-h-[46px] active:scale-95"
+            className="py-3.5 px-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 transition min-h-[46px] active:scale-95"
           >
             <Home className="w-4 h-4" />
             <span>กลับสู่เมนูหลัก (Main Menu)</span>
@@ -776,80 +776,80 @@ export const LearningReflectionScreen: React.FC = () => {
 
       {/* Graduation Certificate & Vocational Competency Assessment Modal */}
       {showCertificate && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in overflow-y-auto">
-          <div className="bg-gradient-to-b from-slate-900 via-slate-950 to-indigo-950 border-4 border-amber-400 rounded-3xl max-w-xl w-full p-5 sm:p-7 shadow-2xl text-center flex flex-col items-center gap-3.5 relative">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in overflow-y-auto">
+          <div className="bg-white border-4 border-amber-400 rounded-3xl max-w-xl w-full p-5 sm:p-7 shadow-2xl text-center flex flex-col items-center gap-3.5 relative text-slate-800">
             {/* Top Seal & Avatar */}
             <div className="flex items-center gap-4">
-              <div className="w-14 h-16 bg-slate-950 rounded-xl p-1 border-2 border-amber-400 overflow-hidden shadow-lg flex items-center justify-center">
+              <div className="w-14 h-16 bg-slate-100 rounded-2xl p-1 border-2 border-amber-400 overflow-hidden shadow-sm flex items-center justify-center">
                 <AvatarRenderer avatar={state.character} size="sm" mode="2d" />
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-400 shadow-xl shadow-amber-500/30">
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 border-2 border-amber-400 flex items-center justify-center text-amber-600 shadow-sm">
                 <Award className="w-8 h-8" />
               </div>
             </div>
 
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block font-mono">
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 block font-mono">
                 สถาบันการอาชีวศึกษา · VOCATIONAL EDUCATION EDITION
               </span>
-              <h2 className="text-lg sm:text-xl font-black text-white mt-0.5">
+              <h2 className="text-lg sm:text-xl font-black text-slate-800 mt-0.5">
                 ใบรายงานผลการประเมินสมรรถนะวิชาชีพ
               </h2>
-              <p className="text-[11px] text-cyan-300 font-mono">
+              <p className="text-[11px] text-indigo-600 font-mono font-bold">
                 รายวิชา: งานไฟฟ้าและอิเล็กทรอนิกส์เบื้องต้น (หน่วย: แบตเตอรี่และวงจรไฟฟ้า)
               </p>
 
-              <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 my-2 text-left space-y-1">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 my-2 text-left space-y-1">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400">ชื่อนักศึกษา:</span>
-                  <span className="font-black text-amber-300 text-sm">คุณ {state.character.name}</span>
+                  <span className="text-slate-500">ชื่อนักศึกษา:</span>
+                  <span className="font-black text-amber-700 text-sm">คุณ {state.character.name}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400">ยศ / ระดับช่าง:</span>
-                  <span className="font-mono text-cyan-300 font-bold">{state.learning.academyRank}</span>
+                  <span className="text-slate-500">ยศ / ระดับช่าง:</span>
+                  <span className="font-mono text-cyan-700 font-bold">{state.learning.academyRank}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400">สถานะสมรรถนะ:</span>
-                  <span className="font-mono font-black text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                  <span className="text-slate-500">สถานะสมรรถนะ:</span>
+                  <span className="font-mono font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                     ผ่านเกณฑ์มาตรฐานช่าง (COMPETENT)
                   </span>
                 </div>
               </div>
 
               {/* 3 Competency Domains (พุทธิพิสัย, ทักษะพิสัย, จิตพิสัย) */}
-              <div className="grid grid-cols-3 gap-2 w-full text-[10px] font-mono text-slate-300 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-left">
+              <div className="grid grid-cols-3 gap-2 w-full text-[10px] font-mono text-slate-700 bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-left">
                 <div className="space-y-0.5">
-                  <span className="text-amber-300 font-bold block">1. พุทธิพิสัย (30%)</span>
-                  <span className="text-slate-400 text-[9px] block">ทฤษฎี V, I, R, สูตรอนุกรม-ขนาน</span>
-                  <strong className="text-white text-xs">{circuitCorrectnessScore} / 30</strong>
+                  <span className="text-amber-700 font-bold block">1. พุทธิพิสัย (30%)</span>
+                  <span className="text-slate-500 text-[9px] block">ทฤษฎี V, I, R, สูตรอนุกรม-ขนาน</span>
+                  <strong className="text-slate-900 text-xs">{circuitCorrectnessScore} / 30</strong>
                 </div>
 
                 <div className="space-y-0.5">
-                  <span className="text-cyan-300 font-bold block">2. ทักษะพิสัย (40%)</span>
-                  <span className="text-slate-400 text-[9px] block">ใช้มัลติมิเตอร์ DCV & แพ็ก 2S2P</span>
-                  <strong className="text-white text-xs">{(batterySuitabilityScore + (racePerformanceScore / 30) * 20).toFixed(0)} / 40</strong>
+                  <span className="text-cyan-700 font-bold block">2. ทักษะพิสัย (40%)</span>
+                  <span className="text-slate-500 text-[9px] block">ใช้มัลติมิเตอร์ DCV & แพ็ก 2S2P</span>
+                  <strong className="text-slate-900 text-xs">{(batterySuitabilityScore + (racePerformanceScore / 30) * 20).toFixed(0)} / 40</strong>
                 </div>
 
                 <div className="space-y-0.5">
-                  <span className="text-emerald-300 font-bold block">3. จิตพิสัย (30%)</span>
-                  <span className="text-slate-400 text-[9px] block">ฟิวส์, BMS & เซฟตี้ลัดวงจร</span>
-                  <strong className="text-white text-xs">{(learningExplanationScore / 20 * 30).toFixed(0)} / 30</strong>
+                  <span className="text-emerald-700 font-bold block">3. จิตพิสัย (30%)</span>
+                  <span className="text-slate-500 text-[9px] block">ฟิวส์, BMS & เซฟตี้ลัดวงจร</span>
+                  <strong className="text-slate-900 text-xs">{(learningExplanationScore / 20 * 30).toFixed(0)} / 30</strong>
                 </div>
               </div>
 
               {/* Total Score & Grade */}
               <div className="flex items-center justify-center gap-3 mt-3">
-                <span className="text-sm font-mono font-black text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40">
+                <span className="text-sm font-mono font-black text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
                   เกรดประเมิน: {gradeInfo.grade} ({totalCompositeScore} / 100)
                 </span>
-                <span className="text-xs font-mono font-bold text-amber-300">
+                <span className="text-xs font-mono font-bold text-amber-700">
                   {gradeInfo.text.split('(')[0]}
                 </span>
               </div>
             </div>
 
             {/* Signature Seal */}
-            <div className="w-full flex items-center justify-between border-t border-slate-800 pt-2 text-[10px] text-slate-400 font-mono">
+            <div className="w-full flex items-center justify-between border-t border-slate-200 pt-2 text-[10px] text-slate-500 font-mono">
               <span>อาจารย์ผู้ประเมิน: ศ.ดร.วัตต์ (Prof. Watt)</span>
               <span>ระบบตรวจสอบอัตโนมัติ AI-DMM Certified</span>
             </div>
@@ -858,7 +858,7 @@ export const LearningReflectionScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                className="py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-amber-700 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200"
               >
                 <span>🖨️ พิมพ์ / แคปเจอร์ส่งครูผู้สอน</span>
               </button>
@@ -866,7 +866,7 @@ export const LearningReflectionScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowCertificate(false)}
-                className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+                className="py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition cursor-pointer border border-slate-200"
               >
                 ปิดหน้าต่าง
               </button>
@@ -874,7 +874,7 @@ export const LearningReflectionScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => goToScene('mission_map')}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-slate-950 text-xs font-black transition shadow-lg shadow-emerald-500/30 cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-black transition shadow-md cursor-pointer"
               >
                 กลับสู่แผนที่ภารกิจ (Mission Map)
               </button>

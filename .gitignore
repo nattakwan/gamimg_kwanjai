@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+.antigravity_chat_sync/
+Model_bike3d/
+public/assets/models/

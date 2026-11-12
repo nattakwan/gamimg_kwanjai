@@ -156,22 +156,22 @@ export const RaceResultsScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white flex flex-col font-sans select-none p-3 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/40 text-slate-800 flex flex-col font-sans select-none p-3 md:p-6">
       <div className="max-w-5xl mx-auto w-full flex-1 flex flex-col gap-5 justify-between">
         {/* Top Header Card: Title & Trophy */}
-        <div className={`bg-slate-900/95 border-2 rounded-3xl p-5 md:p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4 relative overflow-hidden ${
-          isStalled || isExhausted ? 'border-rose-500/60' : 'border-indigo-500/40'
+        <div className={`bg-white/95 border rounded-3xl p-5 md:p-6 shadow-sm flex flex-wrap items-center justify-between gap-4 relative overflow-hidden ${
+          isStalled || isExhausted ? 'border-rose-300' : 'border-slate-200/90'
         }`}>
           <div className="flex items-center gap-4">
             <div
-              className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center shadow-xl border-2 shrink-0 ${
+              className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center shadow-sm border-2 shrink-0 ${
                 isStalled || isExhausted
-                  ? 'bg-rose-500/20 border-rose-500 text-rose-400'
+                  ? 'bg-rose-50 border-rose-400 text-rose-600'
                   : rank === 1
-                  ? 'bg-amber-500/20 border-amber-400 text-amber-400 shadow-amber-500/30'
+                  ? 'bg-amber-50 border-amber-400 text-amber-600 shadow-amber-200'
                   : rank === 2
-                  ? 'bg-slate-300/20 border-slate-300 text-slate-300'
-                  : 'bg-amber-700/20 border-amber-600 text-amber-600'
+                  ? 'bg-slate-100 border-slate-300 text-slate-600'
+                  : 'bg-amber-100/60 border-amber-500 text-amber-700'
               }`}
             >
               {isStalled || isExhausted ? (
@@ -185,19 +185,19 @@ export const RaceResultsScreen: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className={`text-[11px] font-black uppercase tracking-wider px-3 py-0.5 rounded-full ${
                   isStalled || isExhausted
-                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                    : 'bg-amber-500/20 text-amber-400'
+                    ? 'bg-rose-100 text-rose-700 border border-rose-300'
+                    : 'bg-amber-100 text-amber-800'
                 }`}>
                   {isStalled || isExhausted
                     ? 'สรุปผลการแข่งขัน: รถติดค้างบนเนิน (STALLED ON HILL)'
                     : 'สรุปผลการแข่งขันทางการ (Official Race Results)'}
                 </span>
-                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold">
+                <span className="text-[11px] font-mono text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full font-bold">
                   {trackName.split('(')[0]}
                 </span>
               </div>
 
-              <h1 className="text-xl md:text-3xl font-black text-white mt-1">
+              <h1 className="text-xl md:text-3xl font-black text-slate-800 mt-1">
                 {isStalled || isExhausted
                   ? `⚠️ แบตเตอรี่หมดกลางทาง! คุณ ${state.character.name} ติดค้างบนเนินชัน`
                   : rank === 1
@@ -205,43 +205,43 @@ export const RaceResultsScreen: React.FC = () => {
                   : `🏁 เข้าเส้นชัยอันดับที่ #${rank}! ทำผลงานได้ยอดเยี่ยมคุณ ${state.character.name}!`}
               </h1>
 
-              <p className="text-xs text-slate-300 mt-1 flex items-center gap-3">
+              <p className="text-xs text-slate-600 mt-1 flex items-center gap-3">
                 <span>
-                  เวลา: <strong className="text-emerald-400 font-mono">{timeSec.toFixed(1)} วิ</strong>
+                  เวลา: <strong className="text-emerald-700 font-mono">{timeSec.toFixed(1)} วิ</strong>
                 </span>
                 <span>•</span>
                 <span>
-                  ความเร็วเฉลี่ย: <strong className="text-cyan-400 font-mono">{avgSpeed} กม./ชม.</strong>
+                  ความเร็วเฉลี่ย: <strong className="text-cyan-700 font-mono">{avgSpeed} กม./ชม.</strong>
                 </span>
                 <span>•</span>
                 <span>
-                  แบตเตอรี่คงเหลือ: <strong className={remainingPct <= 5 ? 'text-rose-400 font-mono' : 'text-amber-400 font-mono'}>{remainingPct}%</strong>
+                  แบตเตอรี่คงเหลือ: <strong className={remainingPct <= 5 ? 'text-rose-600 font-mono' : 'text-amber-700 font-mono'}>{remainingPct}%</strong>
                 </span>
               </p>
             </div>
           </div>
 
           {/* Race Score Badge out of 30 */}
-          <div className="bg-slate-950 p-3.5 rounded-2xl border-2 border-amber-500/50 flex flex-col items-center justify-center shrink-0 min-w-[130px] shadow-lg shadow-amber-500/20">
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">คะแนนการแข่งขัน</span>
+          <div className="bg-amber-50/80 p-3.5 rounded-2xl border-2 border-amber-300 flex flex-col items-center justify-center shrink-0 min-w-[130px] shadow-sm">
+            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">คะแนนการแข่งขัน</span>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-3xl font-black font-mono text-amber-300">{totalScore30}</span>
-              <span className="text-xs font-mono text-slate-400">/ 30</span>
+              <span className="text-3xl font-black font-mono text-amber-700">{totalScore30}</span>
+              <span className="text-xs font-mono text-slate-500">/ 30</span>
             </div>
-            <span className="text-[10px] font-mono text-emerald-400 mt-0.5">
+            <span className="text-[10px] font-mono text-emerald-700 font-bold mt-0.5">
               สถิติดีที่สุด: {bestScore30}/30
             </span>
           </div>
         </div>
 
         {/* 3-Step Championship Podium Presentation */}
-        <div className="bg-slate-900/90 border border-indigo-500/30 rounded-3xl p-5 shadow-xl flex flex-col gap-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span className="text-xs font-black text-amber-300 uppercase flex items-center gap-1.5">
-              <Trophy className="w-4 h-4 text-amber-400" />
+        <div className="bg-white/95 border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <span className="text-xs font-black text-amber-800 uppercase flex items-center gap-1.5">
+              <Trophy className="w-4 h-4 text-amber-600" />
               โพเดียม 3 อันดับแรก (Championship Podium)
             </span>
-            <span className="text-[10px] font-mono text-slate-400">
+            <span className="text-[10px] font-mono text-slate-500">
               ตัดสินตามเวลาจริงที่เข้าเส้นชัย (Crossing Times)
             </span>
           </div>
@@ -252,10 +252,10 @@ export const RaceResultsScreen: React.FC = () => {
             <div className="flex flex-col items-center">
               {/* Rider Avatar / Icon */}
               <div
-                className={`w-14 h-16 md:w-16 md:h-20 rounded-2xl p-1 border-2 flex items-center justify-center mb-2 shadow-lg ${
+                className={`w-14 h-16 md:w-16 md:h-20 rounded-2xl p-1 border-2 flex items-center justify-center mb-2 shadow-sm ${
                   podium2nd.isPlayer
-                    ? 'border-cyan-400 bg-cyan-950/70 ring-4 ring-cyan-400/30'
-                    : 'border-slate-400 bg-slate-950'
+                    ? 'border-cyan-400 bg-cyan-50 ring-4 ring-cyan-200'
+                    : 'border-slate-300 bg-slate-50'
                 }`}
               >
                 {podium2nd.isPlayer ? (
@@ -264,29 +264,29 @@ export const RaceResultsScreen: React.FC = () => {
                   <span className="text-2xl">{podium2nd.avatarIcon}</span>
                 )}
               </div>
-              <span className="text-xs font-bold text-slate-200 truncate max-w-[100px] md:max-w-none text-center">
+              <span className="text-xs font-bold text-slate-700 truncate max-w-[100px] md:max-w-none text-center">
                 {podium2nd.name}
               </span>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold">
+              <span className="text-[10px] font-mono text-emerald-700 font-bold">
                 {podium2nd.finishTimeSeconds.toFixed(1)} วิ (+{podium2nd.gapSeconds.toFixed(1)})
               </span>
 
               {/* Pedestal Block #2 */}
-              <div className="w-full h-24 md:h-28 bg-gradient-to-t from-slate-800 to-slate-700 border-t-4 border-slate-300 rounded-t-2xl flex flex-col items-center justify-center shadow-lg mt-2">
-                <span className="text-2xl md:text-3xl font-black font-mono text-slate-200">#2</span>
-                <span className="text-[10px] font-bold text-slate-300 uppercase">รองชนะเลิศ</span>
+              <div className="w-full h-24 md:h-28 bg-gradient-to-t from-slate-200 to-slate-100 border-t-4 border-slate-400 rounded-t-2xl flex flex-col items-center justify-center shadow-sm mt-2">
+                <span className="text-2xl md:text-3xl font-black font-mono text-slate-700">#2</span>
+                <span className="text-[10px] font-bold text-slate-600 uppercase">รองชนะเลิศ</span>
               </div>
             </div>
 
             {/* 1st Place Pedestal (Center - Highest) */}
             <div className="flex flex-col items-center">
               {/* Champion Crown / Trophy */}
-              <div className="text-amber-400 mb-1 animate-bounce">👑</div>
+              <div className="text-amber-500 mb-1 animate-bounce">👑</div>
               <div
-                className={`w-16 h-20 md:w-20 md:h-24 rounded-2xl p-1 border-2 flex items-center justify-center mb-2 shadow-2xl ${
+                className={`w-16 h-20 md:w-20 md:h-24 rounded-2xl p-1 border-2 flex items-center justify-center mb-2 shadow-md ${
                   podium1st.isPlayer
-                    ? 'border-amber-400 bg-amber-950/60 ring-4 ring-amber-400/40'
-                    : 'border-amber-400 bg-slate-950'
+                    ? 'border-amber-400 bg-amber-50 ring-4 ring-amber-200'
+                    : 'border-amber-400 bg-amber-50/50'
                 }`}
               >
                 {podium1st.isPlayer ? (
@@ -295,27 +295,27 @@ export const RaceResultsScreen: React.FC = () => {
                   <span className="text-3xl">{podium1st.avatarIcon}</span>
                 )}
               </div>
-              <span className="text-xs md:text-sm font-black text-amber-300 truncate max-w-[120px] md:max-w-none text-center">
+              <span className="text-xs md:text-sm font-black text-amber-800 truncate max-w-[120px] md:max-w-none text-center">
                 {podium1st.name}
               </span>
-              <span className="text-[11px] font-mono text-emerald-400 font-black">
+              <span className="text-[11px] font-mono text-emerald-700 font-black">
                 {podium1st.finishTimeSeconds.toFixed(1)} วิ (WINNER)
               </span>
 
               {/* Pedestal Block #1 */}
-              <div className="w-full h-32 md:h-36 bg-gradient-to-t from-amber-950/80 via-amber-800/70 to-amber-600 border-t-4 border-amber-300 rounded-t-2xl flex flex-col items-center justify-center shadow-xl shadow-amber-500/20 mt-2">
-                <span className="text-3xl md:text-4xl font-black font-mono text-amber-100">#1</span>
-                <span className="text-[10px] md:text-xs font-black text-amber-200 uppercase">ชนะเลิศ</span>
+              <div className="w-full h-32 md:h-36 bg-gradient-to-t from-amber-200 via-amber-100 to-amber-50 border-t-4 border-amber-400 rounded-t-2xl flex flex-col items-center justify-center shadow-md mt-2">
+                <span className="text-3xl md:text-4xl font-black font-mono text-amber-800">#1</span>
+                <span className="text-[10px] md:text-xs font-black text-amber-700 uppercase">ชนะเลิศ</span>
               </div>
             </div>
 
             {/* 3rd Place Pedestal (Right) */}
             <div className="flex flex-col items-center">
               <div
-                className={`w-14 h-16 md:w-16 md:h-20 rounded-2xl p-1 border-2 flex items-center justify-center mb-2 shadow-lg ${
+                className={`w-14 h-16 md:w-16 md:h-20 rounded-2xl p-1 border-2 flex items-center justify-center mb-2 shadow-sm ${
                   podium3rd.isPlayer
-                    ? 'border-cyan-400 bg-cyan-950/70 ring-4 ring-cyan-400/30'
-                    : 'border-amber-700 bg-slate-950'
+                    ? 'border-cyan-400 bg-cyan-50 ring-4 ring-cyan-200'
+                    : 'border-amber-300 bg-slate-50'
                 }`}
               >
                 {podium3rd.isPlayer ? (
@@ -324,32 +324,32 @@ export const RaceResultsScreen: React.FC = () => {
                   <span className="text-2xl">{podium3rd.avatarIcon}</span>
                 )}
               </div>
-              <span className="text-xs font-bold text-slate-200 truncate max-w-[100px] md:max-w-none text-center">
+              <span className="text-xs font-bold text-slate-700 truncate max-w-[100px] md:max-w-none text-center">
                 {podium3rd.name}
               </span>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold">
+              <span className="text-[10px] font-mono text-emerald-700 font-bold">
                 {podium3rd.finishTimeSeconds.toFixed(1)} วิ (+{podium3rd.gapSeconds.toFixed(1)})
               </span>
 
               {/* Pedestal Block #3 */}
-              <div className="w-full h-20 md:h-22 bg-gradient-to-t from-amber-950/90 to-amber-900 border-t-4 border-amber-600 rounded-t-2xl flex flex-col items-center justify-center shadow-lg mt-2">
-                <span className="text-2xl md:text-3xl font-black font-mono text-amber-300">#3</span>
-                <span className="text-[10px] font-bold text-amber-400 uppercase">อันดับ 3</span>
+              <div className="w-full h-20 md:h-22 bg-gradient-to-t from-orange-100 to-amber-50 border-t-4 border-amber-500 rounded-t-2xl flex flex-col items-center justify-center shadow-sm mt-2">
+                <span className="text-2xl md:text-3xl font-black font-mono text-amber-800">#3</span>
+                <span className="text-[10px] font-bold text-amber-700 uppercase">อันดับ 3</span>
               </div>
             </div>
           </div>
 
           {/* 4th Place Card */}
-          <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs text-slate-400 max-w-2xl mx-auto w-full">
+          <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 flex items-center justify-between text-xs text-slate-600 max-w-2xl mx-auto w-full">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded bg-slate-800 text-slate-400 font-mono font-bold flex items-center justify-center text-[11px]">
+              <span className="w-6 h-6 rounded bg-slate-200 text-slate-600 font-mono font-bold flex items-center justify-center text-[11px]">
                 #4
               </span>
               <span>{rank4th.avatarIcon}</span>
-              <span className="font-bold text-slate-300">{rank4th.name}</span>
+              <span className="font-bold text-slate-700">{rank4th.name}</span>
               <span className="text-[10px] text-slate-500">({rank4th.bikeDesc})</span>
             </div>
-            <span className="font-mono text-slate-400">
+            <span className="font-mono text-slate-600">
               {rank4th.finishTimeSeconds.toFixed(1)} วิ (+{rank4th.gapSeconds.toFixed(1)})
             </span>
           </div>
@@ -358,77 +358,77 @@ export const RaceResultsScreen: React.FC = () => {
         {/* Detailed Telemetry & Documented Scoring Rules (2 Columns) */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
           {/* Left Column: Official Telemetry Stats (6 Cols) */}
-          <div className="md:col-span-6 bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-cyan-300 uppercase flex items-center gap-1.5">
-                <Gauge className="w-4 h-4 text-cyan-400" />
+          <div className="md:col-span-6 bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-cyan-800 uppercase flex items-center gap-1.5">
+                <Gauge className="w-4 h-4 text-cyan-600" />
                 ข้อมูลโทรมาตรการแข่งขัน (Saved Race Telemetry)
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">ระยะ {trackDist} ม.</span>
+              <span className="text-[10px] text-slate-500 font-mono">ระยะ {trackDist} ม.</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <Clock className="w-3.5 h-3.5 text-emerald-400 mb-1" />
-                <span className="text-[10px] text-slate-400 block">เวลาเข้าเส้นชัยรวม</span>
-                <span className="font-mono font-bold text-emerald-300 text-sm">{timeSec.toFixed(1)} วินาที</span>
+              <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 shadow-inner">
+                <Clock className="w-3.5 h-3.5 text-emerald-600 mb-1" />
+                <span className="text-[10px] text-slate-500 block">เวลาเข้าเส้นชัยรวม</span>
+                <span className="font-mono font-bold text-emerald-800 text-sm">{timeSec.toFixed(1)} วินาที</span>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <Gauge className="w-3.5 h-3.5 text-cyan-400 mb-1" />
-                <span className="text-[10px] text-slate-400 block">ความเร็วเฉลี่ย / สูงสุด</span>
-                <span className="font-mono font-bold text-cyan-300 text-sm">
+              <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 shadow-inner">
+                <Gauge className="w-3.5 h-3.5 text-cyan-600 mb-1" />
+                <span className="text-[10px] text-slate-500 block">ความเร็วเฉลี่ย / สูงสุด</span>
+                <span className="font-mono font-bold text-cyan-800 text-sm">
                   {avgSpeed} / {topSpeed} กม./ชม.
                 </span>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <Zap className="w-3.5 h-3.5 text-amber-400 mb-1" />
-                <span className="text-[10px] text-slate-400 block">พลังงานที่ใช้ไป</span>
-                <span className="font-mono font-bold text-amber-300 text-sm">
+              <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 shadow-inner">
+                <Zap className="w-3.5 h-3.5 text-amber-600 mb-1" />
+                <span className="text-[10px] text-slate-500 block">พลังงานที่ใช้ไป</span>
+                <span className="font-mono font-bold text-amber-800 text-sm">
                   {energyUsedMah} mAh ({energyWh} Wh)
                 </span>
               </div>
 
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <BatteryCharging className="w-3.5 h-3.5 text-teal-400 mb-1" />
-                <span className="text-[10px] text-slate-400 block">พลังงานแบตเตอรี่คงเหลือ</span>
-                <span className="font-mono font-bold text-teal-300 text-sm">
+              <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 shadow-inner">
+                <BatteryCharging className="w-3.5 h-3.5 text-teal-600 mb-1" />
+                <span className="text-[10px] text-slate-500 block">พลังงานแบตเตอรี่คงเหลือ</span>
+                <span className="font-mono font-bold text-teal-800 text-sm">
                   {remainingMah} mAh ({remainingPct}%)
                 </span>
               </div>
 
               {state.raceData?.regeneratedEnergyMah && state.raceData.regeneratedEnergyMah > 0 ? (
-                <div className="bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-500/40 col-span-2 flex items-center justify-between">
+                <div className="bg-emerald-50 p-2.5 rounded-2xl border border-emerald-200 col-span-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <BatteryCharging className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <BatteryCharging className="w-4 h-4 text-emerald-600 shrink-0" />
                     <div>
-                      <span className="text-[10px] text-slate-400 block">พลังงานที่ชาร์จกลับ (KERS Regenerated)</span>
-                      <span className="font-mono font-bold text-emerald-300 text-sm">
+                      <span className="text-[10px] text-slate-500 block">พลังงานที่ชาร์จกลับ (KERS Regenerated)</span>
+                      <span className="font-mono font-bold text-emerald-800 text-sm">
                         +{state.raceData.regeneratedEnergyMah.toFixed(1)} mAh (
                         {((state.raceData.regeneratedEnergyMah * packV) / 1000).toFixed(2)} Wh)
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
                     KERS REGEN
                   </span>
                 </div>
               ) : null}
 
               {state.raceData?.batteryPickupsCollected !== undefined ? (
-                <div className="bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-500/40 col-span-2 flex items-center justify-between">
+                <div className="bg-emerald-50/70 p-2.5 rounded-2xl border border-emerald-200 col-span-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-base">🔋</span>
                     <div>
-                      <span className="text-[10px] text-slate-400 block">ไอเทมพลังงานที่เก็บได้ (Pickups)</span>
-                      <span className="font-mono font-bold text-emerald-300 text-sm">
+                      <span className="text-[10px] text-slate-500 block">ไอเทมพลังงานที่เก็บได้ (Pickups)</span>
+                      <span className="font-mono font-bold text-emerald-800 text-sm">
                         {state.raceData.batteryPickupsCollected} / {state.raceData.totalPickupsAvailable || 0} ชิ้น
                         {state.raceData.pickupEnergyRecoveredMah ? ` (+${state.raceData.pickupEnergyRecoveredMah} mAh)` : ''}
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
                     ENERGY BOOST
                   </span>
                 </div>
@@ -436,81 +436,81 @@ export const RaceResultsScreen: React.FC = () => {
             </div>
 
             {/* Scientific Explanation of Battery Choice */}
-            <div className="bg-indigo-950/40 p-3 rounded-xl border border-indigo-500/30 flex flex-col gap-1 mt-1">
-              <span className="text-[10px] font-black uppercase text-indigo-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <div className="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 flex flex-col gap-1 mt-1">
+              <span className="text-[10px] font-black uppercase text-indigo-800 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                 บทวิเคราะห์ผลลัพธ์จากชุดแบตเตอรี่ที่เลือก (Battery Physics Impact)
               </span>
-              <p className="text-[11px] text-slate-200 leading-relaxed">{getBatteryExplanation()}</p>
+              <p className="text-[11px] text-slate-700 leading-relaxed">{getBatteryExplanation()}</p>
             </div>
           </div>
 
           {/* Right Column: Documented Scoring Rubric out of 30 (6 Cols) */}
-          <div className="md:col-span-6 bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-black text-amber-300 uppercase flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-amber-400" />
+          <div className="md:col-span-6 bg-white/95 border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-amber-800 uppercase flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-amber-600" />
                 เกณฑ์การคิดคะแนน 30 คะแนน (Documented Scoring Rule)
               </span>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded font-bold">
+              <span className="text-[10px] font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-bold">
                 TOTAL {totalScore30}/30
               </span>
             </div>
 
             <div className="space-y-2 text-xs">
               {/* Category 1: Rank Points (Max 12) */}
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+              <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 flex items-center justify-between shadow-inner">
                 <div>
-                  <div className="font-bold text-slate-200 flex items-center gap-1.5">
+                  <div className="font-bold text-slate-700 flex items-center gap-1.5">
                     <span>1. คะแนนอันดับเข้าเส้นชัย (Finish Rank)</span>
                   </div>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-slate-500">
                     อันดับ 1 = 12 คะแนน, อันดับ 2 = 9, อันดับ 3 = 6, อันดับ 4 = 3
                   </span>
                 </div>
-                <span className="font-mono font-black text-amber-300 text-sm">
+                <span className="font-mono font-black text-amber-800 text-sm">
                   {scoring.rankPoints} / 12
                 </span>
               </div>
 
               {/* Category 2: Speed / Pacing Points (Max 10) */}
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+              <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 flex items-center justify-between shadow-inner">
                 <div>
-                  <div className="font-bold text-slate-200 flex items-center gap-1.5">
+                  <div className="font-bold text-slate-700 flex items-center gap-1.5">
                     <span>2. คะแนนความเร็วและเพซ (Speed & Pacing)</span>
                   </div>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-slate-500">
                     &ge;30 กม./ชม. = 10 คะแนน, &ge;26 = 8, &ge;22 = 6, &lt;22 = 4
                   </span>
                 </div>
-                <span className="font-mono font-black text-cyan-300 text-sm">
+                <span className="font-mono font-black text-cyan-800 text-sm">
                   {scoring.speedPacingPoints} / 10
                 </span>
               </div>
 
               {/* Category 3: Battery Efficiency (Max 8) */}
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+              <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 flex items-center justify-between shadow-inner">
                 <div>
-                  <div className="font-bold text-slate-200 flex items-center gap-1.5">
+                  <div className="font-bold text-slate-700 flex items-center gap-1.5">
                     <span>3. การบริหารพลังงานแบตเตอรี่ (Energy Efficiency)</span>
                   </div>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-slate-500">
                     แบตเตอรี่คงเหลือ &gt;25% = 8 คะแนน, &gt;10% = 6, &gt;0% = 4, หมด = 2
                   </span>
                 </div>
-                <span className="font-mono font-black text-emerald-300 text-sm">
+                <span className="font-mono font-black text-emerald-800 text-sm">
                   {scoring.batteryEfficiencyPoints} / 8
                 </span>
               </div>
             </div>
 
             {/* Total Summary Bar */}
-            <div className="p-3 rounded-xl bg-gradient-to-r from-amber-950/70 via-slate-950 to-emerald-950/70 border border-amber-500/40 flex items-center justify-between mt-auto">
-              <span className="font-bold text-xs text-amber-200 flex items-center gap-1">
-                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-emerald-50 border border-amber-200 flex items-center justify-between mt-auto shadow-sm">
+              <span className="font-bold text-xs text-amber-800 flex items-center gap-1">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                 คะแนนรวมรอบนี้ (Score Awarded):
               </span>
-              <span className="font-mono font-black text-xl text-amber-300">{totalScore30} / 30</span>
+              <span className="font-mono font-black text-xl text-amber-800">{totalScore30} / 30</span>
             </div>
           </div>
         </div>
@@ -525,23 +525,23 @@ export const RaceResultsScreen: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
           <button
             onClick={() => goToScene('racing')}
-            className="w-full sm:flex-1 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-700 active:scale-95 shadow-md"
+            className="w-full sm:flex-1 py-3.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-200 active:scale-95 shadow-sm"
           >
-            <RotateCcw className="w-4 h-4 text-cyan-400" />
+            <RotateCcw className="w-4 h-4 text-cyan-600" />
             <span>แข่งใหม่อีกครั้ง (Retry Race)</span>
           </button>
 
           <button
             onClick={() => goToScene('bike_garage')}
-            className="w-full sm:flex-1 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-700 active:scale-95 shadow-md"
+            className="w-full sm:flex-1 py-3.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition min-h-[46px] border border-slate-200 active:scale-95 shadow-sm"
           >
-            <Wrench className="w-4 h-4 text-amber-400" />
+            <Wrench className="w-4 h-4 text-amber-600" />
             <span>ตรวจสอบวงจรแบตเตอรี่ (Review Circuit)</span>
           </button>
 
           <button
             onClick={() => goToScene('learning_reflection')}
-            className="w-full sm:flex-1 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:brightness-110 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transition min-h-[46px] active:scale-95"
+            className="w-full sm:flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 transition min-h-[46px] active:scale-95"
           >
             <BookOpen className="w-4 h-4" />
             <span>ถอดบทเรียนความรู้และรับวุฒิบัตร (Continue to Reflection)</span>
