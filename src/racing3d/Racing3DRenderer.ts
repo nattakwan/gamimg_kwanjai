@@ -1113,6 +1113,18 @@ export class Racing3DRenderer {
   private currentWidth = 0;
   private currentHeight = 0;
 
+  // 3D Starting Traffic Lights
+  private startLights: {
+    redMat: THREE.MeshBasicMaterial;
+    amberMat: THREE.MeshBasicMaterial;
+    greenMat: THREE.MeshBasicMaterial;
+  } | null = null;
+
+  // Collision impact visual effects
+  private cameraShake: number = 0;
+  private collisionShockwave: THREE.Mesh | null = null;
+  private shockwaveLife: number = 0;
+
   constructor(
     container: HTMLDivElement,
     trackId: string,
@@ -1161,10 +1173,25 @@ export class Racing3DRenderer {
     this.scene.add(this.batteryPickupsGroup);
     this.buildBatteryPickups(trackId);
 
-    // ── 7. Environment & Scenery ──
+    // ── 7. Collision Impact Visual Decal (Reusable, zero-recompile) ──
+    const shockwaveGeo = new THREE.RingGeometry(0.3, 0.85, 24);
+    const shockwaveMat = new THREE.MeshBasicMaterial({
+      color: 0xf59e0b,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.collisionShockwave = new THREE.Mesh(shockwaveGeo, shockwaveMat);
+    this.collisionShockwave.rotation.x = Math.PI / 2;
+    this.collisionShockwave.position.set(0, -9999, 0);
+    this.scene.add(this.collisionShockwave);
+
+    // ── 8. Environment & Scenery ──
     this.buildEnvironment(trackId);
 
-    // ── 7. Resize Observer ──
+    // ── 9. Resize Observer ──
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
     this.resizeObserver.observe(container);
   }
@@ -2004,9 +2031,12 @@ export class Racing3DRenderer {
   }
 
   private buildStartGantry() {
-    const pos = this.sampledPositions[0];
-    const normal = this.sampledNormals[0];
-    const tangent = this.sampledTangents[0];
+    // Starting arch positioned right at start station (sample index 2 ~= 3.0m)
+    // Riders start lined up behind the arch (z = 0 to -2m) and blast right through the arch on GO!
+    const gantryIdx = Math.min(2, TRACK_SAMPLES);
+    const pos = this.sampledPositions[gantryIdx];
+    const normal = this.sampledNormals[gantryIdx];
+    const tangent = this.sampledTangents[gantryIdx];
 
     const spanW = (ROAD_HALF_WIDTH + KERB_WIDTH + SHOULDER_WIDTH) * 2;
     const gantry = new THREE.Group();
@@ -2015,28 +2045,28 @@ export class Racing3DRenderer {
     const beamMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, shininess: 60 });
     const goldMat = new THREE.MeshPhongMaterial({ color: 0xf59e0b, shininess: 90 });
 
-    // Twin structural pylon uprights
+    // Twin structural pylon uprights (5.4m height to frame camera view perfectly)
     [-1, 1].forEach((side) => {
-      const pylonPos = pos.clone().addScaledVector(normal, side * (spanW / 2 + 0.6));
+      const pylonPos = pos.clone().addScaledVector(normal, side * (spanW / 2 + 0.4));
 
-      const foot = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.8, 1.6), pillarMat);
-      foot.position.set(pylonPos.x, pos.y + 0.4, pylonPos.z);
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 1.4), pillarMat);
+      foot.position.set(pylonPos.x, pos.y + 0.3, pylonPos.z);
       gantry.add(foot);
 
-      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.48, 8.8, 12), pillarMat);
-      pillar.position.set(pylonPos.x, pos.y + 4.8, pylonPos.z);
+      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 5.4, 12), pillarMat);
+      pillar.position.set(pylonPos.x, pos.y + 2.7, pylonPos.z);
       gantry.add(pillar);
 
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.08, 8, 16), goldMat);
-      ring.position.set(pylonPos.x, pos.y + 8.4, pylonPos.z);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.07, 8, 16), goldMat);
+      ring.position.set(pylonPos.x, pos.y + 5.1, pylonPos.z);
       ring.rotation.x = Math.PI / 2;
       gantry.add(ring);
     });
 
-    // Overhead heavy crossbeam
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(spanW + 2.4, 1.4, 1.4), beamMat);
+    // Overhead heavy crossbeam at y = pos.y + 5.2
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(spanW + 2.0, 0.9, 0.9), beamMat);
     beam.position.copy(pos);
-    beam.position.y += 8.6;
+    beam.position.y += 5.2;
     beam.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), normal.clone());
     gantry.add(beam);
 
@@ -2065,41 +2095,143 @@ export class Racing3DRenderer {
     bctx.strokeRect(4, 14, 504, 100);
 
     bctx.fillStyle = '#38bdf8';
-    bctx.font = '900 20px sans-serif';
+    bctx.font = '900 18px sans-serif';
     bctx.textAlign = 'center';
-    bctx.fillText('⚡ BATTERY QUEST GRAND PRIX ⚡', 256, 38);
+    bctx.fillText('⚡ BATTERY QUEST GRAND PRIX ⚡', 256, 36);
 
     bctx.fillStyle = '#facc15';
-    bctx.font = '900 56px sans-serif';
-    // On closed circuits, this gantry marks both the Start line and Lap/Finish line!
-    bctx.fillText(this.isClosedTrack ? '🏁 START / FINISH 🏁' : '⚡ START ⚡', 256, 92);
+    bctx.font = '900 46px sans-serif';
+    bctx.fillText(this.isClosedTrack ? '🏁 START / FINISH 🏁' : '⚡ START ⚡', 256, 88);
 
     const bannerTex = new THREE.CanvasTexture(bannerCanvas);
     const bannerMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(spanW * 0.70, 2.4),
+      new THREE.PlaneGeometry(spanW * 0.65, 1.8),
       new THREE.MeshBasicMaterial({ map: bannerTex, side: THREE.DoubleSide })
     );
     bannerMesh.position.copy(pos);
-    bannerMesh.position.y += 8.6;
-    bannerMesh.position.addScaledVector(tangent, -0.75);
+    bannerMesh.position.y += 5.2;
+    bannerMesh.position.addScaledVector(tangent, -0.5);
     bannerMesh.lookAt(bannerMesh.position.clone().sub(tangent));
     gantry.add(bannerMesh);
 
-    // Race starting lights cluster (3 lights: Red, Amber, Green)
-    [-0.8, 0, 0.8].forEach((lx, idx) => {
-      const colors = [0xef4444, 0xf59e0b, 0x10b981];
-      const lightMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.22, 12, 12),
-        new THREE.MeshBasicMaterial({ color: colors[idx] })
-      );
-      lightMesh.position.copy(pos);
-      lightMesh.position.y += 7.4;
-      lightMesh.position.addScaledVector(normal, lx);
-      lightMesh.position.addScaledVector(tangent, -0.75);
-      gantry.add(lightMesh);
+    // ─── 3D Starting Traffic Light Cluster (ไฟจราจรแสดงสัญญาณให้ออกตัว) ───
+    const lightBoxGroup = new THREE.Group();
+    const boxGeo = new THREE.BoxGeometry(2.2, 0.75, 0.45);
+    const boxMat = new THREE.MeshPhongMaterial({ color: 0x050508, shininess: 40 });
+    const boxMesh = new THREE.Mesh(boxGeo, boxMat);
+    lightBoxGroup.add(boxMesh);
+
+    // Suspension cables connecting box to crossbeam
+    const cableMat = new THREE.MeshBasicMaterial({ color: 0x64748b });
+    [-0.75, 0.75].forEach((cx) => {
+      const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.9, 6), cableMat);
+      cable.position.set(cx, 0.8, 0);
+      lightBoxGroup.add(cable);
     });
 
+    // 3 Lamps: Red (Left), Amber (Center), Green (Right)
+    const redMat = new THREE.MeshBasicMaterial({ color: 0xff1111 });
+    const amberMat = new THREE.MeshBasicMaterial({ color: 0x221100 });
+    const greenMat = new THREE.MeshBasicMaterial({ color: 0x002211 });
+
+    const lampGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.12, 16);
+    lampGeo.rotateX(Math.PI / 2);
+
+    const redMesh = new THREE.Mesh(lampGeo, redMat);
+    redMesh.position.set(-0.65, 0, 0.20);
+    lightBoxGroup.add(redMesh);
+
+    const amberMesh = new THREE.Mesh(lampGeo, amberMat);
+    amberMesh.position.set(0, 0, 0.20);
+    lightBoxGroup.add(amberMesh);
+
+    const greenMesh = new THREE.Mesh(lampGeo, greenMat);
+    greenMesh.position.set(0.65, 0, 0.20);
+    lightBoxGroup.add(greenMesh);
+
+    // Visor hoods
+    const visorMat = new THREE.MeshPhongMaterial({ color: 0x090d16 });
+    [-0.65, 0, 0.65].forEach((lx) => {
+      const visor = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.035, 6, 16, Math.PI), visorMat);
+      visor.position.set(lx, 0.04, 0.22);
+      visor.rotation.z = Math.PI;
+      lightBoxGroup.add(visor);
+    });
+
+    // Position light box in the 3D scene facing incoming riders
+    lightBoxGroup.position.copy(pos);
+    lightBoxGroup.position.y += 3.8;
+    lightBoxGroup.position.addScaledVector(tangent, -0.55);
+    lightBoxGroup.lookAt(lightBoxGroup.position.clone().sub(tangent));
+    gantry.add(lightBoxGroup);
+
+    this.startLights = { redMat, amberMat, greenMat };
+
+    // Checkerboard starting line on road deck right under the arch
+    const checkWidth = ROAD_HALF_WIDTH * 2;
+    const numCols = 12;
+    const cellW = checkWidth / numCols;
+    for (let c = 0; c < numCols; c++) {
+      for (let r = 0; r < 2; r++) {
+        const isWhite = (c + r) % 2 === 0;
+        const cell = new THREE.Mesh(
+          new THREE.PlaneGeometry(cellW - 0.02, 0.6),
+          new THREE.MeshBasicMaterial({
+            color: isWhite ? 0xffffff : 0x0f172a,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+          })
+        );
+        cell.rotation.x = Math.PI / 2;
+        const cellPos = pos.clone().addScaledVector(normal, -ROAD_HALF_WIDTH + (c + 0.5) * cellW);
+        cellPos.addScaledVector(tangent, (r - 0.5) * 0.6);
+        cellPos.y += 0.025;
+        cell.position.copy(cellPos);
+        gantry.add(cell);
+      }
+    }
+
     this.scene.add(gantry);
+  }
+
+  // ─── 3D Starting Traffic Lights Countdown Control ─────────────────────────
+
+  public setStartCountdown(stage: 3 | 2 | 1 | 'go' | 'off') {
+    if (!this.startLights) return;
+    if (stage === 3) {
+      this.startLights.redMat.color.setHex(0xff1111);
+      this.startLights.amberMat.color.setHex(0x221100);
+      this.startLights.greenMat.color.setHex(0x002211);
+    } else if (stage === 2) {
+      this.startLights.redMat.color.setHex(0xff1111);
+      this.startLights.amberMat.color.setHex(0xffaa00);
+      this.startLights.greenMat.color.setHex(0x002211);
+    } else if (stage === 1) {
+      this.startLights.redMat.color.setHex(0x330000);
+      this.startLights.amberMat.color.setHex(0xffaa00);
+      this.startLights.greenMat.color.setHex(0x002211);
+    } else if (stage === 'go') {
+      this.startLights.redMat.color.setHex(0x330000);
+      this.startLights.amberMat.color.setHex(0x221100);
+      this.startLights.greenMat.color.setHex(0x10b981);
+    } else if (stage === 'off') {
+      this.startLights.redMat.color.setHex(0x330000);
+      this.startLights.amberMat.color.setHex(0x221100);
+      this.startLights.greenMat.color.setHex(0x002211);
+    }
+  }
+
+  // ─── Racer Collision Impulse & Impact Effect (DeepSeek V4 Pro) ────────────
+
+  public triggerCollisionEffect(z: number, x: number) {
+    this.cameraShake = 0.45;
+    if (this.collisionShockwave) {
+      const { position, normal, tangent } = this.getTrackPosition(z, x);
+      const surfaceUp = new THREE.Vector3().crossVectors(normal, tangent).normalize();
+      this.collisionShockwave.position.copy(position).addScaledVector(surfaceUp, 0.15);
+      this.collisionShockwave.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), surfaceUp);
+      this.shockwaveLife = 1.0;
+    }
   }
 
   // ─── Battery Energy Pickups (DeepSeek V4 Pro Procedural 3D Assets) ─────────
@@ -2607,7 +2739,6 @@ export class Racing3DRenderer {
 
       const leanAlpha = 1 - Math.exp(-8.0 * dt);
       cyclist.currentLean += (targetLean - cyclist.currentLean) * leanAlpha;
-      cyclist.rollPivot.rotation.z = cyclist.currentLean;
 
       // 3. DeepSeek V4 Pro Rolling Kinematics: Pedaling crank cadence linked to ground speed
       // omega_c = v / (i_g * r_w) with i_g = 2.85 gear ratio, r_w = 0.34m wheel radius
@@ -2630,6 +2761,28 @@ export class Racing3DRenderer {
         racer.slopePercent || 0,
         racer.isBraking || false
       );
+
+      // 6. DeepSeek V4 Pro Realistic Bicycle Frame Sway & Rocking Kinematics
+      // In real-world cycling, alternate downward foot strokes rock the bike frame laterally.
+      // Dynamic frame rocking couples roll (Z), micro-yaw (Y), and lateral sway (X) in sync with crank cadence:
+      let pedalingIntensity = 0;
+      if (v > 0.4 && !racer.isBraking) {
+        const baseEffort = racer.isPedaling ? 1.0 : (v > 2.0 ? 0.30 : 0.0);
+        const speedFactor = THREE.MathUtils.clamp(v / 7.0, 0.45, 1.25);
+        const slopeBoost = (racer.slopePercent || 0) > 4 ? 1.35 : 1.0;
+        pedalingIntensity = baseEffort * speedFactor * slopeBoost;
+      }
+
+      // Roll rocking: alternating left-right lean (+/- 2.8 degrees)
+      const bikeRollRock = 0.048 * Math.sin(crankAngle) * pedalingIntensity;
+      // Handlebar & frame yaw oscillation (+/- 1.1 degrees)
+      const bikeYawWobble = 0.020 * Math.cos(crankAngle) * pedalingIntensity;
+      // Lateral wheel contact translation (+/- 2.6 cm)
+      const bikeLateralSway = 0.026 * Math.sin(crankAngle) * pedalingIntensity;
+
+      cyclist.rollPivot.rotation.z = cyclist.currentLean + bikeRollRock;
+      cyclist.rollPivot.rotation.y = bikeYawWobble;
+      cyclist.rollPivot.position.x = bikeLateralSway;
 
       // Motor glow effect & Regenerative energy pulse (KERS)
       if (racer.isRegenActive) {
@@ -2757,10 +2910,18 @@ export class Racing3DRenderer {
 
       this.camera.position.copy(this.smoothCamPos);
 
-      // 5. Subtle camera micro-shake at high speed (creates tactile speed vibration)
-      const shake = 0.012 * speed01 * speed01;
-      this.camera.position.x += (Math.random() - 0.5) * shake;
-      this.camera.position.y += (Math.random() - 0.5) * shake;
+      // 5. Subtle camera micro-shake at high speed + collision impact impulse
+      const highSpeedShake = 0.012 * speed01 * speed01;
+      let totalShakeX = (Math.random() - 0.5) * highSpeedShake;
+      let totalShakeY = (Math.random() - 0.5) * highSpeedShake;
+
+      if (this.cameraShake > 0.005) {
+        totalShakeX += (Math.random() - 0.5) * this.cameraShake * 0.45;
+        totalShakeY += (Math.random() - 0.5) * this.cameraShake * 0.45;
+        this.cameraShake = Math.max(0, this.cameraShake - dt * 3.5);
+      }
+      this.camera.position.x += totalShakeX;
+      this.camera.position.y += totalShakeY;
 
       // 6. Dutch roll / horizon banking: camera tilts with bicycle bank angle
       const targetCamRoll = (playerCyclist?.currentLean || 0) * 0.20;
@@ -2780,6 +2941,18 @@ export class Racing3DRenderer {
       this.smoothFov += (targetFov - this.smoothFov) * fovAlpha;
       this.camera.fov = this.smoothFov;
       this.camera.updateProjectionMatrix();
+    }
+
+    // ── Update Collision Shockwave ──
+    if (this.collisionShockwave && this.shockwaveLife > 0) {
+      this.shockwaveLife = Math.max(0, this.shockwaveLife - dt * 3.5);
+      const k = 1.0 - this.shockwaveLife;
+      const s = 0.35 + k * 2.8;
+      this.collisionShockwave.scale.set(s, s, s);
+      (this.collisionShockwave.material as THREE.MeshBasicMaterial).opacity = this.shockwaveLife * 0.85;
+      if (this.shockwaveLife <= 0) {
+        this.collisionShockwave.position.y = -9999;
+      }
     }
 
     // Render Scene

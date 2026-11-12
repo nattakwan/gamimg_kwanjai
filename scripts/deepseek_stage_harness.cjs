@@ -133,51 +133,35 @@ const PACK_CONFIGS = [
   { name: 'Mismatch: 6V Pack on 24V Motor', voltage: 6.0, capacityMah: 4000, internalR: 0.20, motorV: 24 },
 ];
 
-// Battery Energy Pickups per Stage (DeepSeek V4 Pro)
+// Battery Energy Pickups per Stage (DeepSeek V4 Pro - Reduced 50%)
 function getStageItems(trackId) {
   if (trackId === 'flat_sprint') {
     return [
-      { id: 'fs_1', z: 90, valuePct: 0.07 },
-      { id: 'fs_2', z: 210, valuePct: 0.07 },
-      { id: 'fs_3', z: 330, valuePct: 0.07 },
+      { id: 'fs_1', z: 140, valuePct: 0.08 },
+      { id: 'fs_2', z: 280, valuePct: 0.08 },
     ];
   }
   if (trackId === 'hill_climb') {
     return [
-      { id: 'hc_1', z: 60, valuePct: 0.08 },
-      { id: 'hc_2', z: 130, valuePct: 0.08 },
-      { id: 'hc_3', z: 200, valuePct: 0.07 },
-      { id: 'hc_4', z: 270, valuePct: 0.08 },
-      { id: 'hc_5', z: 340, valuePct: 0.07 },
-      { id: 'hc_6', z: 410, valuePct: 0.08 },
-      { id: 'hc_7', z: 490, valuePct: 0.07 },
-      { id: 'hc_8', z: 560, valuePct: 0.08 },
+      { id: 'hc_1', z: 120, valuePct: 0.10 },
+      { id: 'hc_2', z: 260, valuePct: 0.10 },
+      { id: 'hc_3', z: 400, valuePct: 0.10 },
+      { id: 'hc_4', z: 520, valuePct: 0.10 },
     ];
   }
   if (trackId === 'endurance_route') {
     return [
-      { id: 'end_l1_1', z: 70, valuePct: 0.08 },
-      { id: 'end_l1_2', z: 150, valuePct: 0.08 },
-      { id: 'end_l1_3', z: 230, valuePct: 0.08 },
-      { id: 'end_l1_4', z: 310, valuePct: 0.08 },
-      { id: 'end_l1_5', z: 375, valuePct: 0.08 },
-      { id: 'end_l2_1', z: 470, valuePct: 0.08 },
-      { id: 'end_l2_2', z: 550, valuePct: 0.08 },
-      { id: 'end_l2_3', z: 630, valuePct: 0.08 },
-      { id: 'end_l2_4', z: 710, valuePct: 0.08 },
-      { id: 'end_l2_5', z: 775, valuePct: 0.08 },
-      { id: 'end_l3_1', z: 870, valuePct: 0.08 },
-      { id: 'end_l3_2', z: 950, valuePct: 0.08 },
-      { id: 'end_l3_3', z: 1030, valuePct: 0.08 },
-      { id: 'end_l3_4', z: 1110, valuePct: 0.08 },
-      { id: 'end_l3_5', z: 1175, valuePct: 0.08 },
+      { id: 'end_l1_1', z: 150, valuePct: 0.09 },
+      { id: 'end_l1_2', z: 320, valuePct: 0.09 },
+      { id: 'end_l2_1', z: 550, valuePct: 0.09 },
+      { id: 'end_l2_2', z: 720, valuePct: 0.09 },
+      { id: 'end_l3_1', z: 950, valuePct: 0.09 },
+      { id: 'end_l3_2', z: 1120, valuePct: 0.09 },
     ];
   }
   return [
-    { id: 'off_1', z: 120, valuePct: 0.06 },
-    { id: 'off_2', z: 310, valuePct: 0.06 },
-    { id: 'off_3', z: 520, valuePct: 0.06 },
-    { id: 'off_4', z: 700, valuePct: 0.06 },
+    { id: 'off_1', z: 260, valuePct: 0.08 },
+    { id: 'off_2', z: 580, valuePct: 0.08 },
   ];
 }
 

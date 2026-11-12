@@ -54,7 +54,7 @@ function getSharedAudioContext(): AudioContext | null {
 
 // Web Audio sound generator for racing immersion
 const playRacingTone = (
-  type: 'pedal' | 'motor_hum' | 'brake' | 'boost' | 'rank_change' | 'finish' | 'regen' | 'pickup',
+  type: 'pedal' | 'motor_hum' | 'brake' | 'boost' | 'rank_change' | 'finish' | 'regen' | 'pickup' | 'countdown' | 'go' | 'collision',
   freq: number = 440,
   duration: number = 0.12
 ) => {
@@ -64,7 +64,27 @@ const playRacingTone = (
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    if (type === 'motor_hum') {
+    if (type === 'countdown') {
+      // Crisp race start countdown beep (440 Hz)
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      gain.gain.setValueAtTime(0.14, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16);
+    } else if (type === 'go') {
+      // Energetic race launch tone (880 Hz fanfare)
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1150, ctx.currentTime + 0.35);
+      gain.gain.setValueAtTime(0.22, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.40);
+    } else if (type === 'collision') {
+      // Heavy crunch impact tone
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(160, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(45, ctx.currentTime + 0.22);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.24);
+    } else if (type === 'motor_hum') {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
       gain.gain.setValueAtTime(0.06, ctx.currentTime);
@@ -202,6 +222,19 @@ export const RacingScreen: React.FC = () => {
     }, 1800);
   }, []);
 
+  // Start traffic light countdown state (3, 2, 1, 'GO!', null)
+  const [countdownDisplay, setCountdownDisplay] = useState<3 | 2 | 1 | 'GO!' | null>(3);
+  const [collisionToast, setCollisionToast] = useState<string | null>(null);
+  const collisionToastTimerRef = useRef<number | null>(null);
+
+  const showCollisionToast = useCallback((msg: string) => {
+    setCollisionToast(msg);
+    if (collisionToastTimerRef.current) clearTimeout(collisionToastTimerRef.current);
+    collisionToastTimerRef.current = window.setTimeout(() => {
+      setCollisionToast(null);
+    }, 1800);
+  }, []);
+
   // Game flow states
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [raceFinished, setRaceFinished] = useState<boolean>(false);
@@ -241,7 +274,7 @@ export const RacingScreen: React.FC = () => {
   const [regenPowerW, setRegenPowerW] = useState<number>(0);
   const [isRegenActive, setIsRegenActive] = useState<boolean>(false);
 
-  // 3 AI Opponents (Starting with 50% battery capacity)
+  // 3 AI Opponents (Starting with 50% battery capacity, placed on starting grid)
   const [aiRiders, setAiRiders] = useState<AIRiderState[]>([
     {
       id: 'racer_tina',
@@ -249,7 +282,7 @@ export const RacingScreen: React.FC = () => {
       shortName: 'ทีน่า',
       icon: '🚀',
       color: '#a855f7',
-      z: 0,
+      z: -1.2,
       x: -0.6,
       speedMps: 0,
       batteryRemainingMah: 2000,
@@ -267,7 +300,7 @@ export const RacingScreen: React.FC = () => {
       shortName: 'แซม',
       icon: '⚡',
       color: '#ef4444',
-      z: 0,
+      z: -1.2,
       x: 0.5,
       speedMps: 0,
       batteryRemainingMah: 1000,
@@ -285,7 +318,7 @@ export const RacingScreen: React.FC = () => {
       shortName: 'บิ๊กบล็อก',
       icon: '🛡️',
       color: '#f59e0b',
-      z: 0,
+      z: -2.2,
       x: 0.85,
       speedMps: 0,
       batteryRemainingMah: 3000,
@@ -335,6 +368,10 @@ export const RacingScreen: React.FC = () => {
     isSteeringRight: false,
     isMotorAssistActive: false,
     playerRank: 2,
+    countdownValue: 3 as 3 | 2 | 1 | 'GO!' | null,
+    countdownTimer: 0,
+    isCountdownActive: true,
+    lastCollisionTime: 0,
     aiRiders: [
       {
         id: 'racer_tina',
@@ -342,7 +379,7 @@ export const RacingScreen: React.FC = () => {
         shortName: 'ทีน่า',
         icon: '🚀',
         color: '#a855f7',
-        z: 0,
+        z: -1.2,
         x: -0.6,
         speedMps: 0,
         batteryRemainingMah: 2000,
@@ -360,7 +397,7 @@ export const RacingScreen: React.FC = () => {
         shortName: 'แซม',
         icon: '⚡',
         color: '#ef4444',
-        z: 0,
+        z: -1.2,
         x: 0.5,
         speedMps: 0,
         batteryRemainingMah: 1000,
@@ -378,7 +415,7 @@ export const RacingScreen: React.FC = () => {
         shortName: 'บิ๊กบล็อก',
         icon: '🛡️',
         color: '#f59e0b',
-        z: 0,
+        z: -2.2,
         x: 0.85,
         speedMps: 0,
         batteryRemainingMah: 3000,
@@ -495,13 +532,21 @@ export const RacingScreen: React.FC = () => {
     sim.downhillSavedWh = 0;
     sim.totalRegeneratedMah = 0;
     sim.playerRank = 2;
+    sim.countdownTimer = 0;
+    sim.isCountdownActive = true;
+    sim.countdownValue = 3;
+    sim.lastCollisionTime = 0;
+    setCountdownDisplay(3);
+    renderer3dRef.current?.setStartCountdown(3);
+    playRacingTone('countdown');
+
     sim.pickups = getStageBatteryItems(trackId).map((item) => ({ ...item, collected: false }));
     sim.itemsCollectedCount = 0;
     sim.batteryEnergyRecoveredMah = 0;
     renderer3dRef.current?.resetPickups();
-    sim.aiRiders = sim.aiRiders.map((ai) => ({
+    sim.aiRiders = sim.aiRiders.map((ai, idx) => ({
       ...ai,
-      z: 0,
+      z: idx === 0 ? -1.2 : idx === 1 ? -1.2 : -2.2,
       x: ai.targetLaneX,
       speedMps: 0,
       isFinished: false,
@@ -607,7 +652,52 @@ export const RacingScreen: React.FC = () => {
       const sim = simRef.current;
 
       if (!sim.isPaused && !sim.raceFinished) {
-        sim.raceTimeSeconds += dt;
+        // ─── 0. Starting Traffic Light Countdown Sequence (3, 2, 1, GO!) ───
+        if (sim.isCountdownActive) {
+          sim.countdownTimer += dt;
+          if (sim.countdownTimer < 1.0) {
+            if (sim.countdownValue !== 3) {
+              sim.countdownValue = 3;
+              setCountdownDisplay(3);
+              renderer.setStartCountdown(3);
+              playRacingTone('countdown');
+            }
+          } else if (sim.countdownTimer < 2.0) {
+            if (sim.countdownValue !== 2) {
+              sim.countdownValue = 2;
+              setCountdownDisplay(2);
+              renderer.setStartCountdown(2);
+              playRacingTone('countdown');
+            }
+          } else if (sim.countdownTimer < 3.0) {
+            if (sim.countdownValue !== 1) {
+              sim.countdownValue = 1;
+              setCountdownDisplay(1);
+              renderer.setStartCountdown(1);
+              playRacingTone('countdown');
+            }
+          } else {
+            if (sim.countdownValue !== 'GO!') {
+              sim.countdownValue = 'GO!';
+              setCountdownDisplay('GO!');
+              renderer.setStartCountdown('go');
+              playRacingTone('go');
+              sim.isCountdownActive = false;
+            }
+          }
+          // Hold speeds at 0 during starting countdown
+          sim.playerSpeedMps = 0;
+          sim.playerZ = 0;
+        } else {
+          sim.raceTimeSeconds += dt;
+          if (sim.countdownTimer < 4.5) {
+            sim.countdownTimer += dt;
+            if (sim.countdownTimer >= 4.5 && sim.countdownValue !== null) {
+              sim.countdownValue = null;
+              setCountdownDisplay(null);
+            }
+          }
+        }
 
         // ----------------- PLAYER PHYSICS -----------------
         const totalMassKg = 82; // rider (70kg) + bicycle & battery (12kg)
@@ -823,6 +913,13 @@ export const RacingScreen: React.FC = () => {
           const aiAccel = aiNetForce / 82;
           const newAiSpeed = Math.max(0, ai.speedMps + aiAccel * dt);
 
+          if (sim.isCountdownActive) {
+            return {
+              ...ai,
+              speedMps: 0,
+            };
+          }
+
           let newAiZ = ai.z + newAiSpeed * dt;
           let isAiDone: boolean = ai.isFinished;
           let aiDoneTime: number | null = ai.finishTimeSeconds;
@@ -847,6 +944,38 @@ export const RacingScreen: React.FC = () => {
             finishTimeSeconds: aiDoneTime,
           };
         });
+
+        // 8.1 Racer Collision Physics & Speed Reduction (DeepSeek V4 Pro)
+        if (!sim.isCountdownActive) {
+          const COLLISION_DZ = 1.6; // longitudinal contact tolerance
+          const COLLISION_DX = 0.22; // normalized lateral road units (~0.70m handlebars)
+          for (const ai of sim.aiRiders) {
+            if (ai.isFinished) continue;
+            const dz = Math.abs(sim.playerZ - ai.z);
+            const dx = Math.abs(sim.playerX - ai.x);
+
+            if (dz < COLLISION_DZ && dx < COLLISION_DX) {
+              const nowMs = performance.now();
+              if (nowMs - sim.lastCollisionTime > 400) {
+                sim.lastCollisionTime = nowMs;
+
+                // Physical speed reduction penalty (-28%)
+                const speedPenalty = Math.max(2.4, sim.playerSpeedMps * 0.28);
+                sim.playerSpeedMps = Math.max(0, sim.playerSpeedMps - speedPenalty);
+                ai.speedMps = Math.max(0, ai.speedMps - speedPenalty * 0.65);
+
+                // Elastic lateral repulsion (push apart so bikes don't stick or clip)
+                const push = sim.playerX < ai.x ? -0.15 : 0.15;
+                sim.playerX = Math.max(-0.92, Math.min(0.92, sim.playerX + push));
+                ai.x = Math.max(-0.92, Math.min(0.92, ai.x - push));
+
+                playRacingTone('collision');
+                renderer3dRef.current?.triggerCollisionEffect(sim.playerZ, (sim.playerX + ai.x) / 2);
+                showCollisionToast(`💥 ชนกับ ${ai.shortName}! ความเร็วลดลง -${Math.round(speedPenalty * 3.6)} กม./ชม.`);
+              }
+            }
+          }
+        }
 
         // Compute Live Ranking
         let rank = 1;
@@ -1248,6 +1377,84 @@ export const RacingScreen: React.FC = () => {
             <div className="flex flex-col text-left">
               <span className="font-bold text-xs tracking-wide text-white">{pickupToast.text}</span>
               <span className="text-[10px] text-emerald-400 font-mono">ชาร์จพลังงานสำเร็จ!</span>
+            </div>
+          </div>
+        )}
+
+        {/* Collision Impact Toast */}
+        {collisionToast && (
+          <div className="absolute top-16 right-4 z-30 pointer-events-none animate-in fade-in slide-in-from-top-2 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-rose-950/90 border border-rose-500/80 text-rose-200 shadow-[0_0_20px_rgba(244,63,94,0.5)] backdrop-blur-md transition-all">
+            <span className="text-xl animate-bounce">💥</span>
+            <div className="flex flex-col text-left">
+              <span className="font-bold text-xs tracking-wide text-white">{collisionToast}</span>
+              <span className="text-[10px] text-rose-400 font-mono">สูญเสียความเร็วจากการชน!</span>
+            </div>
+          </div>
+        )}
+
+        {/* Broadcast Race Start Traffic Light Countdown Overlay */}
+        {countdownDisplay !== null && (
+          <div className="absolute inset-0 z-40 pointer-events-none flex flex-col items-center justify-center bg-slate-950/35 backdrop-blur-[2px] transition-all">
+            {/* Overhead 3D-styled Traffic Light Gantry Box in UI */}
+            <div className="flex items-center gap-4 px-6 py-3.5 rounded-3xl bg-slate-900/90 border-2 border-slate-700 shadow-[0_10px_35px_rgba(0,0,0,0.8)] mb-4 animate-in zoom-in-95 duration-200">
+              {/* Red Light Bulb */}
+              <div
+                className={`w-10 h-10 rounded-full border-2 transition-all duration-150 flex items-center justify-center ${
+                  countdownDisplay === 3 || countdownDisplay === 2
+                    ? 'bg-rose-500 border-rose-300 shadow-[0_0_25px_#f43f5e]'
+                    : 'bg-rose-950/50 border-rose-900/40 opacity-40'
+                }`}
+              >
+                <div className="w-3 h-3 rounded-full bg-white/40" />
+              </div>
+
+              {/* Amber Light Bulb */}
+              <div
+                className={`w-10 h-10 rounded-full border-2 transition-all duration-150 flex items-center justify-center ${
+                  countdownDisplay === 2 || countdownDisplay === 1
+                    ? 'bg-amber-400 border-amber-200 shadow-[0_0_25px_#f59e0b]'
+                    : 'bg-amber-950/50 border-amber-900/40 opacity-40'
+                }`}
+              >
+                <div className="w-3 h-3 rounded-full bg-white/40" />
+              </div>
+
+              {/* Green Light Bulb */}
+              <div
+                className={`w-10 h-10 rounded-full border-2 transition-all duration-150 flex items-center justify-center ${
+                  countdownDisplay === 'GO!'
+                    ? 'bg-emerald-400 border-emerald-200 shadow-[0_0_30px_#10b981]'
+                    : 'bg-emerald-950/50 border-emerald-900/40 opacity-40'
+                }`}
+              >
+                <div className="w-3 h-3 rounded-full bg-white/40" />
+              </div>
+            </div>
+
+            {/* Huge Dynamic Countdown Counter */}
+            <div className="text-center animate-in zoom-in-75 duration-150">
+              <span
+                className={`text-6xl md:text-8xl font-black font-mono tracking-tight drop-shadow-[0_8px_16px_rgba(0,0,0,0.9)] ${
+                  countdownDisplay === 'GO!'
+                    ? 'text-emerald-400 animate-bounce'
+                    : countdownDisplay === 1
+                    ? 'text-amber-400'
+                    : countdownDisplay === 2
+                    ? 'text-amber-300'
+                    : 'text-rose-500'
+                }`}
+              >
+                {countdownDisplay}
+              </span>
+              <p className="text-sm md:text-base font-bold text-white/90 uppercase tracking-widest mt-2 drop-shadow-md">
+                {countdownDisplay === 'GO!'
+                  ? '⚡ ออกตัวเลย! ปั่นให้สุดกำลัง! ⚡'
+                  : countdownDisplay === 1
+                  ? 'ระวัง... เตรียมพร้อมปล่อยตัว!'
+                  : countdownDisplay === 2
+                  ? 'เร่งรอบมอเตอร์และวางเท้าบนบันได'
+                  : 'พร้อมประจำจุดออกตัว'}
+              </p>
             </div>
           </div>
         )}
