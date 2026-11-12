@@ -133,17 +133,75 @@ const PACK_CONFIGS = [
   { name: 'Mismatch: 6V Pack on 24V Motor', voltage: 6.0, capacityMah: 4000, internalR: 0.20, motorV: 24 },
 ];
 
-function runStageSimulation(stage, pack, controlMode = 'active_boost') {
+// Battery Energy Pickups per Stage (DeepSeek V4 Pro)
+function getStageItems(trackId) {
+  if (trackId === 'flat_sprint') {
+    return [
+      { id: 'fs_1', z: 90, valuePct: 0.07 },
+      { id: 'fs_2', z: 210, valuePct: 0.07 },
+      { id: 'fs_3', z: 330, valuePct: 0.07 },
+    ];
+  }
+  if (trackId === 'hill_climb') {
+    return [
+      { id: 'hc_1', z: 60, valuePct: 0.08 },
+      { id: 'hc_2', z: 130, valuePct: 0.08 },
+      { id: 'hc_3', z: 200, valuePct: 0.07 },
+      { id: 'hc_4', z: 270, valuePct: 0.08 },
+      { id: 'hc_5', z: 340, valuePct: 0.07 },
+      { id: 'hc_6', z: 410, valuePct: 0.08 },
+      { id: 'hc_7', z: 490, valuePct: 0.07 },
+      { id: 'hc_8', z: 560, valuePct: 0.08 },
+    ];
+  }
+  if (trackId === 'endurance_route') {
+    return [
+      { id: 'end_l1_1', z: 70, valuePct: 0.08 },
+      { id: 'end_l1_2', z: 150, valuePct: 0.08 },
+      { id: 'end_l1_3', z: 230, valuePct: 0.08 },
+      { id: 'end_l1_4', z: 310, valuePct: 0.08 },
+      { id: 'end_l1_5', z: 375, valuePct: 0.08 },
+      { id: 'end_l2_1', z: 470, valuePct: 0.08 },
+      { id: 'end_l2_2', z: 550, valuePct: 0.08 },
+      { id: 'end_l2_3', z: 630, valuePct: 0.08 },
+      { id: 'end_l2_4', z: 710, valuePct: 0.08 },
+      { id: 'end_l2_5', z: 775, valuePct: 0.08 },
+      { id: 'end_l3_1', z: 870, valuePct: 0.08 },
+      { id: 'end_l3_2', z: 950, valuePct: 0.08 },
+      { id: 'end_l3_3', z: 1030, valuePct: 0.08 },
+      { id: 'end_l3_4', z: 1110, valuePct: 0.08 },
+      { id: 'end_l3_5', z: 1175, valuePct: 0.08 },
+    ];
+  }
+  return [
+    { id: 'off_1', z: 120, valuePct: 0.06 },
+    { id: 'off_2', z: 310, valuePct: 0.06 },
+    { id: 'off_3', z: 520, valuePct: 0.06 },
+    { id: 'off_4', z: 700, valuePct: 0.06 },
+  ];
+}
+
+function runStageSimulation(stage, pack, controlMode = 'active_boost', collectPickupsRatio = 1.0) {
   const dt = 0.016; // 60 FPS tick
   const maxTime = 300; // 5 min timeout
   let t = 0;
   let playerZ = 0;
   let playerSpeedMps = 0;
-  let batteryMah = pack.capacityMah;
+  // Starting battery charge fixed at 50%
+  let batteryMah = pack.capacityMah * 0.50;
   let totalRegenMah = 0;
   let topSpeedKmh = 0;
   let playerFinishTime = null;
   let stalled = false;
+  let itemsCollected = 0;
+  let energyFromItemsMah = 0;
+
+  const rawItems = getStageItems(stage.id);
+  const items = rawItems.map((it, idx) => ({
+    ...it,
+    collected: false,
+    shouldCollect: (idx / Math.max(1, rawItems.length - 1)) <= collectPickupsRatio,
+  }));
 
   const totalMassKg = 82;
   const gravity = 9.81;
@@ -246,6 +304,18 @@ function runStageSimulation(stage, pack, controlMode = 'active_boost') {
 
       // Progress distance
       playerZ = Math.min(stage.distanceMeters, playerZ + playerSpeedMps * dt);
+
+      // Collect energy pickup items along racing line
+      for (const item of items) {
+        if (!item.collected && item.shouldCollect && Math.abs(playerZ - item.z) <= 2.5) {
+          item.collected = true;
+          itemsCollected++;
+          const added = Math.round(pack.capacityMah * item.valuePct);
+          batteryMah = Math.min(pack.capacityMah, batteryMah + added);
+          energyFromItemsMah += added;
+        }
+      }
+
       if (playerZ >= stage.distanceMeters && !playerFinishTime) {
         playerFinishTime = t;
       }

@@ -16,6 +16,22 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { CharacterState } from '../types/game';
+import { getStageBatteryItems, BatteryPickupConfig } from './batteryPickupsConfig';
+
+export interface BatteryPickupVisual {
+  id: string;
+  config: BatteryPickupConfig;
+  group: THREE.Group;
+  core: THREE.Mesh;
+  ring: THREE.Mesh;
+  aura: THREE.Mesh;
+  light: THREE.PointLight;
+  basePos: THREE.Vector3;
+  surfaceUp: THREE.Vector3;
+  phase: number;
+  collected: boolean;
+  collectT: number;
+}
 
 // ─── Track Geometry Constants ───────────────────────────────────────────────
 
@@ -1066,6 +1082,8 @@ export class Racing3DRenderer {
   private renderer: THREE.WebGLRenderer;
   private cyclists: Map<string, CyclistParts> = new Map();
   private envGroup: THREE.Group = new THREE.Group();
+  private batteryPickups: Map<string, BatteryPickupVisual> = new Map();
+  private batteryPickupsGroup: THREE.Group = new THREE.Group();
 
   // Track
   private trackCurve!: THREE.CatmullRomCurve3;
@@ -1135,7 +1153,11 @@ export class Racing3DRenderer {
     // ── 5. Track with 3D Deck & Continuous Guardrails ──
     this.buildTrack(trackId);
 
-    // ── 6. Environment & Scenery ──
+    // ── 6. Battery Energy Pickups ──
+    this.scene.add(this.batteryPickupsGroup);
+    this.buildBatteryPickups(trackId);
+
+    // ── 7. Environment & Scenery ──
     this.buildEnvironment(trackId);
 
     // ── 7. Resize Observer ──
@@ -2076,6 +2098,120 @@ export class Racing3DRenderer {
     this.scene.add(gantry);
   }
 
+  // ─── Battery Energy Pickups (DeepSeek V4 Pro Procedural 3D Assets) ─────────
+
+  private buildBatteryPickups(trackId: string) {
+    this.batteryPickupsGroup.clear();
+    this.batteryPickups.clear();
+
+    const items = getStageBatteryItems(trackId);
+    for (const item of items) {
+      const { position, tangent, normal } = this.getTrackPosition(item.z, item.x);
+      const surfaceUp = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+      // Elevate slightly above road deck (0.75m)
+      const basePos = position.clone().addScaledVector(surfaceUp, 0.75);
+
+      const group = new THREE.Group();
+      group.position.copy(basePos);
+
+      // Core: 21700 lithium battery cell (horizontal cylinder, emerald glow)
+      const coreGeo = new THREE.CylinderGeometry(0.10, 0.10, 0.36, 16);
+      const coreMat = new THREE.MeshStandardMaterial({
+        color: 0x052e16,
+        emissive: 0x10b981,
+        emissiveIntensity: 2.2,
+        metalness: 0.85,
+        roughness: 0.25,
+      });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      core.rotation.z = Math.PI / 2;
+      group.add(core);
+
+      // Brass terminal caps (positive & negative terminals)
+      const capGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.05, 16);
+      const capMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        metalness: 0.9,
+        roughness: 0.2,
+        emissive: 0xd97706,
+        emissiveIntensity: 0.5,
+      });
+      const capL = new THREE.Mesh(capGeo, capMat);
+      capL.rotation.z = Math.PI / 2;
+      capL.position.x = -0.20;
+      const capR = capL.clone();
+      capR.position.x = 0.20;
+      group.add(capL, capR);
+
+      // Pulsing energy torus ring (cyan)
+      const ringGeo = new THREE.TorusGeometry(0.32, 0.03, 12, 32);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x06b6d4,
+        transparent: true,
+        opacity: 0.88,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+
+      // Soft glow aura (sphere with additive blending)
+      const auraGeo = new THREE.SphereGeometry(0.50, 12, 12);
+      const auraMat = new THREE.MeshBasicMaterial({
+        color: 0x10b981,
+        transparent: true,
+        opacity: 0.16,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const aura = new THREE.Mesh(auraGeo, auraMat);
+      group.add(aura);
+
+      // Local road illumination point light
+      const light = new THREE.PointLight(0x10b981, 1.6, 5.0, 2.0);
+      group.add(light);
+
+      this.batteryPickupsGroup.add(group);
+
+      this.batteryPickups.set(item.id, {
+        id: item.id,
+        config: item,
+        group,
+        core,
+        ring,
+        aura,
+        light,
+        basePos,
+        surfaceUp,
+        phase: Math.random() * Math.PI * 2,
+        collected: false,
+        collectT: 0,
+      });
+    }
+  }
+
+  public collectPickup(id: string) {
+    const visual = this.batteryPickups.get(id);
+    if (visual && !visual.collected) {
+      visual.collected = true;
+      visual.collectT = 0;
+    }
+  }
+
+  public resetPickups() {
+    this.batteryPickups.forEach((visual) => {
+      visual.collected = false;
+      visual.collectT = 0;
+      visual.group.visible = true;
+      visual.group.scale.set(1, 1, 1);
+      (visual.ring.material as THREE.MeshBasicMaterial).opacity = 0.88;
+      (visual.aura.material as THREE.MeshBasicMaterial).opacity = 0.16;
+      (visual.core.material as THREE.MeshStandardMaterial).emissiveIntensity = 2.2;
+      if (visual.light) visual.light.intensity = 1.6;
+    });
+  }
+
   // ─── Environment & Mountain Background ────────────────────────────────────
 
   private buildEnvironment(trackId: string) {
@@ -2514,6 +2650,42 @@ export class Racing3DRenderer {
       }
     }
 
+    // ── Animate Battery Energy Pickups ──
+    this.batteryPickups.forEach((v) => {
+      if (v.collected) {
+        if (v.collectT < 1.0) {
+          v.collectT += dt / 0.35;
+          const k = Math.min(v.collectT, 1.0);
+          const scale = 1.0 + k * 1.8;
+          v.group.scale.setScalar(scale);
+          (v.ring.material as THREE.MeshBasicMaterial).opacity = 0.88 * (1 - k);
+          (v.aura.material as THREE.MeshBasicMaterial).opacity = 0.16 * (1 - k);
+          (v.core.material as THREE.MeshStandardMaterial).emissiveIntensity = 2.2 * (1 - k);
+          if (v.light) v.light.intensity = 1.6 * (1 - k);
+          if (k >= 1.0) {
+            v.group.visible = false;
+          }
+        }
+        return;
+      }
+
+      // Continuous rotation along vertical axis
+      v.group.rotation.y += dt * 2.2;
+
+      // Vertical floating bobbing along road normal
+      const bob = Math.sin(this.elapsedTime * 2.5 + v.phase) * 0.14;
+      v.group.position.copy(v.basePos).addScaledVector(v.surfaceUp, bob);
+
+      // Energy ring breathing & pulse
+      const ringPulse = 0.88 + Math.sin(this.elapsedTime * 4.2 + v.phase) * 0.14;
+      v.ring.scale.setScalar(ringPulse);
+      (v.ring.material as THREE.MeshBasicMaterial).opacity = 0.65 + ringPulse * 0.23;
+
+      // Soft aura breathing
+      const auraPulse = 0.14 + Math.sin(this.elapsedTime * 3.0 + v.phase) * 0.05;
+      (v.aura.material as THREE.MeshBasicMaterial).opacity = auraPulse;
+    });
+
     // ── Smooth Spring-Arm Chase Camera Follow with Horizon Banking & Apex Anticipation (DeepSeek V4 Pro) ──
     if (playerPos && playerTangent && playerNormal) {
       const lastPlayer = racers.find((r) => r.isPlayer);
@@ -2609,6 +2781,7 @@ export class Racing3DRenderer {
   dispose() {
     this.resizeObserver?.disconnect();
     this.cyclists.clear();
+    this.batteryPickups.clear();
     this.scene.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {
         obj.geometry?.dispose();

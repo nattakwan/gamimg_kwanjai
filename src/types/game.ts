@@ -366,6 +366,9 @@ export interface RaceData {
   maxRegenPowerW?: number;
   chosenMotorVoltage?: number;
   chosenPackVoltage?: number;
+  batteryPickupsCollected?: number;
+  totalPickupsAvailable?: number;
+  pickupEnergyRecoveredMah?: number;
 }
 
 export interface ReflectionScores {

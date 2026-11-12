@@ -415,6 +415,24 @@ export const RaceResultsScreen: React.FC = () => {
                   </span>
                 </div>
               ) : null}
+
+              {state.raceData?.batteryPickupsCollected !== undefined ? (
+                <div className="bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-500/40 col-span-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🔋</span>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">ไอเทมพลังงานที่เก็บได้ (Pickups)</span>
+                      <span className="font-mono font-bold text-emerald-300 text-sm">
+                        {state.raceData.batteryPickupsCollected} / {state.raceData.totalPickupsAvailable || 0} ชิ้น
+                        {state.raceData.pickupEnergyRecoveredMah ? ` (+${state.raceData.pickupEnergyRecoveredMah} mAh)` : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+                    ENERGY BOOST
+                  </span>
+                </div>
+              ) : null}
             </div>
 
             {/* Scientific Explanation of Battery Choice */}

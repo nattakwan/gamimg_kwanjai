@@ -29,10 +29,11 @@ import {
 import { useGameState } from '../../context/GameStateContext';
 import { AvatarRenderer } from '../common/AvatarRenderer';
 import { Racing3DRenderer, RacerUpdate } from '../../racing3d/Racing3DRenderer';
+import { getStageBatteryItems, BatteryPickupConfig } from '../../racing3d/batteryPickupsConfig';
 
 // Web Audio sound generator for racing immersion
 const playRacingTone = (
-  type: 'pedal' | 'motor_hum' | 'brake' | 'boost' | 'rank_change' | 'finish' | 'regen',
+  type: 'pedal' | 'motor_hum' | 'brake' | 'boost' | 'rank_change' | 'finish' | 'regen' | 'pickup',
   freq: number = 440,
   duration: number = 0.12
 ) => {
@@ -79,6 +80,13 @@ const playRacingTone = (
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
       gain.gain.setValueAtTime(0.1, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    } else if (type === 'pickup') {
+      // Crystal energy pickup chime (ascending D5 -> A5)
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880.0, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
     } else {
       // pedal click
       osc.type = 'sine';
@@ -150,6 +158,8 @@ export const RacingScreen: React.FC = () => {
   // Real saved battery pack & motor specs from GameState
   const nominalPackV = state.batteryPack.nominalVoltage || state.batteryPack.totalVoltage || 12.0;
   const totalCapacityMah = state.batteryPack.nominalCapacityMah || state.batteryPack.totalCapacityMah || 4000;
+  // DeepSeek V4 Pro Balance: Starting battery charge fixed at 50% across all race stages
+  const initialBatteryMah = Math.round(totalCapacityMah * 0.50);
   const internalResistance =
     state.batteryPack.internalResistance || (state.batteryPack.parallelCount === 2 ? 0.15 : 0.30);
   const bikeColor = state.bike?.frameColor || state.bikeSetup?.frameColor || '#0284c7';
@@ -158,6 +168,21 @@ export const RacingScreen: React.FC = () => {
   const chosenMotorVoltage =
     state.bikeSetup?.motorVoltageRating || state.bikeSetup?.motorRatedVoltage || 12;
   const motorName = state.bikeSetup?.motorName || `มอเตอร์ ${chosenMotorVoltage}V`;
+
+  // Battery Energy Pickups Setup
+  const stagePickupsConfig = useRef(getStageBatteryItems(trackId));
+  const totalPickupsAvailable = stagePickupsConfig.current.length;
+  const [itemsCollectedCount, setItemsCollectedCount] = useState<number>(0);
+  const [pickupToast, setPickupToast] = useState<{ id: number; text: string } | null>(null);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showPickupToast = useCallback((text: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setPickupToast({ id: Date.now(), text });
+    toastTimerRef.current = setTimeout(() => {
+      setPickupToast(null);
+    }, 1800);
+  }, []);
 
   // Game flow states
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -181,7 +206,7 @@ export const RacingScreen: React.FC = () => {
   const [playerZ, setPlayerZ] = useState<number>(0); // distance in meters
   const [playerX, setPlayerX] = useState<number>(0); // lateral offset (-1 to +1)
   const [playerSpeedMps, setPlayerSpeedMps] = useState<number>(0); // m/s
-  const [batteryRemainingMah, setBatteryRemainingMah] = useState<number>(totalCapacityMah);
+  const [batteryRemainingMah, setBatteryRemainingMah] = useState<number>(initialBatteryMah);
   const [topSpeedKmhRecorded, setTopSpeedKmhRecorded] = useState<number>(0);
   const [playerFinishTime, setPlayerFinishTime] = useState<number | null>(null);
 
@@ -198,7 +223,7 @@ export const RacingScreen: React.FC = () => {
   const [regenPowerW, setRegenPowerW] = useState<number>(0);
   const [isRegenActive, setIsRegenActive] = useState<boolean>(false);
 
-  // 3 AI Opponents
+  // 3 AI Opponents (Starting with 50% battery capacity)
   const [aiRiders, setAiRiders] = useState<AIRiderState[]>([
     {
       id: 'racer_tina',
@@ -209,7 +234,7 @@ export const RacingScreen: React.FC = () => {
       z: 0,
       x: -0.6,
       speedMps: 0,
-      batteryRemainingMah: 4000,
+      batteryRemainingMah: 2000,
       totalCapacityMah: 4000,
       internalResistance: 0.15,
       stamina: 100,
@@ -227,7 +252,7 @@ export const RacingScreen: React.FC = () => {
       z: 0,
       x: 0.5,
       speedMps: 0,
-      batteryRemainingMah: 2000,
+      batteryRemainingMah: 1000,
       totalCapacityMah: 2000,
       internalResistance: 0.30,
       stamina: 100,
@@ -245,7 +270,7 @@ export const RacingScreen: React.FC = () => {
       z: 0,
       x: 0.85,
       speedMps: 0,
-      batteryRemainingMah: 6000,
+      batteryRemainingMah: 3000,
       totalCapacityMah: 6000,
       internalResistance: 0.12,
       stamina: 100,
@@ -265,7 +290,10 @@ export const RacingScreen: React.FC = () => {
     playerZ: 0,
     playerX: 0,
     playerSpeedMps: 0,
-    batteryRemainingMah: totalCapacityMah,
+    batteryRemainingMah: initialBatteryMah,
+    pickups: getStageBatteryItems(trackId).map((item) => ({ ...item, collected: false })),
+    itemsCollectedCount: 0,
+    batteryEnergyRecoveredMah: 0,
     raceTimeSeconds: 0,
     topSpeedKmhRecorded: 0,
     playerFinishTime: null as number | null,
@@ -299,7 +327,7 @@ export const RacingScreen: React.FC = () => {
         z: 0,
         x: -0.6,
         speedMps: 0,
-        batteryRemainingMah: 4000,
+        batteryRemainingMah: 2000,
         totalCapacityMah: 4000,
         internalResistance: 0.15,
         stamina: 100,
@@ -317,7 +345,7 @@ export const RacingScreen: React.FC = () => {
         z: 0,
         x: 0.5,
         speedMps: 0,
-        batteryRemainingMah: 2000,
+        batteryRemainingMah: 1000,
         totalCapacityMah: 2000,
         internalResistance: 0.30,
         stamina: 100,
@@ -335,7 +363,7 @@ export const RacingScreen: React.FC = () => {
         z: 0,
         x: 0.85,
         speedMps: 0,
-        batteryRemainingMah: 6000,
+        batteryRemainingMah: 3000,
         totalCapacityMah: 6000,
         internalResistance: 0.12,
         stamina: 100,
@@ -438,7 +466,8 @@ export const RacingScreen: React.FC = () => {
     sim.playerX = 0;
     sim.playerSpeedMps = 0;
     sim.raceTimeSeconds = 0;
-    sim.batteryRemainingMah = totalCapacityMah;
+    const initialBatt = Math.round(totalCapacityMah * 0.50);
+    sim.batteryRemainingMah = initialBatt;
     sim.topSpeedKmhRecorded = 0;
     sim.playerFinishTime = null;
     sim.raceFinished = false;
@@ -448,6 +477,10 @@ export const RacingScreen: React.FC = () => {
     sim.downhillSavedWh = 0;
     sim.totalRegeneratedMah = 0;
     sim.playerRank = 2;
+    sim.pickups = getStageBatteryItems(trackId).map((item) => ({ ...item, collected: false }));
+    sim.itemsCollectedCount = 0;
+    sim.batteryEnergyRecoveredMah = 0;
+    renderer3dRef.current?.resetPickups();
     sim.aiRiders = sim.aiRiders.map((ai) => ({
       ...ai,
       z: 0,
@@ -455,18 +488,19 @@ export const RacingScreen: React.FC = () => {
       speedMps: 0,
       isFinished: false,
       finishTimeSeconds: null,
-      batteryRemainingMah: ai.totalCapacityMah,
+      batteryRemainingMah: Math.round(ai.totalCapacityMah * 0.50),
     }));
     setPlayerZ(0);
     setPlayerSpeedMps(0);
     setRaceTimeSeconds(0);
-    setBatteryRemainingMah(totalCapacityMah);
+    setBatteryRemainingMah(initialBatt);
+    setItemsCollectedCount(0);
     setPlayerRank(2);
     setIsPaused(false);
     setRaceFinished(false);
     setIsStalledOnHill(false);
     setHasBatteryExhausted(false);
-  }, [totalCapacityMah]);
+  }, [totalCapacityMah, trackId]);
 
   // Keyboard controls listener (Registered once at mount; reads/writes directly to simRef)
   useEffect(() => {
@@ -719,6 +753,25 @@ export const RacingScreen: React.FC = () => {
         if (sim.isSteeringRight) lateralVelocity += 2.0;
         sim.playerX = Math.max(-1.0, Math.min(1.0, sim.playerX + lateralVelocity * dt));
 
+        // 8. Battery Energy Pickups Collision (DeepSeek V4 Pro)
+        for (const item of sim.pickups) {
+          if (item.collected) continue;
+          const dz = Math.abs(sim.playerZ - item.z);
+          const dx = Math.abs(sim.playerX - item.x);
+          // Collision tolerance: 2.5m longitudinal window, 0.40 normalized lateral window (~1.28m)
+          if (dz <= 2.5 && dx <= 0.40) {
+            item.collected = true;
+            sim.itemsCollectedCount += 1;
+            const addedMah = Math.round(totalCapacityMah * item.valuePct);
+            sim.batteryRemainingMah = Math.min(totalCapacityMah, sim.batteryRemainingMah + addedMah);
+            sim.batteryEnergyRecoveredMah += addedMah;
+            renderer3dRef.current?.collectPickup(item.id);
+            playRacingTone('pickup');
+            const pctText = Math.round(item.valuePct * 100);
+            showPickupToast(`+${pctText}% แบตเตอรี่ (+${addedMah} mAh)`);
+          }
+        }
+
         // ----------------- AI OPPONENTS PHYSICS -----------------
         sim.aiRiders = sim.aiRiders.map((ai) => {
           if (ai.isFinished) return ai;
@@ -912,6 +965,7 @@ export const RacingScreen: React.FC = () => {
         setDownhillSavedWh(sim.downhillSavedWh);
         setTotalRegeneratedMah(sim.totalRegeneratedMah);
         setAiRiders(sim.aiRiders);
+        setItemsCollectedCount(sim.itemsCollectedCount);
       }
 
       animId = requestAnimationFrame(gameLoop);
@@ -1031,6 +1085,9 @@ export const RacingScreen: React.FC = () => {
       maxRegenPowerW: Math.round(nominalPackV * 4.8),
       chosenMotorVoltage,
       chosenPackVoltage: nominalPackV,
+      batteryPickupsCollected: sim.itemsCollectedCount,
+      totalPickupsAvailable: sim.pickups.length,
+      pickupEnergyRecoveredMah: sim.batteryEnergyRecoveredMah,
     });
 
     const earnedStars = finalRank === 1 ? 3 : finalRank === 2 ? 2 : 1;
@@ -1148,12 +1205,34 @@ export const RacingScreen: React.FC = () => {
               </span>
             </div>
           </div>
+
+          {/* Battery Pickups Collected Counter */}
+          <div className="bg-slate-950 px-2.5 py-1 rounded-xl border border-emerald-500/50 flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+            <span className="text-sm">🔋</span>
+            <div className="flex flex-col">
+              <span className="text-xs font-mono font-bold text-emerald-300">
+                {itemsCollectedCount}/{totalPickupsAvailable}
+              </span>
+              <span className="text-[8px] font-mono text-emerald-400/80 leading-none">เก็บไอเทม</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Main 2.5D Race Track View */}
       <div className="relative flex-1 w-full overflow-hidden bg-slate-950 flex flex-col justify-end">
         <div ref={container3dRef} className="w-full h-full block absolute inset-0 cursor-crosshair overflow-hidden" />
+
+        {/* Floating Battery Pickup Toast */}
+        {pickupToast && (
+          <div className="absolute top-4 right-4 z-30 pointer-events-none animate-bounce flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-emerald-400/80 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.5)] backdrop-blur-md transition-all">
+            <span className="text-xl">🔋</span>
+            <div className="flex flex-col text-left">
+              <span className="font-bold text-xs tracking-wide text-white">{pickupToast.text}</span>
+              <span className="text-[10px] text-emerald-400 font-mono">ชาร์จพลังงานสำเร็จ!</span>
+            </div>
+          </div>
+        )}
 
         {/* Electrical & Motor Status Ribbon (Above Controls) */}
         <div className="relative z-20 px-4 py-1.5 bg-slate-900/80 backdrop-blur-md border-t border-indigo-500/30 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
@@ -1384,22 +1463,28 @@ export const RacingScreen: React.FC = () => {
             </div>
 
             {/* Quick Stat Highlights */}
-            <div className="grid grid-cols-3 gap-2 w-full text-xs font-mono">
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 block font-sans">พลังงานที่ใช้</span>
-                <span className="text-amber-400 font-bold text-sm">
+            <div className="grid grid-cols-4 gap-2 w-full text-xs font-mono">
+              <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                <span className="text-[9px] text-slate-400 block font-sans">พลังงานที่ใช้</span>
+                <span className="text-amber-400 font-bold text-xs">
                   {Math.round(totalCapacityMah - batteryRemainingMah)} mAh
                 </span>
               </div>
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 block font-sans">ความเร็วเฉลี่ย</span>
-                <span className="text-cyan-400 font-bold text-sm">
+              <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                <span className="text-[9px] text-slate-400 block font-sans">ความเร็วเฉลี่ย</span>
+                <span className="text-cyan-400 font-bold text-xs">
                   {Math.round((totalTrackLength / (playerFinishTime || raceTimeSeconds)) * 3.6)} กม./ชม.
                 </span>
               </div>
-              <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 block font-sans">ดาวรางวัล</span>
-                <span className="text-emerald-400 font-bold text-sm">
+              <div className="bg-slate-950 p-2 rounded-xl border border-emerald-500/40">
+                <span className="text-[9px] text-slate-400 block font-sans">ไอเทมแบต</span>
+                <span className="text-emerald-300 font-bold text-xs">
+                  {itemsCollectedCount}/{totalPickupsAvailable}
+                </span>
+              </div>
+              <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                <span className="text-[9px] text-slate-400 block font-sans">ดาวรางวัล</span>
+                <span className="text-emerald-400 font-bold text-xs">
                   {playerRank === 1 ? '⭐⭐⭐' : playerRank === 2 ? '⭐⭐' : '⭐'}
                 </span>
               </div>
